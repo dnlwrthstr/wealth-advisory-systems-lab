@@ -25,6 +25,7 @@ class SubmitOrderRequest(BaseModel):
     currency: str
     limit_price: Optional[float] = None
     stop_price: Optional[float] = None
+    reference_price: Optional[float] = None
     time_in_force: TimeInForce = TimeInForce.DAY
     remarks: str = ""
 
@@ -66,6 +67,7 @@ def build_router(service: OrderService) -> APIRouter:
                 customer_id=body.customer_id,
                 limit_price=body.limit_price,
                 stop_price=body.stop_price,
+                reference_price=body.reference_price,
                 time_in_force=body.time_in_force,
                 remarks=body.remarks,
             )

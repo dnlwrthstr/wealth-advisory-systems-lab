@@ -52,6 +52,7 @@ class OrderService:
         customer_id: str = "",
         limit_price: float | None = None,
         stop_price: float | None = None,
+        reference_price: float | None = None,
         time_in_force: TimeInForce = TimeInForce.DAY,
         remarks: str = "",
     ) -> Order:
@@ -75,6 +76,7 @@ class OrderService:
             currency=currency,
             limit_price=limit_price,
             stop_price=stop_price,
+            reference_price=reference_price,
             time_in_force=time_in_force,
             status=OrderStatus.RECEIVED,
             submitted_at=now,
@@ -170,7 +172,7 @@ class OrderService:
     def _build_fill(self, order: Order) -> OrderFill:
         """Construct an enriched OrderFill with all performance fields."""
         # Fill price: reference ± random spread
-        reference = order.limit_price or 100.0
+        reference = order.limit_price or order.reference_price or 100.0
         spread = reference * random.uniform(0.000, 0.015)
         fill_price = (reference + spread) if order.side == OrderSide.BUY else (reference - spread)
         fill_price = round(max(fill_price, 0.01), 4)

@@ -70,6 +70,7 @@ class Order:
     updated_at: datetime
     limit_price: float | None = None
     stop_price: float | None = None
+    reference_price: float | None = None
     filled_quantity: float = 0.0
     average_fill_price: float | None = None
     average_cost: float | None = None  # weighted average cost basis (updated on buys)

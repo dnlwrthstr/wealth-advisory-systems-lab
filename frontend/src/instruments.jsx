@@ -320,6 +320,9 @@ function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, posit
         time_in_force: timeInForce,
         remarks,
       };
+      if (suggestedPrice != null) {
+        payload.reference_price = suggestedPrice;
+      }
       if (orderType === "limit" || orderType === "stopLimit") {
         payload.limit_price = parseFloat(limitPrice);
       }
