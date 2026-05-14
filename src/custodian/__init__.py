@@ -27,6 +27,7 @@ from .schemas import (
     ValuatedPosition,
     ValuationPrice,
 )
+from .reference import build_reference
 from .service import CustodianService
 from .store import DuckDBCustodianStore, InMemoryCustodianStore, PostgresCustodianStore
 
@@ -60,4 +61,5 @@ __all__ = [
     "Valuation",
     "ValuatedPosition",
     "ValuationPrice",
+    "build_reference",
 ]
