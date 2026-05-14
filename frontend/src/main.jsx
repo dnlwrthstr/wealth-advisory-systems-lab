@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import CustodianApp from "./custodian";
 import {
-  fetchCustodySnapshot,
   fetchQuestionnaire,
   listClientSegments,
-  listCustodyCustomers,
   listQuestionnaires,
   processAnswers,
   saveClientSegment,
@@ -41,9 +40,6 @@ function App() {
   const [answers, setAnswers] = useState(DEFAULT_ANSWERS);
   const [product, setProduct] = useState(DEFAULT_PRODUCT);
   const [result, setResult] = useState(null);
-  const [custodyCustomers, setCustodyCustomers] = useState([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState("C-1001");
-  const [custodySnapshot, setCustodySnapshot] = useState(null);
   const [clientSegments, setClientSegments] = useState([]);
   const [activeSection, setActiveSection] = useState("custodian");
   const [message, setMessage] = useState("");
@@ -61,16 +57,6 @@ function App() {
         setEditorText(JSON.stringify(detail, null, 2));
       } catch (error) {
         errors.push(`Questionnaires: ${error.message}`);
-      }
-
-      try {
-        const customers = await listCustodyCustomers();
-        setCustodyCustomers(customers);
-        const firstCustomerId = customers[0]?.customer_id ?? "C-1001";
-        setSelectedCustomerId(firstCustomerId);
-        setCustodySnapshot(await fetchCustodySnapshot(firstCustomerId));
-      } catch (error) {
-        errors.push(`Custodian: ${error.message}`);
       }
 
       try {
@@ -98,18 +84,6 @@ function App() {
     }
     loadSelected();
   }, [selectedId]);
-
-  useEffect(() => {
-    async function loadCustomer() {
-      if (!selectedCustomerId) return;
-      try {
-        setCustodySnapshot(await fetchCustodySnapshot(selectedCustomerId));
-      } catch (error) {
-        setMessage(error.message);
-      }
-    }
-    loadCustomer();
-  }, [selectedCustomerId]);
 
   const orderedQuestions = useMemo(() => questionnaire?.questions ?? [], [questionnaire]);
 
@@ -201,12 +175,7 @@ function App() {
         {message ? <p className="message">{message}</p> : null}
 
         {activeSection === "custodian" ? (
-          <CustodyView
-            customers={custodyCustomers}
-            selectedCustomerId={selectedCustomerId}
-            setSelectedCustomerId={setSelectedCustomerId}
-            snapshot={custodySnapshot}
-          />
+          <CustodianApp />
         ) : (
           <AdminView
             questionnaires={questionnaires}
@@ -229,144 +198,6 @@ function App() {
         )}
       </section>
     </main>
-  );
-}
-
-function CustodyView({ customers, selectedCustomerId, setSelectedCustomerId, snapshot }) {
-  if (!snapshot) {
-    return (
-      <section className="panel empty-state">
-        <h2>Custodian Source Data</h2>
-        <p>Loading custody records.</p>
-      </section>
-    );
-  }
-
-  const customer = snapshot.customer;
-
-  return (
-    <section className="custody-layout">
-      <section className="panel">
-        <div className="section-header">
-          <h2>OpenWealth Customer</h2>
-          <span className="badge ok">OpenWealth-style mock</span>
-        </div>
-
-        <label className="customer-picker">
-          Client / Customer
-          <select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
-            {customers.map((item) => (
-              <option key={item.customer_id} value={item.customer_id}>
-                {item.display_name} · {item.customer_id}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <MetricGrid
-          metrics={[
-            ["Customer", `${customer.display_name} (${customer.customer_id})`],
-            ["Segment", customer.segment],
-            ["Risk profile", customer.risk_profile],
-            ["Total value", formatMoney(snapshot.total_market_value, snapshot.base_currency)],
-            ["Accounts", snapshot.accounts.length],
-            ["Positions", snapshot.positions.length],
-          ]}
-        />
-
-        <h3>Portfolios</h3>
-        <div className="compact-list">
-          {customer.portfolios.map((portfolio) => (
-            <article key={portfolio.portfolio_id}>
-              <strong>{portfolio.name}</strong>
-              <span>{portfolio.strategy}</span>
-              <small>{portfolio.portfolio_id} · {portfolio.mandate_type} · {portfolio.base_currency}</small>
-            </article>
-          ))}
-        </div>
-
-        <h3>Asset Allocation</h3>
-        <div className="allocation-list">
-          {snapshot.asset_allocation.map((item) => (
-            <div key={item.label}>
-              <span>{item.label}</span>
-              <div>
-                <i style={{ width: `${Math.max(item.weight * 100, 2)}%` }} />
-              </div>
-              <strong>{Math.round(item.weight * 1000) / 10}%</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <h2>Accounts</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Account</th>
-                <th>Portfolio</th>
-                <th>Type</th>
-                <th>CCY</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.accounts.map((account) => (
-                <tr key={account.account_id}>
-                  <td>{account.account_number}</td>
-                  <td>{account.portfolio_id}</td>
-                  <td>{account.account_type}</td>
-                  <td>{account.currency}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h3>Positions</h3>
-        <div className="table-wrap tall">
-          <table>
-            <thead>
-              <tr>
-                <th>Instrument</th>
-                <th>Type</th>
-                <th>Qty</th>
-                <th>Value</th>
-                <th>Weight</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.positions.map((position) => (
-                <tr key={position.position_id}>
-                  <td>
-                    <strong>{position.instrument.name}</strong>
-                    <small>{position.instrument.isin ?? position.instrument.instrument_id}</small>
-                  </td>
-                  <td>{position.instrument.instrument_type}</td>
-                  <td>{formatNumber(position.valuation.quantity)}</td>
-                  <td>{formatMoney(position.valuation.base_market_value, snapshot.base_currency)}</td>
-                  <td>{Math.round(position.weight * 1000) / 10}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h3>Transactions</h3>
-        <div className="compact-list">
-          {snapshot.transactions.map((transaction) => (
-            <article key={transaction.transaction_id}>
-              <strong>{transaction.description}</strong>
-              <span>{transaction.transaction_type}</span>
-              <small>
-                {transaction.booking_date} · {formatMoney(transaction.amount, transaction.currency)}
-              </small>
-            </article>
-          ))}
-        </div>
-      </section>
-    </section>
   );
 }
 
