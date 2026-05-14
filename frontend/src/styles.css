@@ -1040,6 +1040,50 @@ pre {
   }
 }
 
+/* Profile view tab bar */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: #e8edeb;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.tab-bar button {
+  min-height: 32px;
+  padding: 0 16px;
+  border-radius: 6px;
+  background: transparent;
+  color: #4a5c55;
+  font-weight: 500;
+}
+
+.tab-bar button:hover {
+  background: #d4ddd9;
+}
+
+.tab-bar button.active {
+  background: #ffffff;
+  color: #17201c;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.muted {
+  color: #6b7c75;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.onboarding-steps {
+  margin-top: 1rem;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #4a5c55;
+}
+
 @media (max-width: 720px) {
   .content-shell,
   .sidebar {
