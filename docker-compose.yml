@@ -50,6 +50,30 @@ services:
       timeout: 5s
       retries: 5
 
+  instrument-api:
+    build:
+      context: .
+      dockerfile: backend/instrument_api/Dockerfile
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order-api:
+    build:
+      context: .
+      dockerfile: backend/order_api/Dockerfile
+    ports:
+      - "8004:8004"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   frontend:
     build:
       context: .
@@ -60,6 +84,10 @@ services:
       custodian-api:
         condition: service_healthy
       profile-api:
+        condition: service_healthy
+      instrument-api:
+        condition: service_healthy
+      order-api:
         condition: service_healthy
 
 volumes:

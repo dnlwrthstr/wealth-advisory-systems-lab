@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import CustodianApp from "./custodian";
+import InstrumentsApp from "./instruments";
 import {
   fetchQuestionnaire,
   listClientSegments,
@@ -154,6 +155,7 @@ function App() {
         <nav className="side-menu" aria-label="Main menu">
           {[
             ["custodian", "Custodian"],
+            ["instruments", "Instruments"],
             ["questionnaires", "Questionnaires"],
             ["profile", "Profile"],
           ].map(([key, label]) => (
@@ -175,6 +177,7 @@ function App() {
       <section className="content-shell">
         {message ? <p className="message">{message}</p> : null}
         {activeSection === "custodian" && <CustodianApp />}
+        {activeSection === "instruments" && <InstrumentsApp />}
         {activeSection === "questionnaires" && (
           <QuestionnairesView
             questionnaires={questionnaires}

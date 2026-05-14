@@ -82,3 +82,39 @@ export function fetchClientProfile(clientId) {
 export function fetchReferenceData() {
   return request("/custody/reference");
 }
+
+// Instrument API
+export function searchInstruments({ q = "", type = null, currency = null, limit = 50, offset = 0 } = {}) {
+  const params = new URLSearchParams({ q, limit, offset });
+  if (type) params.set("type", type);
+  if (currency) params.set("currency", currency);
+  return request(`/instruments?${params}`);
+}
+
+export function fetchInstrumentTypes() {
+  return request("/instruments/types");
+}
+
+export function fetchInstrument(instrumentId) {
+  return request(`/instruments/${instrumentId}`);
+}
+
+// Order API
+export function submitOrder(payload) {
+  return request("/orders", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPortfolioOrders(portfolioId) {
+  return request(`/orders/portfolio/${portfolioId}`);
+}
+
+export function fetchOrder(orderId) {
+  return request(`/orders/${orderId}`);
+}
+
+export function cancelOrder(orderId) {
+  return request(`/orders/${orderId}`, { method: "DELETE" });
+}

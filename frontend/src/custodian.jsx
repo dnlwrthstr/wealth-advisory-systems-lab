@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchClientProfile, fetchCustodySnapshot, listCustodyCustomers } from "./services/api";
 import { labelFor, loadReferenceData } from "./reference";
+import { OrderDialog, PortfolioOrdersPanel } from "./instruments";
 
 // ---------------------------------------------------------------------------
 // Label maps
@@ -616,6 +617,8 @@ function ClientProfilePanel({ customer, portfolios, profile, loading }) {
 
 function PortfolioDetail({ snapshot, portfolioId, onBack, onBackToCustomer }) {
   const { customer, accounts, positions, transactions, baseCurrency } = snapshot;
+  const [tab, setTab] = useState("positions"); // "positions" | "orders" | "transactions"
+  const [tradeTarget, setTradeTarget] = useState(null); // { isin, name, currency, price, accountId }
 
   const portfolioInfo = snapshot.portfolios.find((p) => p.identification === portfolioId);
   const portfolioAccounts = accounts.filter(
@@ -629,6 +632,7 @@ function PortfolioDetail({ snapshot, portfolioId, onBack, onBackToCustomer }) {
   );
 
   const positionDate = pfPositions[0]?.positionDate;
+  const defaultAccountId = portfolioAccounts[0]?.id ?? "";
 
   // Group positions by asset class
   const grouped = {};
@@ -661,36 +665,75 @@ function PortfolioDetail({ snapshot, portfolioId, onBack, onBackToCustomer }) {
             {baseCurrency}
           </p>
         </div>
-        <div className="c-kpi-row">
-          <Kpi label="AUM" value={fmtCcy(totalBase, baseCurrency)} />
-          <Kpi label="Positions" value={pfPositions.length} />
-          <Kpi label="Accounts" value={portfolioAccounts.length} />
-          {positionDate && <Kpi label="As of" value={fmtDate(positionDate)} />}
+        <div className="c-portfolio-header-right">
+          <div className="c-kpi-row">
+            <Kpi label="AUM" value={fmtCcy(totalBase, baseCurrency)} />
+            <Kpi label="Positions" value={pfPositions.length} />
+            <Kpi label="Accounts" value={portfolioAccounts.length} />
+            {positionDate && <Kpi label="As of" value={fmtDate(positionDate)} />}
+          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setTradeTarget({ isin: "", instrumentName: "", currency: baseCurrency, suggestedPrice: null, portfolioId, accountId: defaultAccountId })}
+          >
+            New Order
+          </button>
         </div>
       </div>
 
-      {/* Positions by asset class */}
-      <div className="c-section">
-        <h3>Positions</h3>
-        {ASSET_CLASS_ORDER.filter((ac) => grouped[ac]?.length > 0).map((ac) => (
-          <AssetClassSection
-            key={ac}
-            assetClass={ac}
-            positions={grouped[ac]}
-            baseCurrency={baseCurrency}
-            portfolioTotal={totalBase}
-          />
+      {/* Tab bar */}
+      <div className="c-tab-bar" style={{ marginBottom: "1rem" }}>
+        {[["positions", "Positions"], ["orders", "Orders"], ["transactions", "Transactions"]].map(([key, label]) => (
+          <button key={key} type="button" className={tab === key ? "active" : ""} onClick={() => setTab(key)}>
+            {label}
+          </button>
         ))}
-        {pfPositions.length === 0 && (
-          <p className="c-empty">No positions for this portfolio.</p>
-        )}
       </div>
 
-      {/* Transactions */}
-      <div className="c-section">
-        <h3>Transactions</h3>
-        <TransactionList transactions={transactions} />
-      </div>
+      {tab === "positions" && (
+        <div className="c-section">
+          {ASSET_CLASS_ORDER.filter((ac) => grouped[ac]?.length > 0).map((ac) => (
+            <AssetClassSection
+              key={ac}
+              assetClass={ac}
+              positions={grouped[ac]}
+              baseCurrency={baseCurrency}
+              portfolioTotal={totalBase}
+              portfolioId={portfolioId}
+              accountId={defaultAccountId}
+              onTrade={setTradeTarget}
+            />
+          ))}
+          {pfPositions.length === 0 && (
+            <p className="c-empty">No positions for this portfolio.</p>
+          )}
+        </div>
+      )}
+
+      {tab === "orders" && (
+        <div className="c-section">
+          <PortfolioOrdersPanel portfolioId={portfolioId} />
+        </div>
+      )}
+
+      {tab === "transactions" && (
+        <div className="c-section">
+          <TransactionList transactions={transactions} />
+        </div>
+      )}
+
+      {tradeTarget && (
+        <OrderDialog
+          isin={tradeTarget.isin}
+          instrumentName={tradeTarget.instrumentName}
+          currency={tradeTarget.currency}
+          suggestedPrice={tradeTarget.suggestedPrice}
+          portfolioId={tradeTarget.portfolioId}
+          accountId={tradeTarget.accountId}
+          onClose={() => setTradeTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -699,7 +742,7 @@ function PortfolioDetail({ snapshot, portfolioId, onBack, onBackToCustomer }) {
 // Positions section for one asset class
 // ---------------------------------------------------------------------------
 
-function AssetClassSection({ assetClass, positions, baseCurrency, portfolioTotal }) {
+function AssetClassSection({ assetClass, positions, baseCurrency, portfolioTotal, portfolioId, accountId, onTrade }) {
   const [collapsed, setCollapsed] = useState(false);
   const meta = ASSET_CLASS_META[assetClass];
   const sectionTotal = positions.reduce(
@@ -731,14 +774,14 @@ function AssetClassSection({ assetClass, positions, baseCurrency, portfolioTotal
           <table className="c-pos-table">
             {isCash && <CashHeader />}
             {isBond && <BondHeader baseCurrency={baseCurrency} />}
-            {!isCash && !isBond && <SecurityHeader baseCurrency={baseCurrency} />}
+            {!isCash && !isBond && <SecurityHeader baseCurrency={baseCurrency} showTrade={!!onTrade} />}
             <tbody>
               {positions.map((pos) => (
                 isCash
                   ? <CashRow key={pos.id} pos={pos} />
                   : isBond
-                  ? <BondRow key={pos.id} pos={pos} baseCurrency={baseCurrency} />
-                  : <SecurityRow key={pos.id} pos={pos} baseCurrency={baseCurrency} />
+                  ? <BondRow key={pos.id} pos={pos} baseCurrency={baseCurrency} onTrade={onTrade ? () => onTrade({ isin: pos.financialInstrument.isin, instrumentName: pos.financialInstrument.name, currency: pos.financialInstrument.currency, suggestedPrice: pos.price?.value, portfolioId, accountId }) : null} />
+                  : <SecurityRow key={pos.id} pos={pos} baseCurrency={baseCurrency} onTrade={onTrade ? () => onTrade({ isin: pos.financialInstrument.isin, instrumentName: pos.financialInstrument.name, currency: pos.financialInstrument.currency, suggestedPrice: pos.price?.value, portfolioId, accountId }) : null} />
               ))}
             </tbody>
           </table>
@@ -789,7 +832,56 @@ function BondHeader({ baseCurrency }) {
     </thead>
   );
 }
-function BondRow({ pos, baseCurrency }) {
+// Equity / Fund / Other columns
+function SecurityHeader({ baseCurrency, showTrade }) {
+  return (
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>ISIN</th>
+        <th className="r">Qty</th>
+        <th className="r">Price</th>
+        <th>CCY</th>
+        <th className="r">Mkt Value</th>
+        <th className="r">Base ({baseCurrency})</th>
+        <th className="r">Weight</th>
+        {showTrade && <th />}
+      </tr>
+    </thead>
+  );
+}
+function SecurityRow({ pos, baseCurrency, onTrade }) {
+  const fi = pos.financialInstrument;
+  return (
+    <tr>
+      <td>
+        <span className="c-instr-name">{fi.name}</span>
+        {fi.sector && <small className="c-tag">{fi.sector.replace(/_/g, " ")}</small>}
+      </td>
+      <td><span className="mono">{fi.isin ?? "—"}</span></td>
+      <td className="r mono">{fmtNum(pos.quantity.value, pos.quantity.unit === "nominal" ? 0 : 2)}</td>
+      <td className="r mono">
+        {pos.price ? fmtNum(pos.price.value, pos.price.currency === "CHF" ? 2 : 2) : "—"}
+      </td>
+      <td><span className="mono">{fi.currency}</span></td>
+      <td className="r mono">{fmtCcy(pos.valuation.totalValue, pos.valuation.currency)}</td>
+      <td className="r mono">
+        {pos.valuation.baseValue != null
+          ? fmtCcy(pos.valuation.baseValue, baseCurrency)
+          : fmtCcy(pos.valuation.totalValue, baseCurrency)}
+      </td>
+      <td className="r mono">{fmtPct(pos.weight)}</td>
+      {onTrade && (
+        <td>
+          <button type="button" className="btn-trade" onClick={onTrade}>Trade</button>
+        </td>
+      )}
+    </tr>
+  );
+}
+
+function BondRow({ pos, baseCurrency, onTrade }) {
+  // overrides default BondRow below — keep same columns, add trade button
   const fi = pos.financialInstrument;
   return (
     <tr>
@@ -805,48 +897,6 @@ function BondRow({ pos, baseCurrency }) {
           ? fmtCcy(pos.accruedInterest.value, pos.accruedInterest.currency)
           : "—"}
       </td>
-      <td className="r mono">{fmtCcy(pos.valuation.totalValue, pos.valuation.currency)}</td>
-      <td className="r mono">
-        {pos.valuation.baseValue != null
-          ? fmtCcy(pos.valuation.baseValue, baseCurrency)
-          : fmtCcy(pos.valuation.totalValue, baseCurrency)}
-      </td>
-      <td className="r mono">{fmtPct(pos.weight)}</td>
-    </tr>
-  );
-}
-
-// Equity / Fund / Other columns
-function SecurityHeader({ baseCurrency }) {
-  return (
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>ISIN</th>
-        <th className="r">Qty</th>
-        <th className="r">Price</th>
-        <th>CCY</th>
-        <th className="r">Mkt Value</th>
-        <th className="r">Base ({baseCurrency})</th>
-        <th className="r">Weight</th>
-      </tr>
-    </thead>
-  );
-}
-function SecurityRow({ pos, baseCurrency }) {
-  const fi = pos.financialInstrument;
-  return (
-    <tr>
-      <td>
-        <span className="c-instr-name">{fi.name}</span>
-        {fi.sector && <small className="c-tag">{fi.sector.replace(/_/g, " ")}</small>}
-      </td>
-      <td><span className="mono">{fi.isin ?? "—"}</span></td>
-      <td className="r mono">{fmtNum(pos.quantity.value, pos.quantity.unit === "nominal" ? 0 : 2)}</td>
-      <td className="r mono">
-        {pos.price ? fmtNum(pos.price.value, pos.price.currency === "CHF" ? 2 : 2) : "—"}
-      </td>
-      <td><span className="mono">{fi.currency}</span></td>
       <td className="r mono">{fmtCcy(pos.valuation.totalValue, pos.valuation.currency)}</td>
       <td className="r mono">
         {pos.valuation.baseValue != null

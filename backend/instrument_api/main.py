@@ -1,0 +1,34 @@
+"""FastAPI app — instrument universe search service."""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from instruments.data import INSTRUMENTS
+from instruments.service import InstrumentService
+from instruments.store import InstrumentStore
+
+from .router import build_router
+
+_store = InstrumentStore(INSTRUMENTS)
+_service = InstrumentService(_store)
+
+app = FastAPI(
+    title="Instrument API",
+    version="0.1.0",
+    description="Instrument universe search and lookup.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health", tags=["system"])
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+app.include_router(build_router(_service))

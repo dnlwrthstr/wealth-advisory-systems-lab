@@ -1,22 +1,32 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// Local dev: custody-api on 8001, profile-api on 8002.
-// In Docker, nginx routes /api/custody/* → custodian-api and /api/* → profile-api.
+// Local dev: custody-api:8001, profile-api:8002, instrument-api:8003, order-api:8004.
+// In Docker, nginx routes by prefix.
 const custodyTarget = process.env.VITE_CUSTODY_TARGET ?? "http://localhost:8001";
 const profileTarget = process.env.VITE_PROFILE_TARGET ?? "http://localhost:8002";
+const instrumentTarget = process.env.VITE_INSTRUMENT_TARGET ?? "http://localhost:8003";
+const orderTarget = process.env.VITE_ORDER_TARGET ?? "http://localhost:8004";
 
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // More specific prefix first — custody routes go to port 8001
       "/api/custody": {
         target: custodyTarget,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
-      // Everything else (/api/admin, /api/profile, …) goes to port 8002
+      "/api/instruments": {
+        target: instrumentTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+      "/api/orders": {
+        target: orderTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
       "/api": {
         target: profileTarget,
         changeOrigin: true,
