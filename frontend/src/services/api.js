@@ -78,3 +78,7 @@ export function fetchCustodySnapshot(customerId) {
 export function fetchClientProfile(clientId) {
   return request(`/profile/${clientId}`);
 }
+
+export function fetchReferenceData() {
+  return request("/custody/reference");
+}

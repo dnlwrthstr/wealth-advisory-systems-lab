@@ -1,62 +1,28 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchClientProfile, fetchCustodySnapshot, listCustodyCustomers } from "./services/api";
+import { labelFor, loadReferenceData } from "./reference";
 
 // ---------------------------------------------------------------------------
 // Label maps
 // ---------------------------------------------------------------------------
 
+// Asset-class display config — color and ordering are UI concerns, not reference data
 const ASSET_CLASS_META = {
-  cash:        { label: "Cash & Liquidity",  color: "#64736c" },
-  bond:        { label: "Fixed Income",      color: "#2563eb" },
-  equity:      { label: "Equities",          color: "#16a34a" },
-  fund:        { label: "Funds & ETFs",      color: "#9333ea" },
-  commodity:   { label: "Commodities",       color: "#d97706" },
-  realEstate:  { label: "Real Estate",       color: "#0891b2" },
-  alternative: { label: "Alternatives",      color: "#dc2626" },
-  cryptoAsset: { label: "Digital Assets",    color: "#f59e0b" },
-  index:       { label: "Indices",           color: "#6366f1" },
-  other:       { label: "Other",             color: "#6b7280" },
+  cash:        { color: "#64736c" },
+  bond:        { color: "#2563eb" },
+  equity:      { color: "#16a34a" },
+  fund:        { color: "#9333ea" },
+  commodity:   { color: "#d97706" },
+  realEstate:  { color: "#0891b2" },
+  alternative: { color: "#dc2626" },
+  cryptoAsset: { color: "#f59e0b" },
+  index:       { color: "#6366f1" },
+  other:       { color: "#6b7280" },
 };
 const ASSET_CLASS_ORDER = [
   "cash", "bond", "equity", "fund", "commodity",
   "realEstate", "alternative", "cryptoAsset", "index", "other",
 ];
-
-const TX_LABELS = {
-  buy: "Buy", sell: "Sell", buyToClose: "Buy to Close", sellToOpen: "Sell to Open",
-  inflowCash: "Cash In", outflowCash: "Cash Out", internalTransfer: "Transfer",
-  dividendCash: "Dividend", dividendReinvestment: "Reinvest", dividendStock: "Stock Div",
-  dividendChoice: "Div. Choice", coupon: "Coupon", interestPayment: "Interest",
-  fees: "Fees", taxes: "Taxes", taxCorrections: "Tax Adj", managementFee: "Mgmt Fee",
-  custodyFee: "Custody Fee", subscription: "Subscribe", redemption: "Redeem",
-  redemptionPartial: "Part. Redeem", fxSpot: "FX Spot", merger: "Merger",
-  stockSplit: "Stock Split", spinOff: "Spin-off", bonus: "Bonus",
-  capitalIncrease: "Cap. Increase", other: "Other",
-};
-
-const MVT_LABELS = {
-  interest: "Interest", brokerageFee: "Brokerage", commission: "Commission",
-  withholdingTax: "WHT", capitalGainTax: "CGT", financialTransactionTax: "FTT",
-  managementFee: "Mgmt Fee", custodyFee: "Custody", accruedInterest: "Accrued",
-  otherFee: "Fee", otherTax: "Tax", stampDuty: "Stamp Duty", premium: "Premium",
-  reclaimableTax: "Reclaim Tax", valueAddedTax: "VAT",
-};
-
-const SEGMENT_LABELS = {
-  retail: "Retail", privateClient: "Private Client", highNetWorth: "High Net Worth",
-  ultraHighNetWorth: "Ultra HNW", familyOffice: "Family Office",
-  institutional: "Institutional", corporate: "Corporate",
-};
-
-const STRATEGY_LABELS = {
-  capitalPreservation: "Capital Preservation", income: "Income",
-  balanced: "Balanced", balancedGrowth: "Balanced Growth",
-  capitalGrowth: "Capital Growth", aggressiveGrowth: "Aggressive Growth",
-};
-
-const MANDATE_LABELS = {
-  discretionary: "Discretionary", advisory: "Advisory", executionOnly: "Execution Only",
-};
 
 // Profile pipeline label maps (snake_case from profiling API)
 const RISK_LEVEL_META = {
@@ -121,9 +87,7 @@ function fmtPct(weight) {
   return `${(weight * 100).toFixed(1)} %`;
 }
 
-function fmtLabel(map, key) {
-  return map[key] ?? key;
-}
+// All enum labels now come from the reference module; no local maps needed.
 
 // ---------------------------------------------------------------------------
 // Movement summary — compact one-liner for transaction rows
@@ -155,10 +119,11 @@ function movementSummary(movements) {
     }
   }
 
-  // Fee / tax legs
-  const feeLegs = movements.filter((m) => MVT_LABELS[m.type] && m.amount != null);
+  // Fee / tax legs (exclude structural legs already handled above)
+  const structuralTypes = new Set(["asset", "cash"]);
+  const feeLegs = movements.filter((m) => !structuralTypes.has(m.type) && m.amount != null);
   for (const m of feeLegs) {
-    parts.push(`${MVT_LABELS[m.type]} ${fmtCcy(m.amount, m.currency)}`);
+    parts.push(`${labelFor("movementType", m.type)} ${fmtCcy(m.amount, m.currency)}`);
   }
 
   return parts.join("  ·  ");
@@ -250,7 +215,7 @@ function CustomerList({ customers, search, onSearch, onSelect, loading, error })
           >
             <div className="c-customer-main">
               <strong>{c.name}</strong>
-              <span className="c-segment-badge">{fmtLabel(SEGMENT_LABELS, c.customerSegment)}</span>
+              <span className="c-segment-badge">{labelFor("customerSegment", c.customerSegment)}</span>
             </div>
             <div className="c-customer-meta">
               <span>{c.id}</span>
@@ -307,7 +272,7 @@ function CustomerOverview({ snapshot, loading, profile, profileLoading, onSelect
         <div>
           <h2>{customer.name}</h2>
           <p className="c-customer-subtitle">
-            {fmtLabel(SEGMENT_LABELS, customer.customerSegment)}
+            {labelFor("customerSegment", customer.customerSegment)}
             {customer.bankAdvisor && <> · RM: {customer.bankAdvisor}</>}
             {customer.language && <> · {customer.language.toUpperCase()}</>}
           </p>
@@ -340,7 +305,7 @@ function CustomerOverview({ snapshot, loading, profile, profileLoading, onSelect
                 const meta = ASSET_CLASS_META[item.instrumentType] ?? ASSET_CLASS_META.other;
                 return (
                   <div key={item.label} className="c-alloc-row">
-                    <span className="c-alloc-label">{meta.label}</span>
+                    <span className="c-alloc-label">{labelFor("financialInstrumentType", item.instrumentType)}</span>
                     <div className="c-alloc-track">
                       <div className="c-alloc-fill" style={{ width: `${Math.max(item.weight * 100, 0.5)}%`, background: meta.color }} />
                     </div>
@@ -365,9 +330,9 @@ function CustomerOverview({ snapshot, loading, profile, profileLoading, onSelect
                   <button key={pf.identification} type="button" className="c-portfolio-card" onClick={() => onSelectPortfolio(pf.identification)}>
                     <div className="c-portfolio-top">
                       <strong>{pf.name ?? pf.identification}</strong>
-                      <span className="c-mandate-badge">{fmtLabel(MANDATE_LABELS, pf.mandateType)}</span>
+                      <span className="c-mandate-badge">{labelFor("mandateType", pf.mandateType)}</span>
                     </div>
-                    <div className="c-portfolio-strategy">{fmtLabel(STRATEGY_LABELS, pf.strategy)}</div>
+                    <div className="c-portfolio-strategy">{labelFor("investmentStrategy", pf.strategy)}</div>
                     <div className="c-portfolio-bottom">
                       <div className="c-portfolio-kpis">
                         <span>{fmtCcy(aum, baseCurrency)}</span>
@@ -428,7 +393,7 @@ function ClientProfilePanel({ customer, portfolios, profile, loading }) {
         <dl className="c-profile-dl">
           <div>
             <dt>Client segment</dt>
-            <dd>{fmtLabel(SEGMENT_LABELS, customer.customerSegment)}</dd>
+            <dd>{labelFor("customerSegment", customer.customerSegment)}</dd>
           </div>
           <div>
             <dt>Reference currency</dt>
@@ -448,8 +413,8 @@ function ClientProfilePanel({ customer, portfolios, profile, loading }) {
               {portfolios.map((pf) => (
                 <tr key={pf.identification}>
                   <td>{pf.name ?? pf.identification}</td>
-                  <td><span className="c-mandate-badge">{fmtLabel(MANDATE_LABELS, pf.mandateType)}</span></td>
-                  <td>{fmtLabel(STRATEGY_LABELS, pf.strategy)}</td>
+                  <td><span className="c-mandate-badge">{labelFor("mandateType", pf.mandateType)}</span></td>
+                  <td>{labelFor("investmentStrategy", pf.strategy)}</td>
                 </tr>
               ))}
             </tbody>
@@ -689,9 +654,9 @@ function PortfolioDetail({ snapshot, portfolioId, onBack, onBackToCustomer }) {
         <div>
           <h2>{portfolioInfo?.name ?? portfolioId}</h2>
           <p className="c-customer-subtitle">
-            {fmtLabel(STRATEGY_LABELS, portfolioInfo?.strategy)}
+            {labelFor("investmentStrategy", portfolioInfo?.strategy)}
             {" · "}
-            {fmtLabel(MANDATE_LABELS, portfolioInfo?.mandateType)}
+            {labelFor("mandateType", portfolioInfo?.mandateType)}
             {" · "}
             {baseCurrency}
           </p>
@@ -754,7 +719,7 @@ function AssetClassSection({ assetClass, positions, baseCurrency, portfolioTotal
         style={{ "--ac-color": meta.color }}
       >
         <span className="c-asset-dot" />
-        <span className="c-asset-name">{meta.label}</span>
+        <span className="c-asset-name">{labelFor("financialInstrumentType", assetClass)}</span>
         <span className="c-asset-count">{positions.length}</span>
         <span className="c-asset-total">{fmtCcy(sectionTotal, baseCurrency)}</span>
         <span className="c-asset-pct">{fmtPct(sectionWeight)}</span>
@@ -926,7 +891,7 @@ function TransactionList({ transactions }) {
                 <td className="mono">{fmtDate(tx.transactionDate)}</td>
                 <td>
                   <span className={txChipClass(tx.type)}>
-                    {fmtLabel(TX_LABELS, tx.type)}
+                    {labelFor("transactionType", tx.type)}
                   </span>
                 </td>
                 <td className="c-tx-desc">{tx.description}</td>
@@ -960,6 +925,8 @@ export default function CustodianApp() {
   const [view, setView] = useState("list"); // 'list' | 'customer' | 'portfolio'
 
   useEffect(() => {
+    // Load reference data and customer list in parallel
+    loadReferenceData();
     listCustodyCustomers()
       .then(setCustomers)
       .catch((err) => setCustomersError(err.message))

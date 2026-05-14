@@ -1,5 +1,6 @@
 """HTTP routes for the custodian API — OpenWealth-compliant endpoints."""
 
+from custodian.reference import build_reference
 from custodian.schemas import (
     Account,
     Customer,
@@ -10,9 +11,17 @@ from custodian.schemas import (
 from custodian.service import CustodianService
 from fastapi import APIRouter, HTTPException
 
+_REFERENCE = build_reference()
+
 
 def build_router(service: CustodianService) -> APIRouter:
     router = APIRouter(prefix="/custody", tags=["custodian"])
+
+    @router.get("/reference", tags=["reference"])
+    def get_reference() -> dict[str, list[dict[str, str]]]:
+        """Return all OpenWealth enum reference data for dropdowns and search."""
+        return _REFERENCE
+
 
     @router.get("/customers", response_model=list[Customer])
     def list_customers() -> list[Customer]:
