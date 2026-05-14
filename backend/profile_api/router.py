@@ -23,6 +23,7 @@ from .schemas.admin import (
     ClientProfileResultPayload,
     ClientSegmentPayload,
     GateDecisionPayload,
+    LatestClientProfileResponse,
     ProcessAnswersRequest,
     ProcessAnswersResponse,
     ProfileScoresPayload,
@@ -60,6 +61,7 @@ _CLIENT_SEGMENTS: dict[str, ClientSegmentPayload] = {
 def build_router(
     profiling: ProfilingService,
     suitability: SuitabilityService,
+    audit_store=None,
 ) -> APIRouter:
     router = APIRouter(tags=["profile"])
 
@@ -76,6 +78,31 @@ def build_router(
             combined_risk_profile=result.combined_risk_profile,
             suitable=result.suitable,
             flags=result.flags,
+        )
+
+    @router.get(
+        "/profile/{client_id}",
+        response_model=LatestClientProfileResponse,
+        responses={404: {"description": "No profile on record for this client"}},
+    )
+    def get_latest_client_profile(client_id: str) -> LatestClientProfileResponse:
+        if audit_store is None:
+            raise HTTPException(status_code=404, detail="No profile on record (audit store not configured)")
+        record = audit_store.get_latest_for_client(client_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="No profile on record for this client")
+        return LatestClientProfileResponse(
+            processing_run_id=record.processing_run_id,
+            client_id=record.client_id,
+            questionnaire_id=record.questionnaire_id,
+            questionnaire_version=record.questionnaire_version,
+            profile=record.derived_profile,
+            strategy_profile=record.strategy_profile,
+            gates=record.gates,
+            warnings=record.warnings,
+            errors=record.errors,
+            valid=record.valid,
+            processed_at=record.processed_at,
         )
 
     @router.get("/admin/questionnaires", response_model=list[QuestionnairePayload])
