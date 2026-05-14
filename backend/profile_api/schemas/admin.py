@@ -194,3 +194,19 @@ class ProcessAnswersResponse(BaseModel):
     gates: list[GateDecisionPayload] = Field(default_factory=list)
     passed: bool | None = None
     requires_review: bool | None = None
+
+
+class LatestClientProfileResponse(BaseModel):
+    """Latest stored profiling result for a client, sourced from the audit trail."""
+
+    processing_run_id: int
+    client_id: str
+    questionnaire_id: str
+    questionnaire_version: str
+    profile: dict | None = None
+    strategy_profile: dict | None = None
+    gates: list[dict] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+    valid: bool
+    processed_at: str

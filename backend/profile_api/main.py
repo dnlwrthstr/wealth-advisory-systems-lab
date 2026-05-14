@@ -41,4 +41,4 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-app.include_router(build_router(profiling=_profiling, suitability=_suitability))
+app.include_router(build_router(profiling=_profiling, suitability=_suitability, audit_store=_audit_store))

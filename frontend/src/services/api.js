@@ -74,3 +74,7 @@ export function fetchCustodyTransactions(customerId) {
 export function fetchCustodySnapshot(customerId) {
   return request(`/custody/customers/${customerId}/snapshot`);
 }
+
+export function fetchClientProfile(clientId) {
+  return request(`/profile/${clientId}`);
+}
