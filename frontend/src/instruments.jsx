@@ -408,7 +408,7 @@ function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, portf
               <label>Quantity
                 <input
                   type="number"
-                  min="0.01"
+                  min="1"
                   step="1"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
