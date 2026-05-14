@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local data artifacts
+data/raw/*
+data/processed/*
+data/external/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+
+# Generated Parquet files (regenerate with scripts/generate_custodian_data.py)
+data/custodian/*.parquet
+
+# Environment files
+.env
+.env.*
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Claude Code local settings (permissions, per-machine preferences)
+.claude/settings.local.json
+

@@ -1,0 +1,159 @@
+client_profile:
+  id: client_profile_id
+  version: 1.0
+  last_reviewed_at: date
+  next_review_due_at: date
+
+  client:
+    client_id: string
+    client_type:
+      enum: [retail, professional, eligible_counterparty]
+    legal_form:
+      enum: [natural_person, legal_entity, trust, foundation]
+    domicile_country: ISO-3166-1
+    tax_residency_country: ISO-3166-1
+
+  profiling_context:
+    regulation:
+      enum: [FIDLEG, MiFID_II, both]
+    advisory_type:
+      enum: [execution_only, advisory, discretionary]
+
+  investment_objectives:
+    primary_objective:
+      enum:
+        - capital_preservation
+        - income
+        - balanced_growth
+        - capital_growth
+    investment_horizon:
+      enum:
+        - short_term      # < 3 years
+        - medium_term     # 3–7 years
+        - long_term       # > 7 years
+    target_return_expectation: optional_percentage
+    income_requirement:
+      enum: [none, low, medium, high]
+
+  financial_situation:
+    annual_net_income:
+      bucket:
+        enum: [low, medium, high]
+      currency: ISO-4217
+    net_worth:
+      bucket:
+        enum: [low, medium, high]
+      currency: ISO-4217
+    investment_size_relative_to_wealth:
+      enum:
+        - high_concentration      # >50%
+        - medium_concentration    # 20–50%
+        - low_concentration       # <20%
+    liquidity_needs:
+      enum:
+        - high        # funds needed <1y
+        - medium      # funds possibly needed <3y
+        - low         # no foreseeable need
+
+  risk_capacity:
+    score:
+      type: integer
+      range: [1, 4]
+    derived_from:
+      - annual_net_income
+      - net_worth
+      - investment_size_relative_to_wealth
+      - liquidity_needs
+    calculation_rule: minimum_of_components
+    binding: true
+
+  risk_tolerance:
+    questionnaire:
+      loss_scenarios:
+        loss_10_percent:
+          enum: [panic_sell, reduce, hold, buy_more]
+        loss_20_percent:
+          enum: [unacceptable, uncomfortable, acceptable, expected]
+      attitude_statement:
+        enum:
+          - avoid_losses
+          - prefer_stability
+          - accept_volatility
+          - seek_max_growth
+    score:
+      type: integer
+      range: [1, 4]
+    calculation_rule: average
+    binding: true
+
+  knowledge_and_experience:
+    instruments:
+      equities:
+        enum: [none, basic, experienced]
+      bonds:
+        enum: [none, basic, experienced]
+      funds_etfs:
+        enum: [none, basic, experienced]
+      derivatives:
+        enum: [none, basic, advanced]
+      structured_products:
+        enum: [none, basic, advanced]
+    appropriateness_gate:
+      rule: minimum_experience_required
+      effect: restrict_instrument_universe
+
+  constraints_and_preferences:
+    esg:
+      enabled: boolean
+      exclusions:
+        sectors: optional_list
+        issuers: optional_list
+    currency_constraints:
+      allowed_currencies: optional_list_ISO_4217
+    drawdown_limit:
+      max_drawdown_percent: optional_percentage
+    regulatory_restrictions:
+      notes: optional_string
+
+  scoring_summary:
+    objective_score:
+      type: float
+      range: [1.0, 4.0]
+    risk_capacity_score:
+      reference: risk_capacity.score
+    risk_tolerance_score:
+      reference: risk_tolerance.score
+    final_risk_score:
+      calculation_rule: min(risk_capacity_score, risk_tolerance_score)
+
+  risk_profile:
+    category:
+      enum:
+        - defensive
+        - conservative
+        - balanced
+        - growth
+    equity_exposure_range:
+      min_percent: percentage
+      max_percent: percentage
+    volatility_band:
+      expected_annual_volatility_percent: optional_percentage
+
+  suitability_envelope:
+    allowed_asset_classes:
+      - cash
+      - bonds
+      - equities
+      - funds
+      - alternatives
+    excluded_instruments: optional_list
+    max_leverage: numeric
+    notes: optional_string
+
+  audit_trail:
+    created_at: timestamp
+    created_by: advisor_id
+    last_updated_at: timestamp
+    last_updated_by: advisor_id
+    evidence_documents:
+      - document_id
