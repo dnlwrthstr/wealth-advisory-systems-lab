@@ -269,7 +269,7 @@ export function OrderDialog({ isin, instrumentName, currency, suggestedPrice, po
 function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, portfolioId: initPortfolio, accountId: initAccount, onClose, title }) {
   const [side, setSide] = useState("buy");
   const [orderType, setOrderType] = useState("market");
-  const [quantity, setQuantity] = useState("100");
+  const [quantity, setQuantity] = useState("1");
   const [limitPrice, setLimitPrice] = useState(suggestedPrice != null ? String(suggestedPrice) : "");
   const [timeInForce, setTimeInForce] = useState("day");
   const [portfolioId, setPortfolioId] = useState(initPortfolio);
