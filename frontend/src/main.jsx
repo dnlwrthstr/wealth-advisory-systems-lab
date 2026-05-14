@@ -4,6 +4,7 @@ import CustodianApp from "./custodian";
 import {
   fetchQuestionnaire,
   listClientSegments,
+  listCustodyCustomers,
   listQuestionnaires,
   processAnswers,
   saveClientSegment,
@@ -31,18 +32,25 @@ const DEFAULT_PRODUCT = {
   daily_liquidity: true,
 };
 
+// ─── Top-level shell ────────────────────────────────────────────────────────
+
 function App() {
   const [status, setStatus] = useState("Loading");
+  const [message, setMessage] = useState("");
+  const [activeSection, setActiveSection] = useState("custodian");
+
+  // Questionnaire admin state
   const [questionnaires, setQuestionnaires] = useState([]);
   const [selectedId, setSelectedId] = useState("client_profile_v1");
   const [questionnaire, setQuestionnaire] = useState(null);
   const [editorText, setEditorText] = useState("");
+  const [clientSegments, setClientSegments] = useState([]);
+
+  // Profiling state
+  const [customers, setCustomers] = useState([]);
   const [answers, setAnswers] = useState(DEFAULT_ANSWERS);
   const [product, setProduct] = useState(DEFAULT_PRODUCT);
   const [result, setResult] = useState(null);
-  const [clientSegments, setClientSegments] = useState([]);
-  const [activeSection, setActiveSection] = useState("custodian");
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -58,13 +66,16 @@ function App() {
       } catch (error) {
         errors.push(`Questionnaires: ${error.message}`);
       }
-
       try {
         setClientSegments(await listClientSegments());
       } catch (error) {
         errors.push(`Client segments: ${error.message}`);
       }
-
+      try {
+        setCustomers(await listCustodyCustomers());
+      } catch (error) {
+        errors.push(`Customers: ${error.message}`);
+      }
       setStatus(errors.length ? "API partial" : "API online");
       setMessage(errors.join(" | "));
     }
@@ -103,21 +114,12 @@ function App() {
     }
   }
 
-  async function handleProcess(event) {
-    event.preventDefault();
+  async function handleProcess(clientId, financialContext) {
     setMessage("");
     try {
       const payload = {
-        answer_set: {
-          client_id: "C-1001",
-          answers,
-        },
-        financial_context: {
-          age: 42,
-          annual_income: 180000,
-          liquid_net_worth: 750000,
-          restrictions: ["no single-stock positions above 10%"],
-        },
+        answer_set: { client_id: clientId, answers },
+        financial_context: financialContext,
         product,
       };
       setResult(await processAnswers(selectedId, payload));
@@ -132,10 +134,9 @@ function App() {
       const saved = await saveClientSegment(segment);
       setClientSegments((current) => {
         const exists = current.some((item) => item.segment_id === saved.segment_id);
-        if (exists) {
-          return current.map((item) => (item.segment_id === saved.segment_id ? saved : item));
-        }
-        return [...current, saved];
+        return exists
+          ? current.map((item) => (item.segment_id === saved.segment_id ? saved : item))
+          : [...current, saved];
       });
       setMessage("Client segment saved");
     } catch (error) {
@@ -151,20 +152,20 @@ function App() {
           <h1>Systems Lab</h1>
         </div>
         <nav className="side-menu" aria-label="Main menu">
-          <button
-            className={activeSection === "custodian" ? "active" : ""}
-            type="button"
-            onClick={() => setActiveSection("custodian")}
-          >
-            Custodian
-          </button>
-          <button
-            className={activeSection === "admin" ? "active" : ""}
-            type="button"
-            onClick={() => setActiveSection("admin")}
-          >
-            Admin
-          </button>
+          {[
+            ["custodian", "Custodian"],
+            ["questionnaires", "Questionnaires"],
+            ["profile", "Profile"],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              className={activeSection === key ? "active" : ""}
+              type="button"
+              onClick={() => setActiveSection(key)}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
         <div className={`status ${status === "API online" ? "ok" : status === "API partial" ? "api-partial" : "error"}`}>
           {status}
@@ -173,19 +174,26 @@ function App() {
 
       <section className="content-shell">
         {message ? <p className="message">{message}</p> : null}
-
-        {activeSection === "custodian" ? (
-          <CustodianApp />
-        ) : (
-          <AdminView
+        {activeSection === "custodian" && <CustodianApp />}
+        {activeSection === "questionnaires" && (
+          <QuestionnairesView
             questionnaires={questionnaires}
             selectedId={selectedId}
             setSelectedId={setSelectedId}
-            clientSegments={clientSegments}
-            onSaveSegment={handleSaveSegment}
+            questionnaire={questionnaire}
             editorText={editorText}
             setEditorText={setEditorText}
-            onSubmit={handleSaveQuestionnaire}
+            onSave={handleSaveQuestionnaire}
+            clientSegments={clientSegments}
+            onSaveSegment={handleSaveSegment}
+          />
+        )}
+        {activeSection === "profile" && (
+          <ProfileView
+            customers={customers}
+            questionnaires={questionnaires}
+            selectedQuestionnaireId={selectedId}
+            onSelectQuestionnaire={setSelectedId}
             questionnaire={questionnaire}
             questions={orderedQuestions}
             answers={answers}
@@ -201,37 +209,288 @@ function App() {
   );
 }
 
-function ProcessView({ questionnaire, questions, answers, setAnswers, product, setProduct, result, onSubmit }) {
+// ─── Questionnaires view ─────────────────────────────────────────────────────
+// Purpose: admin configuration — design questionnaire DAGs, manage client segments.
+
+function QuestionnairesView({
+  questionnaires,
+  selectedId,
+  setSelectedId,
+  questionnaire,
+  editorText,
+  setEditorText,
+  onSave,
+  clientSegments,
+  onSaveSegment,
+}) {
   return (
-    <section className="work-grid">
-      <form className="panel" onSubmit={onSubmit}>
+    <section className="admin-layout">
+      <SegmentAdmin segments={clientSegments} onSaveSegment={onSaveSegment} />
+
+      <section className="admin-section">
         <div className="section-header">
-          <h2>Answers</h2>
-          <button type="submit">Run Profile</button>
+          <h2>Questionnaire Definition</h2>
+          <label className="inline-select">
+            Active
+            <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+              {questionnaires.map((item) => (
+                <option key={item.questionnaire_id} value={item.questionnaire_id}>
+                  {item.questionnaire_id} v{item.version}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        <QuestionnaireTree questionnaire={questionnaire} />
+        <div className="work-grid">
+          <section className="panel">
+            <h3>Flow</h3>
+            <QuestionnaireTree questionnaire={questionnaire} />
+          </section>
 
-        <div className="question-list">
-          {questions.map((question) => (
-            <QuestionField
-              key={question.question_id}
-              question={question}
-              value={answers[question.question_id]}
-              onChange={(value) =>
-                setAnswers((current) => ({ ...current, [question.question_id]: value }))
-              }
+          <form className="panel admin-panel" onSubmit={onSave}>
+            <div className="section-header">
+              <h3>JSON Editor</h3>
+              <button type="submit">Save</button>
+            </div>
+            <textarea
+              spellCheck="false"
+              value={editorText}
+              onChange={(event) => setEditorText(event.target.value)}
             />
-          ))}
+          </form>
         </div>
-
-        <ProductPanel product={product} setProduct={setProduct} />
-      </form>
-
-      <ResultPanel result={result} />
+      </section>
     </section>
   );
 }
+
+// ─── Profile view ────────────────────────────────────────────────────────────
+// Purpose: advisor workflow — run profiling for existing or new clients.
+
+function ProfileView({
+  customers,
+  questionnaires,
+  selectedQuestionnaireId,
+  onSelectQuestionnaire,
+  questionnaire,
+  questions,
+  answers,
+  setAnswers,
+  product,
+  setProduct,
+  result,
+  onProcess,
+}) {
+  const [mode, setMode] = useState("existing"); // "existing" | "new"
+
+  return (
+    <section className="admin-layout">
+      <div className="section-header" style={{ padding: "0 0 1rem" }}>
+        <h2>Client Profiling</h2>
+        <div className="tab-bar">
+          <button
+            type="button"
+            className={mode === "existing" ? "active" : ""}
+            onClick={() => setMode("existing")}
+          >
+            Existing Client
+          </button>
+          <button
+            type="button"
+            className={mode === "new" ? "active" : ""}
+            onClick={() => setMode("new")}
+          >
+            New Client
+          </button>
+        </div>
+      </div>
+
+      {mode === "existing" ? (
+        <ReprofilingView
+          customers={customers}
+          questionnaires={questionnaires}
+          selectedQuestionnaireId={selectedQuestionnaireId}
+          onSelectQuestionnaire={onSelectQuestionnaire}
+          questionnaire={questionnaire}
+          questions={questions}
+          answers={answers}
+          setAnswers={setAnswers}
+          product={product}
+          setProduct={setProduct}
+          result={result}
+          onProcess={onProcess}
+        />
+      ) : (
+        <OnboardingView customers={customers} />
+      )}
+    </section>
+  );
+}
+
+// ─── Existing client: reprofiling / periodic review ──────────────────────────
+
+function ReprofilingView({
+  customers,
+  questionnaires,
+  selectedQuestionnaireId,
+  onSelectQuestionnaire,
+  questionnaire,
+  questions,
+  answers,
+  setAnswers,
+  product,
+  setProduct,
+  result,
+  onProcess,
+}) {
+  const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id ?? "");
+  const [financialContext, setFinancialContext] = useState({
+    age: 42,
+    annual_income: 180000,
+    liquid_net_worth: 750000,
+    restrictions: [],
+  });
+
+  // Keep default selection in sync once customers load
+  useEffect(() => {
+    if (!selectedCustomerId && customers.length) {
+      setSelectedCustomerId(customers[0].id);
+    }
+  }, [customers]);
+
+  function updateContext(field, value) {
+    setFinancialContext((ctx) => ({ ...ctx, [field]: value }));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    onProcess(selectedCustomerId, financialContext);
+  }
+
+  return (
+    <section className="admin-section">
+      <div className="section-header">
+        <p className="muted">Reprofiling or periodic review for an existing client.</p>
+        <label className="inline-select">
+          Questionnaire
+          <select
+            value={selectedQuestionnaireId}
+            onChange={(event) => onSelectQuestionnaire(event.target.value)}
+          >
+            {questionnaires.map((item) => (
+              <option key={item.questionnaire_id} value={item.questionnaire_id}>
+                {item.questionnaire_id} v{item.version}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="work-grid">
+        <form className="panel" onSubmit={handleSubmit}>
+          <div className="section-header">
+            <h3>Client &amp; Context</h3>
+          </div>
+
+          <label>
+            Client
+            <select
+              value={selectedCustomerId}
+              onChange={(event) => setSelectedCustomerId(event.target.value)}
+            >
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.id})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="three-col" style={{ marginTop: "1rem" }}>
+            <label>
+              Age
+              <input
+                type="number"
+                min="18"
+                max="100"
+                value={financialContext.age}
+                onChange={(e) => updateContext("age", Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Annual income (CHF)
+              <input
+                type="number"
+                min="0"
+                step="10000"
+                value={financialContext.annual_income}
+                onChange={(e) => updateContext("annual_income", Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Liquid net worth (CHF)
+              <input
+                type="number"
+                min="0"
+                step="50000"
+                value={financialContext.liquid_net_worth}
+                onChange={(e) => updateContext("liquid_net_worth", Number(e.target.value))}
+              />
+            </label>
+          </div>
+
+          <div className="section-header" style={{ marginTop: "1.5rem" }}>
+            <h3>Questionnaire Answers</h3>
+          </div>
+          <div className="question-list">
+            {questions.map((question) => (
+              <QuestionField
+                key={question.question_id}
+                question={question}
+                value={answers[question.question_id]}
+                onChange={(value) =>
+                  setAnswers((current) => ({ ...current, [question.question_id]: value }))
+                }
+              />
+            ))}
+          </div>
+
+          <ProductPanel product={product} setProduct={setProduct} />
+
+          <div style={{ marginTop: "1.5rem" }}>
+            <button type="submit">Run Profile</button>
+          </div>
+        </form>
+
+        <ResultPanel result={result} />
+      </div>
+    </section>
+  );
+}
+
+// ─── New client: KYC + segmentation + profiling ───────────────────────────────
+
+function OnboardingView() {
+  return (
+    <section className="admin-section">
+      <div className="panel empty-state">
+        <h3>New Client Onboarding</h3>
+        <p>
+          The onboarding workflow covers KYC data capture, client segmentation, and initial
+          profiling. This will be built in the next iteration.
+        </p>
+        <ol className="plain-list onboarding-steps">
+          <li>KYC — identity, legal entity, tax residency</li>
+          <li>Segmentation — assign client segment based on AuM and mandate type</li>
+          <li>Profiling — run the segment's assigned questionnaire and derive strategy</li>
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+// ─── Shared components ────────────────────────────────────────────────────────
 
 function QuestionField({ question, value, onChange }) {
   if (question.answer_type === "multiple_choice") {
@@ -347,9 +606,7 @@ function QuestionnaireTree({ questionnaire }) {
   const edges = questionnaire?.edges ?? [];
   const questions = questionnaire?.questions ?? [];
 
-  if (!nodes.length && !questions.length) {
-    return null;
-  }
+  if (!nodes.length && !questions.length) return null;
 
   const treeNodes = nodes.length
     ? nodes
@@ -373,7 +630,6 @@ function QuestionnaireTree({ questionnaire }) {
     const nextVisited = new Set(visited);
     nextVisited.add(nodeId);
     const childEdges = childrenByNode[nodeId] ?? [];
-
     return (
       <li key={`${nodeId}-${depth}`} style={{ "--depth": depth }}>
         <div>
@@ -385,7 +641,9 @@ function QuestionnaireTree({ questionnaire }) {
             {childEdges.map((edge) => (
               <React.Fragment key={`${edge.from_node_id}-${edge.to_node_id}`}>
                 <li className="edge-label" style={{ "--depth": depth + 1 }}>
-                  {edge.condition ? `${edge.condition.question_id} ${edge.condition.operator} ${String(edge.condition.value)}` : "next"}
+                  {edge.condition
+                    ? `${edge.condition.question_id} ${edge.condition.operator} ${String(edge.condition.value)}`
+                    : "next"}
                 </li>
                 {renderNode(edge.to_node_id, depth + 1, nextVisited)}
               </React.Fragment>
@@ -398,7 +656,6 @@ function QuestionnaireTree({ questionnaire }) {
 
   return (
     <section className="tree-panel">
-      <h3>Questionnaire Tree</h3>
       <ul>{entryNodeId ? renderNode(entryNodeId) : null}</ul>
     </section>
   );
@@ -408,17 +665,13 @@ function ProductPanel({ product, setProduct }) {
   function update(field, value) {
     setProduct((current) => ({ ...current, [field]: value }));
   }
-
   return (
-    <section className="subpanel">
+    <section className="subpanel" style={{ marginTop: "1.5rem" }}>
       <h3>Product Gate Input</h3>
       <div className="three-col">
         <label>
           Instrument
-          <select
-            value={product.instrument_type}
-            onChange={(event) => update("instrument_type", event.target.value)}
-          >
+          <select value={product.instrument_type} onChange={(e) => update("instrument_type", e.target.value)}>
             <option value="equities">Equities</option>
             <option value="bonds">Bonds</option>
             <option value="funds_etfs">Funds / ETFs</option>
@@ -428,10 +681,7 @@ function ProductPanel({ product, setProduct }) {
         </label>
         <label>
           Min experience
-          <select
-            value={product.minimum_instrument_experience}
-            onChange={(event) => update("minimum_instrument_experience", event.target.value)}
-          >
+          <select value={product.minimum_instrument_experience} onChange={(e) => update("minimum_instrument_experience", e.target.value)}>
             <option value="none">None</option>
             <option value="basic">Basic</option>
             <option value="experienced">Experienced</option>
@@ -440,7 +690,7 @@ function ProductPanel({ product, setProduct }) {
         </label>
         <label>
           Risk
-          <select value={product.risk_level} onChange={(event) => update("risk_level", event.target.value)}>
+          <select value={product.risk_level} onChange={(e) => update("risk_level", e.target.value)}>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
@@ -448,10 +698,7 @@ function ProductPanel({ product, setProduct }) {
         </label>
         <label>
           Knowledge
-          <select
-            value={product.required_knowledge}
-            onChange={(event) => update("required_knowledge", event.target.value)}
-          >
+          <select value={product.required_knowledge} onChange={(e) => update("required_knowledge", e.target.value)}>
             <option value="basic">Basic</option>
             <option value="intermediate">Intermediate</option>
             <option value="advanced">Advanced</option>
@@ -459,10 +706,7 @@ function ProductPanel({ product, setProduct }) {
         </label>
         <label>
           Liquidity
-          <select
-            value={String(product.daily_liquidity)}
-            onChange={(event) => update("daily_liquidity", event.target.value === "true")}
-          >
+          <select value={String(product.daily_liquidity)} onChange={(e) => update("daily_liquidity", e.target.value === "true")}>
             <option value="true">Daily</option>
             <option value="false">Not daily</option>
           </select>
@@ -481,7 +725,6 @@ function ResultPanel({ result }) {
       </section>
     );
   }
-
   return (
     <section className="panel result-panel">
       <div className="section-header">
@@ -490,7 +733,6 @@ function ResultPanel({ result }) {
           {result.valid ? "Valid" : "Invalid"}
         </span>
       </div>
-
       <MetricGrid
         metrics={[
           ["Processing run", result.processing_run_id ?? "Not stored"],
@@ -501,7 +743,6 @@ function ResultPanel({ result }) {
           ["Passed", result.passed === false ? "No" : "Yes"],
         ]}
       />
-
       <h3>Gates</h3>
       <div className="gate-list">
         {result.gates.map((gate) => (
@@ -513,10 +754,8 @@ function ResultPanel({ result }) {
           </article>
         ))}
       </div>
-
       <h3>Suitability Envelope</h3>
       <pre>{JSON.stringify(result.strategy_profile?.suitability_envelope ?? {}, null, 2)}</pre>
-
       <h3>Warnings and Errors</h3>
       <ul className="plain-list">
         {[...result.warnings, ...result.errors].length ? (
@@ -542,84 +781,6 @@ function MetricGrid({ metrics }) {
   );
 }
 
-function formatMoney(value, currency) {
-  return new Intl.NumberFormat("en-CH", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-CH", {
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function AdminView({
-  questionnaires,
-  selectedId,
-  setSelectedId,
-  clientSegments,
-  onSaveSegment,
-  editorText,
-  setEditorText,
-  onSubmit,
-  questionnaire,
-  questions,
-  answers,
-  setAnswers,
-  product,
-  setProduct,
-  result,
-  onProcess,
-}) {
-  return (
-    <section className="admin-layout">
-      <SegmentAdmin segments={clientSegments} onSaveSegment={onSaveSegment} />
-
-      <section className="admin-section">
-        <div className="section-header">
-          <h2>Questionnaire And Profiling</h2>
-          <label className="inline-select">
-            Questionnaire
-            <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
-              {questionnaires.map((item) => (
-                <option key={item.questionnaire_id} value={item.questionnaire_id}>
-                  {item.questionnaire_id} v{item.version}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <ProcessView
-          questionnaire={questionnaire}
-          questions={questions}
-          answers={answers}
-          setAnswers={setAnswers}
-          product={product}
-          setProduct={setProduct}
-          result={result}
-          onSubmit={onProcess}
-        />
-      </section>
-
-      <form className="panel admin-panel" onSubmit={onSubmit}>
-        <div className="section-header">
-          <h2>Questionnaire Definition</h2>
-          <button type="submit">Save Definition</button>
-        </div>
-        <textarea
-          spellCheck="false"
-          value={editorText}
-          onChange={(event) => setEditorText(event.target.value)}
-        />
-      </form>
-    </section>
-  );
-}
-
 function SegmentAdmin({ segments, onSaveSegment }) {
   const [draft, setDraft] = useState({
     segment_id: "",
@@ -633,10 +794,6 @@ function SegmentAdmin({ segments, onSaveSegment }) {
 
   function edit(field, value) {
     setDraft((current) => ({ ...current, [field]: value }));
-  }
-
-  function loadSegment(segment) {
-    setDraft(segment);
   }
 
   function handleSubmit(event) {
@@ -656,7 +813,6 @@ function SegmentAdmin({ segments, onSaveSegment }) {
         <h2>Client Segments</h2>
         <span className="badge">Admin config</span>
       </div>
-
       <div className="segment-grid">
         <div className="segment-list">
           {segments.map((segment) => (
@@ -664,7 +820,7 @@ function SegmentAdmin({ segments, onSaveSegment }) {
               key={segment.segment_id}
               className="segment-row"
               type="button"
-              onClick={() => loadSegment(segment)}
+              onClick={() => setDraft(segment)}
             >
               <strong>{segment.label}</strong>
               <span>{segment.segment_id}</span>
@@ -674,43 +830,23 @@ function SegmentAdmin({ segments, onSaveSegment }) {
             </button>
           ))}
         </div>
-
         <form className="segment-form" onSubmit={handleSubmit}>
           <div className="two-col">
             <label>
               Segment ID
-              <input
-                type="text"
-                value={draft.segment_id}
-                onChange={(event) => edit("segment_id", event.target.value)}
-                required
-              />
+              <input type="text" value={draft.segment_id} onChange={(e) => edit("segment_id", e.target.value)} required />
             </label>
             <label>
               Label
-              <input
-                type="text"
-                value={draft.label}
-                onChange={(event) => edit("label", event.target.value)}
-                required
-              />
+              <input type="text" value={draft.label} onChange={(e) => edit("label", e.target.value)} required />
             </label>
             <label>
               Minimum liquid net worth
-              <input
-                type="number"
-                min="0"
-                step="50000"
-                value={draft.minimum_liquid_net_worth}
-                onChange={(event) => edit("minimum_liquid_net_worth", event.target.value)}
-              />
+              <input type="number" min="0" step="50000" value={draft.minimum_liquid_net_worth} onChange={(e) => edit("minimum_liquid_net_worth", e.target.value)} />
             </label>
             <label>
               Review policy
-              <select
-                value={draft.review_policy}
-                onChange={(event) => edit("review_policy", event.target.value)}
-              >
+              <select value={draft.review_policy} onChange={(e) => edit("review_policy", e.target.value)}>
                 <option value="standard">Standard</option>
                 <option value="enhanced">Enhanced</option>
                 <option value="specialist">Specialist</option>
@@ -719,18 +855,10 @@ function SegmentAdmin({ segments, onSaveSegment }) {
           </div>
           <label>
             Description
-            <textarea
-              className="short-textarea"
-              value={draft.description}
-              onChange={(event) => edit("description", event.target.value)}
-            />
+            <textarea className="short-textarea" value={draft.description} onChange={(e) => edit("description", e.target.value)} />
           </label>
           <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={draft.enabled}
-              onChange={(event) => edit("enabled", event.target.checked)}
-            />
+            <input type="checkbox" checked={draft.enabled} onChange={(e) => edit("enabled", e.target.checked)} />
             Enabled for onboarding and questionnaire assignment
           </label>
           <button type="submit">Save Segment</button>
@@ -738,6 +866,10 @@ function SegmentAdmin({ segments, onSaveSegment }) {
       </div>
     </section>
   );
+}
+
+function formatMoney(value, currency) {
+  return new Intl.NumberFormat("en-CH", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
 createRoot(document.getElementById("root")).render(<App />);
