@@ -449,7 +449,15 @@ function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, posit
                 className={`btn-primary order-submit ${side}`}
                 disabled={submitting}
               >
-                {submitting ? "Submitting…" : `${side === "buy" ? "Buy" : "Sell"} ${quantity} ${currency}`}
+                {submitting ? "Submitting…" : (() => {
+                  const qty = parseFloat(quantity) || 0;
+                  const price = parseFloat(limitPrice) || suggestedPrice || 0;
+                  const total = qty * price;
+                  const label = side === "buy" ? "Buy" : "Sell";
+                  return total > 0
+                    ? `${label} ${qty} · ${new Intl.NumberFormat("en-CH", { style: "currency", currency, maximumFractionDigits: 2 }).format(total)}`
+                    : `${label} ${qty} ${currency}`;
+                })()}
               </button>
             </div>
           </form>
