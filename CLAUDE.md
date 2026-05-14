@@ -110,6 +110,8 @@ jupyter notebook
 | `src/advice/` | `SuitabilityService` | Product suitability and appropriateness evaluation |
 | `src/custodian/` | `CustodianService`, `InMemoryCustodianStore`, `PostgresCustodianStore` | OpenWealth-style custody data access |
 | `src/audit/` | `PostgresAuditStore` | Persists processing audit trails to Postgres |
+| `src/instruments/` | `InstrumentService`, `InstrumentStore` | 175-instrument universe across all 15 OpenWealth FinancialInstrumentType values; `data.py` holds the fixtures |
+| `src/orders/` | `OrderService`, `OrderStore` | In-memory order book; daemon thread simulates random fills every 3 s |
 
 Each service class takes a store in its constructor — use the in-memory store for notebooks and tests, the Postgres store when a `DATABASE_URL` is available:
 
@@ -139,6 +141,8 @@ custody = CustodianService(PostgresCustodianStore(db_url))
 |---|---|---|
 | `backend/custodian_api/` | 8001 | `backend/custodian_api/Dockerfile` |
 | `backend/profile_api/` | 8002 | `backend/profile_api/Dockerfile` |
+| `backend/instrument_api/` | 8003 | `backend/instrument_api/Dockerfile` |
+| `backend/order_api/` | 8004 | `backend/order_api/Dockerfile` |
 
 Each service has a `main.py` (FastAPI app + service instantiation), a `router.py` (routes + Pydantic↔domain serialization), and a `schemas/` sub-package. The router is the only place that converts between Pydantic payloads and domain dataclasses.
 
