@@ -17,6 +17,13 @@ git commit -m "..."
 Branch naming: `<topic>/<short-desc>` — e.g. `feat/duckdb-store`, `fix/snapshot-weight`, `refactor/profiling-service`.
 Never commit directly to `main`.
 
+After the user merges a branch, delete it locally and on the remote:
+
+```bash
+git branch -d <branch>
+git push origin --delete <branch>
+```
+
 ## docker-compose.yml maintenance
 
 `docker-compose.yml` must be kept in sync with architectural changes:
