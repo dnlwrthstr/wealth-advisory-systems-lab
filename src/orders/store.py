@@ -34,6 +34,9 @@ class OrderStore:
     def list_by_portfolio(self, portfolio_id: str) -> list[Order]:
         return [o for o in self._orders.values() if o.portfolio_id == portfolio_id]
 
+    def list_all(self) -> list[Order]:
+        return list(self._orders.values())
+
     def list_pending(self) -> list[Order]:
         return [
             o for o in self._orders.values()

@@ -118,3 +118,26 @@ export function fetchOrder(orderId) {
 export function cancelOrder(orderId) {
   return request(`/orders/${orderId}`, { method: "DELETE" });
 }
+
+export function listAllOrders({ status = null, portfolio_id = null } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (portfolio_id) params.set("portfolio_id", portfolio_id);
+  const qs = params.toString();
+  return request(`/orders${qs ? "?" + qs : ""}`);
+}
+
+export function getOrderMode() {
+  return request("/orders/mode");
+}
+
+export function setOrderMode(auto) {
+  return request("/orders/mode", {
+    method: "POST",
+    body: JSON.stringify({ auto }),
+  });
+}
+
+export function manualExecuteOrder(orderId) {
+  return request(`/orders/${orderId}/execute`, { method: "POST" });
+}

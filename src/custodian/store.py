@@ -1,6 +1,9 @@
 """Data access layer for custodian data."""
 
 import json
+import threading
+import uuid
+from datetime import date
 from typing import Protocol
 
 from .schemas import (
@@ -53,9 +56,11 @@ class InMemoryCustodianStore:
     ) -> None:
         self._customers = {c.id: c for c in customers}
         self._accounts = accounts
-        self._positions = positions
-        self._transactions = transactions
+        self._positions = list(positions)
+        self._transactions = list(transactions)
         self._account_owner = account_owner
+        self._lock = threading.Lock()
+        self._avg_cost: dict[tuple[str, str], float] = {}  # (account_id, isin) → weighted avg price
 
     def list_customers(self) -> list[Customer]:
         return list(self._customers.values())
@@ -77,6 +82,59 @@ class InMemoryCustodianStore:
 
     def list_transactions(self, customer_id: str) -> list[Transaction]:
         return [t for t in self._transactions if t.customer_id == customer_id]
+
+    def add_transaction(self, tx: Transaction) -> None:
+        with self._lock:
+            self._transactions.append(tx)
+
+    def upsert_position(
+        self,
+        account_id: str,
+        isin: str,
+        quantity_delta: float,
+        fill_price: float,
+        instrument: FinancialInstrument,
+        account_ref: AccountReference,
+        position_date: str,
+    ) -> ValuatedPosition:
+        with self._lock:
+            key = (account_id, isin)
+            existing = next(
+                (p for p in self._positions if p.account.id == account_id and p.financial_instrument.isin == isin),
+                None,
+            )
+            if existing is not None:
+                old_qty = existing.quantity.value
+                old_avg = self._avg_cost.get(key, fill_price)
+                new_qty = old_qty + quantity_delta
+                if new_qty <= 0:
+                    self._positions = [p for p in self._positions if not (p.account.id == account_id and p.financial_instrument.isin == isin)]
+                    self._avg_cost.pop(key, None)
+                    return existing
+                new_avg = (old_qty * old_avg + quantity_delta * fill_price) / new_qty if quantity_delta > 0 else old_avg
+                self._avg_cost[key] = new_avg
+                existing.quantity.value = new_qty
+                existing.valuation.total_value = round(new_qty * fill_price, 4)
+                existing.position_date = position_date
+                return existing
+            else:
+                self._avg_cost[key] = fill_price
+                pos = ValuatedPosition(
+                    id=str(uuid.uuid4()),
+                    name=instrument.name,
+                    currency=instrument.currency,
+                    position_date=position_date,
+                    end_of_day_indicator=False,
+                    financial_instrument=instrument,
+                    account=account_ref,
+                    quantity=Quantity(value=quantity_delta, unit=QuantityUnit.PIECE),
+                    valuation=Valuation(
+                        total_value=round(quantity_delta * fill_price, 4),
+                        currency=instrument.currency,
+                    ),
+                )
+                self._positions.append(pos)
+                return pos
 
 
 def _v(val):

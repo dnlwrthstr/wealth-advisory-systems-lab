@@ -1,17 +1,54 @@
 """HTTP routes for the custodian API — OpenWealth-compliant endpoints."""
 
+import uuid
+from typing import Optional
+
 from custodian.reference import build_reference
 from custodian.schemas import (
     Account,
+    AccountReference,
+    AccountType,
     Customer,
     CustomerSnapshot,
+    FinancialInstrument,
+    FinancialInstrumentType,
+    Movement,
+    MovementType,
+    Quantity,
+    QuantityUnit,
     Transaction,
+    TransactionType,
     ValuatedPosition,
+    ValuationPrice,
+    PriceType,
 )
 from custodian.service import CustodianService
+from custodian.store import InMemoryCustodianStore
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 _REFERENCE = build_reference()
+
+
+class TradeBookingRequest(BaseModel):
+    portfolio_id: str
+    account_id: str
+    customer_id: str
+    isin: str
+    instrument_name: str
+    instrument_type: str
+    instrument_currency: str
+    side: str           # "buy" | "sell"
+    quantity: float
+    fill_price: float
+    fill_currency: str
+    trade_date: str
+    settlement_date: str
+    order_id: str
+    fill_id: str
+    fee: float = 0.0
+    net_amount: float = 0.0
+    fx_rate: Optional[float] = None
 
 
 def build_router(service: CustodianService) -> APIRouter:
@@ -64,5 +101,67 @@ def build_router(service: CustodianService) -> APIRouter:
         if result is None:
             raise HTTPException(status_code=404, detail="customer not found")
         return result
+
+    @router.post("/bookings")
+    def create_booking(req: TradeBookingRequest) -> dict:
+        store = service._store
+        if not isinstance(store, InMemoryCustodianStore):
+            return {"ok": False, "reason": "read-only store"}
+
+        tx_id = str(uuid.uuid4())
+        instrument = FinancialInstrument(
+            id=str(uuid.uuid4()),
+            isin=req.isin,
+            name=req.instrument_name,
+            type=FinancialInstrumentType(req.instrument_type) if req.instrument_type in [e.value for e in FinancialInstrumentType] else FinancialInstrumentType.OTHER,
+            currency=req.instrument_currency,
+        )
+        account_ref = AccountReference(id=req.account_id, type=AccountType.SAFEKEEPING_ACCOUNT)
+        quantity_delta = req.quantity if req.side == "buy" else -req.quantity
+
+        movements = [
+            Movement(
+                type=MovementType.ASSET,
+                financial_instrument=instrument,
+                quantity=Quantity(value=req.quantity, unit=QuantityUnit.PIECE),
+                price=ValuationPrice(value=req.fill_price, price_type=PriceType.MARKET, currency=req.instrument_currency),
+            ),
+            Movement(
+                type=MovementType.CASH,
+                currency=req.fill_currency,
+                amount=req.net_amount,
+            ),
+        ]
+        if req.fee > 0:
+            movements.append(
+                Movement(
+                    type=MovementType.BROKERAGE_FEE,
+                    currency=req.fill_currency,
+                    amount=-req.fee,
+                )
+            )
+
+        tx = Transaction(
+            id=tx_id,
+            type=TransactionType.BUY if req.side == "buy" else TransactionType.SELL,
+            transaction_date=req.trade_date,
+            customer_id=req.customer_id,
+            description=f"{'Buy' if req.side == 'buy' else 'Sell'} {req.quantity} {req.instrument_name} @ {req.fill_price} {req.instrument_currency}",
+            trade_date=req.trade_date,
+            settlement_date=req.settlement_date,
+            reference=req.order_id,
+            movement_list=movements,
+        )
+        store.add_transaction(tx)
+        store.upsert_position(
+            account_id=req.account_id,
+            isin=req.isin,
+            quantity_delta=quantity_delta,
+            fill_price=req.fill_price,
+            instrument=instrument,
+            account_ref=account_ref,
+            position_date=req.trade_date,
+        )
+        return {"ok": True, "transaction_id": tx_id}
 
     return router
