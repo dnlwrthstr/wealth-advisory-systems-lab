@@ -54,6 +54,23 @@ export function listCustodyCustomers() {
   return request("/custody/customers");
 }
 
+export function fetchCustodyCustomer(customerId) {
+  return request(`/custody/customers/${customerId}`);
+}
+
+export function fetchCustodyAccounts(customerId) {
+  return request(`/custody/customers/${customerId}/accounts`);
+}
+
+export function fetchCustodyPositions(customerId, accountId = null) {
+  const qs = accountId ? `?account_id=${encodeURIComponent(accountId)}` : "";
+  return request(`/custody/customers/${customerId}/positions${qs}`);
+}
+
+export function fetchCustodyTransactions(customerId) {
+  return request(`/custody/customers/${customerId}/transactions`);
+}
+
 export function fetchCustodySnapshot(customerId) {
   return request(`/custody/customers/${customerId}/snapshot`);
 }
