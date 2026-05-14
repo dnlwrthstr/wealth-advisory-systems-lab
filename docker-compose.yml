@@ -24,7 +24,7 @@ services:
     environment:
       CUSTODIAN_DATA_PATH: /data/custodian
     volumes:
-      - ./data/custodian:/data/custodian:ro
+      - custodian-data:/data/custodian
     ports:
       - "8001:8001"
     healthcheck:
@@ -38,7 +38,7 @@ services:
       context: .
       dockerfile: backend/profile_api/Dockerfile
     environment:
-      DATABASE_URL: postgresql://wealth_advisory:wealth_advisory@database:5433/wealth_advisory
+      DATABASE_URL: postgresql://wealth_advisory:wealth_advisory@database:5432/wealth_advisory
     ports:
       - "8002:8002"
     depends_on:
@@ -64,3 +64,4 @@ services:
 
 volumes:
   postgres-data:
+  custodian-data:

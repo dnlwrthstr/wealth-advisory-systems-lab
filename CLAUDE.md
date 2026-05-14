@@ -17,6 +17,15 @@ git commit -m "..."
 Branch naming: `<topic>/<short-desc>` — e.g. `feat/duckdb-store`, `fix/snapshot-weight`, `refactor/profiling-service`.
 Never commit directly to `main`.
 
+## docker-compose.yml maintenance
+
+`docker-compose.yml` must be kept in sync with architectural changes:
+
+- Any new service dependency (e.g. a new backend service, a new data store) needs a corresponding service block, healthcheck, and `depends_on` wiring.
+- Internal service hostnames use the Docker network port (e.g. `database:5432`), not the host-mapped port (e.g. `5433`).
+- Data that must be generated at container start (not checked in) belongs in a named Docker volume; the service's entrypoint script is responsible for generating it if absent.
+- When a service no longer depends on Postgres, remove its `depends_on: database` and `DATABASE_URL`.
+
 ## Commands
 
 ### Python environment

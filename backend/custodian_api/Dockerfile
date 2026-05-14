@@ -11,11 +11,11 @@ RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY src /app/src
 COPY backend/custodian_api /app/backend/custodian_api
+COPY scripts /app/scripts
 
-# Parquet data is mounted at runtime via CUSTODIAN_DATA_PATH.
-# When the env var is absent the service falls back to in-memory fixture data.
-VOLUME ["/data/custodian"]
+COPY backend/custodian_api/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8001
 
-CMD ["uvicorn", "backend.custodian_api.main:app", "--host", "0.0.0.0", "--port", "8001"]
+ENTRYPOINT ["/app/entrypoint.sh"]
