@@ -729,6 +729,7 @@ function PortfolioDetail({ snapshot, portfolioId, onBack, onBackToCustomer }) {
           instrumentName={tradeTarget.instrumentName}
           currency={tradeTarget.currency}
           suggestedPrice={tradeTarget.suggestedPrice}
+          positionQty={tradeTarget.positionQty}
           portfolioId={tradeTarget.portfolioId}
           accountId={tradeTarget.accountId}
           onClose={() => setTradeTarget(null)}
@@ -780,8 +781,8 @@ function AssetClassSection({ assetClass, positions, baseCurrency, portfolioTotal
                 isCash
                   ? <CashRow key={pos.id} pos={pos} />
                   : isBond
-                  ? <BondRow key={pos.id} pos={pos} baseCurrency={baseCurrency} onTrade={onTrade ? () => onTrade({ isin: pos.financialInstrument.isin, instrumentName: pos.financialInstrument.name, currency: pos.financialInstrument.currency, suggestedPrice: pos.price?.value, portfolioId, accountId }) : null} />
-                  : <SecurityRow key={pos.id} pos={pos} baseCurrency={baseCurrency} onTrade={onTrade ? () => onTrade({ isin: pos.financialInstrument.isin, instrumentName: pos.financialInstrument.name, currency: pos.financialInstrument.currency, suggestedPrice: pos.price?.value, portfolioId, accountId }) : null} />
+                  ? <BondRow key={pos.id} pos={pos} baseCurrency={baseCurrency} onTrade={onTrade ? () => onTrade({ isin: pos.financialInstrument.isin, instrumentName: pos.financialInstrument.name, currency: pos.financialInstrument.currency, suggestedPrice: pos.price?.value, positionQty: pos.quantity.value, portfolioId, accountId }) : null} />
+                  : <SecurityRow key={pos.id} pos={pos} baseCurrency={baseCurrency} onTrade={onTrade ? () => onTrade({ isin: pos.financialInstrument.isin, instrumentName: pos.financialInstrument.name, currency: pos.financialInstrument.currency, suggestedPrice: pos.price?.value, positionQty: pos.quantity.value, portfolioId, accountId }) : null} />
               ))}
             </tbody>
           </table>

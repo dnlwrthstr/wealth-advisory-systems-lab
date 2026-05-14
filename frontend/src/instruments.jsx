@@ -251,13 +251,14 @@ function QuickOrderDialog({ instrument, onClose }) {
 
 // ─── Order dialog (shared, used from custodian and instrument search) ─────────
 
-export function OrderDialog({ isin, instrumentName, currency, suggestedPrice, portfolioId, accountId, onClose }) {
+export function OrderDialog({ isin, instrumentName, currency, suggestedPrice, positionQty, portfolioId, accountId, onClose }) {
   return (
     <OrderDialogBase
       isin={isin}
       instrumentName={instrumentName}
       currency={currency}
       suggestedPrice={suggestedPrice}
+      positionQty={positionQty}
       portfolioId={portfolioId}
       accountId={accountId}
       onClose={onClose}
@@ -266,7 +267,7 @@ export function OrderDialog({ isin, instrumentName, currency, suggestedPrice, po
   );
 }
 
-function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, portfolioId: initPortfolio, accountId: initAccount, onClose, title }) {
+function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, positionQty, portfolioId: initPortfolio, accountId: initAccount, onClose, title }) {
   const [side, setSide] = useState("buy");
   const [orderType, setOrderType] = useState("market");
   const [quantity, setQuantity] = useState("1");
@@ -410,6 +411,7 @@ function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, portf
                   type="number"
                   min="1"
                   step="1"
+                  max={side === "sell" && positionQty != null ? positionQty : undefined}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   required
