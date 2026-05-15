@@ -172,14 +172,139 @@ def _entries(enum_cls) -> list[dict[str, str]]:
 def build_reference() -> dict[str, list[dict[str, str]]]:
     """Return the complete OpenWealth reference data map."""
     return {
-        "customerSegment":       _entries(CustomerSegment),
-        "customerStatus":        _entries(CustomerStatus),
-        "mandateType":           _entries(MandateType),
-        "investmentStrategy":    _entries(InvestmentStrategy),
+        "customerSegment":         _entries(CustomerSegment),
+        "customerStatus":          _entries(CustomerStatus),
+        "mandateType":             _entries(MandateType),
+        "investmentStrategy":      _entries(InvestmentStrategy),
         "financialInstrumentType": _entries(FinancialInstrumentType),
-        "accountType":           _entries(AccountType),
-        "transactionType":       _entries(TransactionType),
-        "movementType":          _entries(MovementType),
-        "quantityUnit":          _entries(QuantityUnit),
-        "priceType":             _entries(PriceType),
+        "accountType":             _entries(AccountType),
+        "transactionType":         _entries(TransactionType),
+        "movementType":            _entries(MovementType),
+        "quantityUnit":            _entries(QuantityUnit),
+        "priceType":               _entries(PriceType),
+        "currency":                CURRENCIES,
+        "country":                 COUNTRIES,
+        "region":                  REGIONS,
     }
+
+
+# ---------------------------------------------------------------------------
+# Currencies — ISO 4217, focused on wealth management relevant currencies
+# ---------------------------------------------------------------------------
+
+CURRENCIES: list[dict[str, str]] = [
+    {"value": "CHF", "label": "Swiss Franc",          "symbol": "Fr.",  "region": "Europe"},
+    {"value": "EUR", "label": "Euro",                  "symbol": "€",    "region": "Europe"},
+    {"value": "USD", "label": "US Dollar",             "symbol": "$",    "region": "Americas"},
+    {"value": "GBP", "label": "British Pound",         "symbol": "£",    "region": "Europe"},
+    {"value": "JPY", "label": "Japanese Yen",          "symbol": "¥",    "region": "Asia Pacific"},
+    {"value": "CAD", "label": "Canadian Dollar",       "symbol": "C$",   "region": "Americas"},
+    {"value": "AUD", "label": "Australian Dollar",     "symbol": "A$",   "region": "Asia Pacific"},
+    {"value": "NZD", "label": "New Zealand Dollar",    "symbol": "NZ$",  "region": "Asia Pacific"},
+    {"value": "SEK", "label": "Swedish Krona",         "symbol": "kr",   "region": "Europe"},
+    {"value": "NOK", "label": "Norwegian Krone",       "symbol": "kr",   "region": "Europe"},
+    {"value": "DKK", "label": "Danish Krone",          "symbol": "kr",   "region": "Europe"},
+    {"value": "SGD", "label": "Singapore Dollar",      "symbol": "S$",   "region": "Asia Pacific"},
+    {"value": "HKD", "label": "Hong Kong Dollar",      "symbol": "HK$",  "region": "Asia Pacific"},
+    {"value": "CNY", "label": "Chinese Yuan",          "symbol": "¥",    "region": "Asia Pacific"},
+    {"value": "KRW", "label": "South Korean Won",      "symbol": "₩",    "region": "Asia Pacific"},
+    {"value": "INR", "label": "Indian Rupee",          "symbol": "₹",    "region": "Asia Pacific"},
+    {"value": "BRL", "label": "Brazilian Real",        "symbol": "R$",   "region": "Americas"},
+    {"value": "MXN", "label": "Mexican Peso",          "symbol": "$",    "region": "Americas"},
+    {"value": "ZAR", "label": "South African Rand",    "symbol": "R",    "region": "Africa"},
+    {"value": "AED", "label": "UAE Dirham",            "symbol": "د.إ",  "region": "Middle East"},
+    {"value": "SAR", "label": "Saudi Riyal",           "symbol": "﷼",    "region": "Middle East"},
+    {"value": "TRY", "label": "Turkish Lira",          "symbol": "₺",    "region": "Europe"},
+    {"value": "PLN", "label": "Polish Zloty",          "symbol": "zł",   "region": "Europe"},
+    {"value": "CZK", "label": "Czech Koruna",          "symbol": "Kč",   "region": "Europe"},
+    {"value": "HUF", "label": "Hungarian Forint",      "symbol": "Ft",   "region": "Europe"},
+    {"value": "ILS", "label": "Israeli Shekel",        "symbol": "₪",    "region": "Middle East"},
+    {"value": "THB", "label": "Thai Baht",             "symbol": "฿",    "region": "Asia Pacific"},
+    {"value": "MYR", "label": "Malaysian Ringgit",     "symbol": "RM",   "region": "Asia Pacific"},
+    {"value": "IDR", "label": "Indonesian Rupiah",     "symbol": "Rp",   "region": "Asia Pacific"},
+    {"value": "PHP", "label": "Philippine Peso",       "symbol": "₱",    "region": "Asia Pacific"},
+]
+
+# ---------------------------------------------------------------------------
+# Countries — ISO 3166-1 alpha-2, weighted toward financial centres
+# ---------------------------------------------------------------------------
+
+COUNTRIES: list[dict[str, str]] = [
+    # Europe
+    {"value": "CH", "label": "Switzerland",        "region": "Europe",        "currency": "CHF"},
+    {"value": "DE", "label": "Germany",            "region": "Europe",        "currency": "EUR"},
+    {"value": "FR", "label": "France",             "region": "Europe",        "currency": "EUR"},
+    {"value": "GB", "label": "United Kingdom",     "region": "Europe",        "currency": "GBP"},
+    {"value": "NL", "label": "Netherlands",        "region": "Europe",        "currency": "EUR"},
+    {"value": "LU", "label": "Luxembourg",         "region": "Europe",        "currency": "EUR"},
+    {"value": "IE", "label": "Ireland",            "region": "Europe",        "currency": "EUR"},
+    {"value": "SE", "label": "Sweden",             "region": "Europe",        "currency": "SEK"},
+    {"value": "NO", "label": "Norway",             "region": "Europe",        "currency": "NOK"},
+    {"value": "DK", "label": "Denmark",            "region": "Europe",        "currency": "DKK"},
+    {"value": "FI", "label": "Finland",            "region": "Europe",        "currency": "EUR"},
+    {"value": "IT", "label": "Italy",              "region": "Europe",        "currency": "EUR"},
+    {"value": "ES", "label": "Spain",              "region": "Europe",        "currency": "EUR"},
+    {"value": "PT", "label": "Portugal",           "region": "Europe",        "currency": "EUR"},
+    {"value": "BE", "label": "Belgium",            "region": "Europe",        "currency": "EUR"},
+    {"value": "AT", "label": "Austria",            "region": "Europe",        "currency": "EUR"},
+    {"value": "PL", "label": "Poland",             "region": "Europe",        "currency": "PLN"},
+    {"value": "CZ", "label": "Czech Republic",     "region": "Europe",        "currency": "CZK"},
+    {"value": "HU", "label": "Hungary",            "region": "Europe",        "currency": "HUF"},
+    {"value": "TR", "label": "Turkey",             "region": "Europe",        "currency": "TRY"},
+    # Americas
+    {"value": "US", "label": "United States",      "region": "Americas",      "currency": "USD"},
+    {"value": "CA", "label": "Canada",             "region": "Americas",      "currency": "CAD"},
+    {"value": "BR", "label": "Brazil",             "region": "Americas",      "currency": "BRL"},
+    {"value": "MX", "label": "Mexico",             "region": "Americas",      "currency": "MXN"},
+    {"value": "AR", "label": "Argentina",          "region": "Americas",      "currency": "ARS"},
+    {"value": "CL", "label": "Chile",              "region": "Americas",      "currency": "CLP"},
+    {"value": "CO", "label": "Colombia",           "region": "Americas",      "currency": "COP"},
+    # Asia Pacific
+    {"value": "JP", "label": "Japan",              "region": "Asia Pacific",  "currency": "JPY"},
+    {"value": "CN", "label": "China",              "region": "Asia Pacific",  "currency": "CNY"},
+    {"value": "HK", "label": "Hong Kong",          "region": "Asia Pacific",  "currency": "HKD"},
+    {"value": "SG", "label": "Singapore",          "region": "Asia Pacific",  "currency": "SGD"},
+    {"value": "KR", "label": "South Korea",        "region": "Asia Pacific",  "currency": "KRW"},
+    {"value": "AU", "label": "Australia",          "region": "Asia Pacific",  "currency": "AUD"},
+    {"value": "NZ", "label": "New Zealand",        "region": "Asia Pacific",  "currency": "NZD"},
+    {"value": "IN", "label": "India",              "region": "Asia Pacific",  "currency": "INR"},
+    {"value": "TW", "label": "Taiwan",             "region": "Asia Pacific",  "currency": "TWD"},
+    {"value": "TH", "label": "Thailand",           "region": "Asia Pacific",  "currency": "THB"},
+    {"value": "MY", "label": "Malaysia",           "region": "Asia Pacific",  "currency": "MYR"},
+    {"value": "ID", "label": "Indonesia",          "region": "Asia Pacific",  "currency": "IDR"},
+    {"value": "PH", "label": "Philippines",        "region": "Asia Pacific",  "currency": "PHP"},
+    # Middle East & Africa
+    {"value": "AE", "label": "United Arab Emirates", "region": "Middle East", "currency": "AED"},
+    {"value": "SA", "label": "Saudi Arabia",       "region": "Middle East",   "currency": "SAR"},
+    {"value": "IL", "label": "Israel",             "region": "Middle East",   "currency": "ILS"},
+    {"value": "QA", "label": "Qatar",              "region": "Middle East",   "currency": "QAR"},
+    {"value": "KW", "label": "Kuwait",             "region": "Middle East",   "currency": "KWD"},
+    {"value": "ZA", "label": "South Africa",       "region": "Africa",        "currency": "ZAR"},
+    {"value": "NG", "label": "Nigeria",            "region": "Africa",        "currency": "NGN"},
+    {"value": "EG", "label": "Egypt",              "region": "Africa",        "currency": "EGP"},
+    {"value": "KE", "label": "Kenya",              "region": "Africa",        "currency": "KES"},
+    # Offshore / booking centres
+    {"value": "KY", "label": "Cayman Islands",     "region": "Offshore",      "currency": "KYD"},
+    {"value": "VG", "label": "British Virgin Islands", "region": "Offshore",  "currency": "USD"},
+    {"value": "LI", "label": "Liechtenstein",      "region": "Europe",        "currency": "CHF"},
+    {"value": "MC", "label": "Monaco",             "region": "Europe",        "currency": "EUR"},
+    {"value": "GG", "label": "Guernsey",           "region": "Offshore",      "currency": "GBP"},
+    {"value": "JE", "label": "Jersey",             "region": "Offshore",      "currency": "GBP"},
+    {"value": "IM", "label": "Isle of Man",        "region": "Offshore",      "currency": "GBP"},
+    {"value": "MT", "label": "Malta",              "region": "Europe",        "currency": "EUR"},
+    {"value": "CY", "label": "Cyprus",             "region": "Europe",        "currency": "EUR"},
+]
+
+# ---------------------------------------------------------------------------
+# Regions — used for asset allocation and instrument classification
+# ---------------------------------------------------------------------------
+
+REGIONS: list[dict[str, str]] = [
+    {"value": "Europe",       "label": "Europe"},
+    {"value": "Americas",     "label": "Americas"},
+    {"value": "Asia Pacific", "label": "Asia Pacific"},
+    {"value": "Middle East",  "label": "Middle East"},
+    {"value": "Africa",       "label": "Africa"},
+    {"value": "Offshore",     "label": "Offshore / Booking Centres"},
+    {"value": "Global",       "label": "Global"},
+]
