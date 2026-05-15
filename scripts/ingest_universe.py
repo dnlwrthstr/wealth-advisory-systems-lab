@@ -182,8 +182,13 @@ def ingest_bond_master(seeds: list[InstrumentSeed], raw_df, live: bool) -> list[
         row = csv_by_isin.get(seed.isin, {})
         coupon_str = row.get("actInterestRate", "")
         coupon = _safe_float(coupon_str)
-        if coupon is not None and coupon > 1:
-            coupon = round(coupon / 100, 6)  # percent → fraction
+        # FINFOX `actInterestRate` is consistently in percentage form (range
+        # observed 0.0 to 35.0 across the full export). The earlier `> 1:
+        # divide by 100` heuristic was a bug — it left every sub-1% coupon
+        # un-normalised, so e.g. "0.875 NRW.BANK 19-34" stored as 0.875 instead
+        # of 0.00875. Always divide by 100.
+        if coupon is not None:
+            coupon = round(coupon / 100, 6)
 
         interest_type_raw = row.get("interestType", "fixedinterest")
         interest_type = "floating" if "float" in (interest_type_raw or "").lower() else "fixed"

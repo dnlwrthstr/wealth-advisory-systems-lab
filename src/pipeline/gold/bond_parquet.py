@@ -71,17 +71,19 @@ _COUPON_FROM_NAME = re.compile(r"^\s*(\d+(?:\.\d+)?)\b")
 
 
 def _normalize_coupon(name: Optional[str], coupon_rate: Any) -> Optional[float]:
-    """Resolve the FINFOX parquet's mixed-units coupon to a clean decimal fraction.
+    """Belt-and-suspenders coupon normalisation against the bond name.
 
-    The bronze ingest (scripts/ingest_universe.py) only divided values >1 by 100,
-    missing the entire "<1% coupon" band (Citigroup 0.5, NRW.BANK 0.875,
-    CABEI 0.11, …). Result: in the parquet a coupon of 0.5 means 0.5% on some
-    rows and 50% on others — undecidable from the number alone. The bond name
-    disambiguates: it canonically starts with the coupon in percentage form.
+    The bronze ingest (scripts/ingest_universe.py) now always divides by 100,
+    so the parquet's `coupon_rate` is consistently a decimal fraction. This
+    function is kept as a safety net in case (a) the bronze ingest reverts or
+    (b) a future FINFOX export changes format. The bond name canonically
+    starts with the coupon in percentage form ("5.375 Republik Ungarn",
+    "0.11 CABEI", "10.25 Brazil 07-28"), which we trust as the source of
+    truth when the parsed value disagrees with the parquet by more than the
+    rounding margin.
 
-    Strategy: take the leading number from the name, treat as percentage,
-    return as decimal. Fall back to a defensive divide-by-100 heuristic only
-    when the name isn't parseable (variable-coupon "var Alpiq …", blank name).
+    Fall back to a defensive divide-by-100 heuristic only when the name
+    isn't parseable (variable-coupon "var Alpiq …", blank name).
     """
     if name:
         m = _COUPON_FROM_NAME.match(name)
