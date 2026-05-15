@@ -1,8 +1,11 @@
 {
   "doc": {
-    "holdingsCount": 1418,
-    "holdingsAsOf": "2026-05-12",
     "totalExpenseRatio": 0.002,
-    "benchmarkName": "MSCI World Index (Net)"
+    "riskRating": { "srri": 6, "sri": 4 },
+    "holdingsCount": 1418
+  },
+  "_meta": {
+    "source": "BlackRock iShares product page + PRIIPS KID",
+    "sourceTimestamp": "2026-05-15T17:30:00Z"
   }
 }

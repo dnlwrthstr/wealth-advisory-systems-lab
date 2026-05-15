@@ -615,6 +615,7 @@ function FundDetail({ source }) {
 
       <AllocationPanel allocation={source.assetAllocation} />
       <HoldingsPanel source={source} allocation={source.assetAllocation} />
+      <ProvenancePanel recordMeta={source.recordMeta} />
     </>
   );
 }
@@ -658,6 +659,51 @@ function AllocationBars({ title, rows }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function ProvenancePanel({ recordMeta }) {
+  const [open, setOpen] = useState(true);
+  if (!recordMeta) return null;
+  const sources = recordMeta.sourceOfTruth || [];
+  return (
+    <section className="subpanel span-2 provenance">
+      <button
+        type="button"
+        className="subpanel-title provenance-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span className="subpanel-icon">{open ? "▾" : "▸"}</span>
+        Record Provenance
+      </button>
+      {open && (
+        <div className="subpanel-body">
+          <KV>
+            <Row label="Schema version" value={<span className="mono">{val(recordMeta.schemaVersion)}</span>} />
+            <Row label="Golden as-of" value={<span className="mono">{val(recordMeta.goldenAsOf)}</span>} />
+            <Row label="Ingestion run" value={<span className="mono">{val(recordMeta.ingestionRunId)}</span>} />
+            <Row label="Active" value={recordMeta.isActive === true ? "Yes" : recordMeta.isActive === false ? "No" : EM_DASH} />
+          </KV>
+          <p className="provenance-section-title">Source of truth</p>
+          {sources.length === 0 ? (
+            <p className="muted">{EM_DASH}</p>
+          ) : (
+            <ul className="provenance-list">
+              {sources.map((e, i) => (
+                <li key={`${e.fieldGroup}:${e.source}:${i}`}>
+                  <span className="provenance-field">{e.fieldGroup}</span>
+                  <span className="provenance-source">
+                    {e.source}
+                    {e.sourceTimestamp ? <span className="muted"> ({e.sourceTimestamp})</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -767,6 +813,8 @@ function EquityDetail({ source }) {
           <Row label="Dividend yield" value={fmtPctVal(source.dividendPolicy?.dividendYield)} />
         </KV>
       </Subpanel>
+
+      <ProvenancePanel recordMeta={source.recordMeta} />
     </>
   );
 }
@@ -834,6 +882,8 @@ function BondDetail({ source }) {
           <Row label="First trading" value={<span className="mono">{val(primary.firstTradingDate)}</span>} />
         </KV>
       </Subpanel>
+
+      <ProvenancePanel recordMeta={source.recordMeta} />
     </>
   );
 }

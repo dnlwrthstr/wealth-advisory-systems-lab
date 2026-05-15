@@ -28,6 +28,31 @@ log = logging.getLogger("fund_yahoo_enrich")
 CACHE_DIR = Path.home() / ".cache" / "wealth-advisory-systems-lab" / "yahoo-funds"
 
 
+def merge_source_of_truth(
+    record_meta: Dict[str, Any],
+    entries: List[Dict[str, str]],
+) -> Dict[str, Any]:
+    """Merge `entries` into `record_meta.sourceOfTruth`, deduping by
+    (fieldGroup, source). When a duplicate is found, the *new* entry's
+    sourceTimestamp wins so the audit trail reflects the most recent
+    enrichment. Returns the updated record_meta.
+    """
+    sot: List[Dict[str, Any]] = list(record_meta.get("sourceOfTruth") or [])
+    index = {
+        (e.get("fieldGroup"), e.get("source")): i
+        for i, e in enumerate(sot)
+    }
+    for entry in entries:
+        key = (entry.get("fieldGroup"), entry.get("source"))
+        if key in index:
+            sot[index[key]] = entry
+        else:
+            sot.append(entry)
+            index[key] = len(sot) - 1
+    record_meta["sourceOfTruth"] = sot
+    return record_meta
+
+
 def _cache_path(isin: str) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR / f"{isin}.json"
@@ -206,6 +231,7 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
         return doc
 
     currency = doc.get("currencyOfDenomination") or yhoo.get("currency")
+    touched_groups: List[str] = []
 
     # ── Fees ────────────────────────────────────────────────────────────
     ter = yhoo.get("expenseRatio")
@@ -214,6 +240,7 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
         fees = doc.setdefault("fees", {})
         ongoing = fees.setdefault("ongoing", {})
         ongoing.setdefault("totalExpenseRatio", ter)
+        touched_groups.append("fees")
 
     # ── Market data ─────────────────────────────────────────────────────
     md = doc.get("marketData") or {}
@@ -245,6 +272,12 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
     md.setdefault("asOf", now_iso)
     md.setdefault("sourceMic", (doc.get("primaryListing") or {}).get("mic"))
     doc["marketData"] = md
+    if any(yhoo.get(k) is not None for k in
+           ("navPrice", "regularMarketPrice", "totalAssets",
+            "open", "high", "low", "close", "volume",
+            "ytdReturn", "oneYearReturn",
+            "threeYearAverageReturn", "fiveYearAverageReturn", "beta3Year")):
+        touched_groups.append("marketData")
 
     # ── Identifiers + primary-listing ticker ────────────────────────────
     yhoo_symbol = yhoo.get("yahooSymbol")
@@ -252,6 +285,7 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
     if yhoo_symbol and not listing.get("ticker"):
         listing["ticker"] = yhoo_symbol
         doc["primaryListing"] = listing
+        touched_groups.append("primaryListing")
     if yhoo_symbol:
         ids: List[Dict[str, str]] = doc.setdefault("identifierList", [])
         if not any(
@@ -259,17 +293,42 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
             for e in ids
         ):
             ids.append({"identifier": yhoo_symbol, "type": "tickerSymbol"})
+            touched_groups.append("identifiers")
 
     # ── Asset allocation + look-through ────────────────────────────────
     alloc = yhoo.get("assetAllocation") or {}
     if alloc:
         existing = doc.get("assetAllocation") or {}
+        added_any = False
         # Fill missing dimensions only — don't overwrite curated allocations.
         for key in ("holdings", "bySector", "byAssetClass", "byRegion"):
             if alloc.get(key) and not existing.get(key):
                 existing[key] = alloc[key]
+                added_any = True
         if existing:
             doc["assetAllocation"] = existing
+        if added_any:
+            if alloc.get("holdings"):
+                touched_groups.append("holdings")
+            if alloc.get("bySector") or alloc.get("byAssetClass") or alloc.get("byRegion"):
+                touched_groups.append("assetAllocation")
+
+    # ── Provenance: append/refresh sourceOfTruth for the groups we filled ──
+    if touched_groups:
+        record_meta = doc.setdefault("recordMeta", {
+            "schemaVersion": "0.2.0",
+            "goldenAsOf": now_iso,
+            "sourceOfTruth": [],
+            "isActive": True,
+        })
+        record_meta["goldenAsOf"] = now_iso  # most recent enrichment
+        merge_source_of_truth(
+            record_meta,
+            [
+                {"fieldGroup": fg, "source": "yfinance", "sourceTimestamp": now_iso}
+                for fg in sorted(set(touched_groups))
+            ],
+        )
 
     return doc
 

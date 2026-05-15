@@ -7,19 +7,35 @@ the patch to OpenSearch, refreshes the index, and rebuilds the
 `pms_golden_instrumentsearch` helper so any hoisted fields surface in
 the "Find an instrument" UI.
 
+Patch shape:
+    {
+      "doc":   { …FundGolden top-level fields to set… },
+      "_meta": {                                # optional
+        "source":          "BlackRock iShares product page",
+        "sourceTimestamp": "2026-05-15T17:30:00Z",
+        "fieldGroups":     ["holdings", "fees"]   # optional override
+      }
+    }
+
+When `_meta` is present, the script appends one `sourceOfTruth` entry
+per `fieldGroup` to the doc's `recordMeta.sourceOfTruth` (deduping by
+`(fieldGroup, source)`). When `fieldGroups` is omitted, the field
+groups are derived from the keys present in `doc` — useful so the
+skill doesn't have to enumerate them twice.
+
+The `_meta` block itself is stripped from the body before sending to
+OpenSearch (it's not part of the FundGolden schema).
+
 Usage:
     python -m pipeline.gold.apply_fund_patch path/to/<goldenId>.json
 
 The script:
   1. Validates the patch shape (top-level `doc`, no destructive ops).
   2. Derives the document id from the patch filename (no `.json` part).
-  3. POSTs `/pms_golden_fund/_update/<id>` with the patch body.
-  4. Refreshes the index.
-  5. Rebuilds the helper search index.
-
-It does NOT apply patches that target fields outside the FundGolden
-shape — the OpenSearch mapping is dynamic=false and will reject
-unknown fields, but the helper catches obvious typos here too.
+  3. If `_meta` is present, reads the current doc, merges sourceOfTruth.
+  4. POSTs `/pms_golden_fund/_update/<id>` with the (cleaned) patch.
+  5. Refreshes the index.
+  6. Rebuilds the helper search index.
 """
 
 from __future__ import annotations
@@ -30,10 +46,13 @@ import logging
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from opensearchpy import OpenSearch
+
+from .fund_yahoo_enrich import merge_source_of_truth
 
 log = logging.getLogger("apply_fund_patch")
 
@@ -57,6 +76,41 @@ _ALLOWED_TOP_LEVEL = {
     "umbrella",    # only if the skill found a more authoritative LEI
     "managementCompany",
     "investmentManager", "promoter",
+    "recordMeta",  # the script writes here too — allow direct overrides
+}
+
+
+# Top-level doc keys → canonical fieldGroup label for `recordMeta.sourceOfTruth`.
+# When a patch's `_meta` doesn't list `fieldGroups`, we derive them from doc keys.
+_DOC_KEY_TO_FIELD_GROUP = {
+    "totalExpenseRatio":      "fees",
+    "fees":                   "fees",
+    "transactionCostsPRIIPs": "fees",
+    "swingPricingApplied":    "fees",
+    "dealing":                "dealing",
+    "riskRating":             "riskRating",
+    "serviceProviders":       "serviceProviders",
+    "benchmarkName":          "benchmark",
+    "benchmarkIdentifier":    "benchmark",
+    "replicationMethod":      "fundProfile",
+    "rebalanceFrequency":     "fundProfile",
+    "dividendPolicy":         "fundProfile",
+    "isCurrencyHedged":       "fundProfile",
+    "hedgingCurrency":        "fundProfile",
+    "inceptionDate":          "fundProfile",
+    "fiscalYearEnd":          "fundProfile",
+    "holdingsCount":          "holdings",
+    "holdingsAsOf":           "holdings",
+    "assetAllocation":        "holdings",
+    "currencyAllocation":     "holdings",
+    "performance":            "performance",
+    "taxStatuses":            "taxStatuses",
+    "compliance":             "compliance",
+    "shareClass":             "shareClass",
+    "umbrella":               "umbrella",
+    "managementCompany":      "managementCompany",
+    "investmentManager":      "managementCompany",
+    "promoter":               "promoter",
 }
 
 
@@ -74,6 +128,18 @@ def _validate_patch(body: Any) -> dict:
             "apply_fund_patch.py."
         )
     return body
+
+
+def _derive_field_groups(doc: dict) -> list:
+    """When `_meta.fieldGroups` is omitted, infer them from the doc keys."""
+    seen = set()
+    out = []
+    for key in doc:
+        fg = _DOC_KEY_TO_FIELD_GROUP.get(key)
+        if fg and fg not in seen:
+            seen.add(fg)
+            out.append(fg)
+    return out
 
 
 def main() -> None:
@@ -110,7 +176,39 @@ def main() -> None:
             "a FundGolden id (expected FG-…). Rename the patch file."
         )
 
+    # Pull _meta out of the body before sending; OpenSearch's update doc body
+    # is a strict subset of the FundGolden schema and rejects unknown keys.
+    patch_meta = body.pop("_meta", None) or {}
+
     client = OpenSearch(hosts=[args.url], verify_certs=False, ssl_show_warn=False)
+
+    # If the patch declares a source, append sourceOfTruth entries. The merge
+    # has to happen on top of the existing recordMeta, so we fetch first.
+    if patch_meta.get("source"):
+        try:
+            current = client.get(index=INDEX, id=golden_id)
+        except Exception as exc:  # noqa: BLE001 — 404 etc.
+            sys.exit(f"document {golden_id!r} not found in {INDEX}: {exc}")
+        record_meta = dict((current.get("_source") or {}).get("recordMeta") or {})
+        field_groups = patch_meta.get("fieldGroups") or _derive_field_groups(body["doc"])
+        source_label = patch_meta["source"]
+        timestamp = patch_meta.get("sourceTimestamp") or datetime.now(timezone.utc).isoformat()
+        merge_source_of_truth(
+            record_meta,
+            [
+                {"fieldGroup": fg, "source": source_label, "sourceTimestamp": timestamp}
+                for fg in field_groups
+            ],
+        )
+        record_meta["goldenAsOf"] = timestamp
+        # Stitch the recomputed recordMeta into the patch so the update is
+        # atomic — single request.
+        body["doc"] = {**body["doc"], "recordMeta": record_meta}
+        log.info(
+            "Appended/refreshed %d sourceOfTruth entries (source=%r)",
+            len(field_groups), source_label,
+        )
+
     log.info("Updating %s/%s with %d top-level field(s)",
              INDEX, golden_id, len(body["doc"]))
     resp = client.update(index=INDEX, id=golden_id, body=body)

@@ -2880,3 +2880,76 @@ pre {
 .holdings-scroll.is-scrollable .holdings-table th {
   border-bottom: 1px solid #d5dbd6;
 }
+
+/* Record Provenance panel — collapsible audit trail at the bottom of *Detail */
+
+.subpanel.provenance .subpanel-title.provenance-toggle {
+  background: none;
+  border: 0;
+  padding: 0;
+  height: auto;
+  min-height: auto;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #355c4b;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.subpanel.provenance .subpanel-title.provenance-toggle .subpanel-icon {
+  /* override the badge styling for the chevron */
+  background: transparent;
+  color: #355c4b;
+  width: 14px;
+  height: 14px;
+  font-size: 0.85rem;
+  letter-spacing: normal;
+}
+
+.subpanel.provenance .subpanel-body {
+  margin-top: 0.4rem;
+  gap: 0.6rem;
+}
+
+.provenance-section-title {
+  margin: 0.3rem 0 0.2rem 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #54655d;
+  font-weight: 600;
+}
+
+.provenance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.provenance-list li {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.provenance-field {
+  color: #1a2823;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.82rem;
+}
+
+.provenance-source {
+  color: #1a2823;
+  text-align: right;
+}

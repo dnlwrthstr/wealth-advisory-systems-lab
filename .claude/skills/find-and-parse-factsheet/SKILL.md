@@ -147,26 +147,36 @@ For an ISIN like `IE00B4L5Y983`:
            { "identifier": "US0378331005", "name": "Apple Inc",     "weight": 0.0418, "assetClass": "EQUITY" }
          ]
        }
+     },
+     "_meta": {
+       "source":          "BlackRock iShares product page + PRIIPS KID",
+       "sourceTimestamp": "2026-05-15T17:30:00Z"
      }
    }
    ```
+   The `_meta` block is the **provenance**: a single label that
+   describes where every field in `doc` came from, plus the timestamp.
+   `apply_fund_patch` reads it, derives the affected field groups from
+   the keys in `doc` (via a built-in mapping), appends/updates entries
+   in `recordMeta.sourceOfTruth`, and bumps `goldenAsOf`. You only need
+   to set `fieldGroups` explicitly when the default derivation is wrong
+   (rare).
+
    Show the patch to the user. **Wait for confirmation** before
    applying.
 
 7. **Apply** (after user confirms). The lab ships a small helper that
-   wraps the OpenSearch update + refresh and rebuilds the search index
-   so any newly populated fields surface in the "Find an instrument" UI:
+   strips `_meta`, merges sourceOfTruth, runs the OpenSearch update +
+   refresh, and rebuilds the search index so any newly populated fields
+   surface in the "Find an instrument" UI:
    ```bash
    PYTHONPATH=src python -m pipeline.gold.apply_fund_patch \
      data/opensearch/golden/fund/patches/<goldenId>.json
    ```
-   (Direct curl form: `POST /pms_golden_fund/_update/<goldenId>` with
-   the patch as the body, then `POST /pms_golden_fund/_refresh`.)
 
-8. **Append a `recordMeta.sourceOfTruth` entry** so the audit trail
-   stays honest: source = the URL you fetched, `fieldGroup` = the group
-   you populated (`fees`, `dealing`, `riskRating`, `serviceProviders`,
-   `holdings`, …), `sourceTimestamp` = today.
+The audit trail is now automatic — you don't append `sourceOfTruth`
+entries by hand. Just keep `_meta.source` precise (the actual URL or
+document name, not a generic "factsheet").
 
 ## Full holdings extraction
 
