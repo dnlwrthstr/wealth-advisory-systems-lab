@@ -17,6 +17,7 @@ import argparse
 import datetime as dt
 import json
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -58,6 +59,47 @@ def _seniority_token(value: Optional[str]) -> str:
     if not value:
         return "other"
     return value
+
+
+# Bond names canonically start with the coupon as a percentage:
+#   "5.375 Republik Ungarn 23-33"   →  5.375%   →  0.05375 decimal
+#   "0.875 NRW.BANK 19-34"          →  0.875%   →  0.00875 decimal
+#   "0.11 CABEI 21-28"              →  0.11%    →  0.0011  decimal
+#   "0 Korea Railroad 19-24"        →  0%       →  0.0
+#   "var Alpiq Holding AG 2013-ff"  →  variable →  fall back to parquet value
+_COUPON_FROM_NAME = re.compile(r"^\s*(\d+(?:\.\d+)?)\b")
+
+
+def _normalize_coupon(name: Optional[str], coupon_rate: Any) -> Optional[float]:
+    """Resolve the FINFOX parquet's mixed-units coupon to a clean decimal fraction.
+
+    The bronze ingest (scripts/ingest_universe.py) only divided values >1 by 100,
+    missing the entire "<1% coupon" band (Citigroup 0.5, NRW.BANK 0.875,
+    CABEI 0.11, …). Result: in the parquet a coupon of 0.5 means 0.5% on some
+    rows and 50% on others — undecidable from the number alone. The bond name
+    disambiguates: it canonically starts with the coupon in percentage form.
+
+    Strategy: take the leading number from the name, treat as percentage,
+    return as decimal. Fall back to a defensive divide-by-100 heuristic only
+    when the name isn't parseable (variable-coupon "var Alpiq …", blank name).
+    """
+    if name:
+        m = _COUPON_FROM_NAME.match(name)
+        if m:
+            try:
+                return round(float(m.group(1)) / 100.0, 6)
+            except (TypeError, ValueError):
+                pass
+    if coupon_rate is None:
+        return None
+    try:
+        v = float(coupon_rate)
+    except (TypeError, ValueError):
+        return None
+    # Defensive fallback for var-rate bonds where we couldn't parse the name:
+    # any value > 0.20 can't be a real bond coupon as decimal (would be 20%+),
+    # so treat as percentage. Imperfect but better than nothing.
+    return round(v / 100.0, 6) if v > 0.20 else v
 
 
 def _credit_profile(rating: Optional[str], agency: Optional[str]) -> Optional[CreditProfile]:
@@ -168,7 +210,7 @@ def row_to_golden(
             currencyOfDenomination=currency,
             maturityDate=maturity,
             couponType=row.get("interest_type") or None,
-            currentCouponRate=row.get("coupon_rate"),
+            currentCouponRate=_normalize_coupon(row.get("name"), row.get("coupon_rate")),
             minimumDenomination=row.get("face_value"),
             lifecycleStatus=_lifecycle_from_maturity(maturity),
             issuer=issuer,
