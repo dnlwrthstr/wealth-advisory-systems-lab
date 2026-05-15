@@ -44,7 +44,6 @@ const TYPE_TABS = [
 export default function InstrumentsApp() {
   const [identifier, setIdentifier] = useState("");
   const [name, setName] = useState("");
-  const [issuer, setIssuer] = useState("");
   const [typeTab, setTypeTab] = useState("all");
   const [currencyFilter, setCurrencyFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
@@ -86,12 +85,12 @@ export default function InstrumentsApp() {
     doSearch({
       identifier,
       name,
-      issuer,
       type: typeTab,
       currency: currencyFilter || null,
       country: countryFilter || null,
+      limit: 10,
     });
-  }, [identifier, name, issuer, typeTab, currencyFilter, countryFilter, doSearch]);
+  }, [identifier, name, typeTab, currencyFilter, countryFilter, doSearch]);
 
   const items = results?.items ?? [];
   const total = results?.total ?? 0;
@@ -122,7 +121,7 @@ export default function InstrumentsApp() {
           ))}
         </div>
 
-        <div className="finder-fields">
+        <div className="finder-fields finder-fields-2">
           <label className="finder-field">
             <span className="finder-field-label">Identifier</span>
             <span className="finder-input-wrap">
@@ -144,18 +143,6 @@ export default function InstrumentsApp() {
                 value={name}
                 placeholder="Short or long name"
                 onChange={(e) => setName(e.target.value)}
-              />
-            </span>
-          </label>
-          <label className="finder-field">
-            <span className="finder-field-label">Issuer</span>
-            <span className="finder-input-wrap">
-              <span className="finder-input-icon">⌂</span>
-              <input
-                type="search"
-                value={issuer}
-                placeholder="Issuer legal name"
-                onChange={(e) => setIssuer(e.target.value)}
               />
             </span>
           </label>
@@ -203,25 +190,23 @@ export default function InstrumentsApp() {
       <section className="finder-results">
         <div className="finder-results-header">
           <span className="finder-count">
-            {loading ? "Searching…" : `${total} result${total === 1 ? "" : "s"}`}
+            {loading
+              ? "Searching…"
+              : `${Math.min(total, 10)} of ${total} result${total === 1 ? "" : "s"}`}
           </span>
           <span className="finder-index-name">Index: pms_golden_instrumentsearch</span>
         </div>
 
-        {!loading && items.length === 0 && (
+        {!loading && items.length === 0 ? (
           <p className="finder-empty">No instruments matched.</p>
+        ) : (
+          <ResultTable
+            items={items}
+            typeTab={typeTab}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
         )}
-
-        <ul className="finder-list">
-          {items.map((hit) => (
-            <ResultCard
-              key={`${hit.scope}:${hit.document_id}`}
-              hit={hit}
-              selected={selectedId === hit.document_id}
-              onSelect={() => setSelectedId(hit.document_id)}
-            />
-          ))}
-        </ul>
       </section>
 
       {selected && (
@@ -242,55 +227,90 @@ export default function InstrumentsApp() {
   );
 }
 
-// ─── Result card ────────────────────────────────────────────────────────────
+// ─── Result table (compact, scrollable, type-aware columns) ─────────────────
 
-function ResultCard({ hit, selected, onSelect }) {
-  const isin =
-    (hit.identifiers || []).find((id) => (id.type || "").toLowerCase() === "isin")?.identifier
-    || "";
-  const ticker = hit.ticker || hit.short_name || "";
-  const quality = hit.quality_score != null ? `${Math.round(hit.quality_score * 100)}%` : null;
-  const subtitle = hit.short_name || hit.issuer_legal_name || "";
-
-  return (
-    <li>
-      <button
-        type="button"
-        className={`finder-card${selected ? " selected" : ""}`}
-        onClick={onSelect}
-      >
-        <aside className="finder-card-ident">
-          <strong className="finder-card-ident-name">{hit.long_name}</strong>
-          <span className="finder-card-ident-isin mono">{isin || hit.document_id}</span>
-          <span className="finder-card-ident-tag">{labelForType(hit.ow_type)}</span>
-          {ticker && <span className="finder-card-ident-ticker mono">{ticker}</span>}
-        </aside>
-        <div className="finder-card-main">
-          <div className="finder-card-head">
-            <span className="finder-card-class">{hit.asset_class || ""}</span>
-            <span className="finder-card-status">{hit.lifecycle_status || "active"}</span>
-            {quality && <span className="finder-card-quality">Quality {quality}</span>}
-          </div>
-          <h3 className="finder-card-title">{hit.long_name}</h3>
-          {subtitle && <p className="finder-card-sub">{subtitle}</p>}
-          {hit.issuer_legal_name && hit.scope === "fund" && (
-            <p className="finder-card-sub">Umbrella: {hit.issuer_legal_name}</p>
-          )}
-          <div className="finder-card-tags">
-            <span className="finder-tag finder-tag-id mono">{hit.document_id}</span>
-            {hit.ow_type && <span className="finder-tag">{labelForType(hit.ow_type).toLowerCase()}</span>}
-            {hit.country && <span className="finder-tag">{hit.country}</span>}
-            {hit.currency && <span className="finder-tag">{hit.currency}</span>}
-            {hit.cfi_code && <span className="finder-tag mono">CFI {hit.cfi_code}</span>}
-          </div>
-        </div>
-      </button>
-    </li>
-  );
+function isinFor(hit) {
+  return (hit.identifiers || []).find((id) => (id.type || "").toLowerCase() === "isin")?.identifier || "";
 }
 
 function labelForType(t) {
-  return ({ equity: "EQUITY", simpleBond: "BOND", fund: "FUND" })[t] || t.toUpperCase();
+  return ({ equity: "Equity", simpleBond: "Bond", fund: "Fund" })[t] || t;
+}
+
+function fmtPct(decimal) {
+  if (decimal == null) return "—";
+  return `${(decimal * 100).toFixed(3)} %`;
+}
+
+// Columns keyed by the active type tab. Each entry: {label, render(hit)}.
+const COLUMNS = {
+  all: [
+    { key: "isin",   label: "ISIN / ID",   render: (h) => <span className="mono">{isinFor(h) || h.document_id}</span> },
+    { key: "valor",  label: "Valor",       render: (h) => <span className="mono">{h.valor || "—"}</span> },
+    { key: "type",   label: "Type",        render: (h) => <span className="finder-row-chip">{labelForType(h.ow_type)}</span> },
+    { key: "name",   label: "Name",        render: (h) => <span className="finder-row-name">{h.long_name}</span>, wide: true },
+    { key: "ccy",    label: "CCY",         render: (h) => <span className="mono">{h.currency || "—"}</span> },
+  ],
+  equity: [
+    { key: "isin",   label: "ISIN",        render: (h) => <span className="mono">{isinFor(h) || "—"}</span> },
+    { key: "valor",  label: "Valor",       render: (h) => <span className="mono">{h.valor || "—"}</span> },
+    { key: "ticker", label: "Ticker",      render: (h) => <span className="mono">{h.ticker || "—"}</span> },
+    { key: "name",   label: "Name",        render: (h) => <span className="finder-row-name">{h.long_name}</span>, wide: true },
+    { key: "sector", label: "Sector",      render: (h) => h.sector || "—" },
+    { key: "ccy",    label: "CCY",         render: (h) => <span className="mono">{h.currency || "—"}</span> },
+    { key: "mic",    label: "Venue",       render: (h) => <span className="mono">{h.venue_mic || "—"}</span> },
+    { key: "country",label: "Country",     render: (h) => <span className="mono">{h.country || "—"}</span> },
+  ],
+  simpleBond: [
+    { key: "isin",   label: "ISIN",        render: (h) => <span className="mono">{isinFor(h) || "—"}</span> },
+    { key: "valor",  label: "Valor",       render: (h) => <span className="mono">{h.valor || "—"}</span> },
+    { key: "name",   label: "Name",        render: (h) => <span className="finder-row-name">{h.long_name}</span>, wide: true },
+    { key: "issuer", label: "Issuer",      render: (h) => h.issuer_legal_name || "—" },
+    { key: "coupon", label: "Coupon",      render: (h) => <span className="mono">{fmtPct(h.coupon_rate)}</span> },
+    { key: "mat",    label: "Maturity",    render: (h) => <span className="mono">{h.maturity_date || "—"}</span> },
+    { key: "rating", label: "Rating",      render: (h) => <span className="finder-row-chip">{h.issuer_rating || "—"}</span> },
+    { key: "ccy",    label: "CCY",         render: (h) => <span className="mono">{h.currency || "—"}</span> },
+  ],
+  fund: [
+    { key: "isin",   label: "ISIN",        render: (h) => <span className="mono">{isinFor(h) || "—"}</span> },
+    { key: "valor",  label: "Valor",       render: (h) => <span className="mono">{h.valor || "—"}</span> },
+    { key: "name",   label: "Share Class", render: (h) => <span className="finder-row-name">{h.long_name}</span>, wide: true },
+    { key: "sub",    label: "Sub-fund",    render: (h) => h.sub_fund_name || "—" },
+    { key: "umb",    label: "Umbrella",    render: (h) => h.umbrella_name || h.issuer_legal_name || "—" },
+    { key: "sub_t",  label: "Sub-type",    render: (h) => <span className="finder-row-chip">{h.fund_sub_type || "—"}</span> },
+    { key: "div",    label: "Policy",      render: (h) => h.dividend_policy || "—" },
+    { key: "ccy",    label: "CCY",         render: (h) => <span className="mono">{h.currency || "—"}</span> },
+  ],
+};
+
+function ResultTable({ items, typeTab, selectedId, onSelect }) {
+  const cols = COLUMNS[typeTab] || COLUMNS.all;
+  return (
+    <div className="finder-table-wrap">
+      <table className="finder-table">
+        <thead>
+          <tr>
+            {cols.map((c) => (
+              <th key={c.key} className={c.wide ? "wide" : ""}>{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((hit) => (
+            <tr
+              key={`${hit.scope}:${hit.document_id}`}
+              className={selectedId === hit.document_id ? "selected" : ""}
+              onClick={() => onSelect(hit.document_id)}
+            >
+              {cols.map((c) => (
+                <td key={c.key} className={c.wide ? "wide" : ""}>{c.render(hit)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // ─── Detail panel (overlay) ─────────────────────────────────────────────────

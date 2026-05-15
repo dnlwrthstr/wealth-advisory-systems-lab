@@ -40,10 +40,23 @@ class SearchHit:
     country: Optional[str]
     venue_mic: Optional[str]
     ticker: Optional[str]
+    valor: Optional[str]
     issuer_legal_name: Optional[str]
     issuer_lei: Optional[str]
+    # Equity
+    sector: Optional[str]
+    # Bond
+    coupon_rate: Optional[float]
+    maturity_date: Optional[str]
+    issuer_rating: Optional[str]
+    # Fund
     management_company_name: Optional[str]
     promoter_name: Optional[str]
+    sub_fund_name: Optional[str]
+    umbrella_name: Optional[str]
+    fund_sub_type: Optional[str]
+    dividend_policy: Optional[str]
+    # Common
     identifiers: List[Dict[str, str]]
     lifecycle_status: Optional[str]
     quality_score: Optional[float]
@@ -65,10 +78,19 @@ def _hit_to_search(hit: Dict[str, Any]) -> SearchHit:
         country=src.get("country"),
         venue_mic=src.get("venueMic"),
         ticker=src.get("ticker"),
+        valor=src.get("valor"),
         issuer_legal_name=src.get("issuerLegalName"),
         issuer_lei=src.get("issuerLei"),
+        sector=src.get("sector"),
+        coupon_rate=src.get("couponRate"),
+        maturity_date=src.get("maturityDate"),
+        issuer_rating=src.get("issuerRating"),
         management_company_name=src.get("managementCompanyName"),
         promoter_name=src.get("promoterName"),
+        sub_fund_name=src.get("subFundName"),
+        umbrella_name=src.get("umbrellaName"),
+        fund_sub_type=src.get("fundSubType"),
+        dividend_policy=src.get("dividendPolicy"),
         identifiers=list(src.get("identifiers") or []),
         lifecycle_status=src.get("lifecycleStatus"),
         quality_score=src.get("qualityScore"),
@@ -77,18 +99,29 @@ def _hit_to_search(hit: Dict[str, Any]) -> SearchHit:
 
 
 def _identifier_subquery(value: str) -> Dict[str, Any]:
-    """Match an identifier substring across schemes — also accepts exact
-    matches against the keyword-mapped `identifierStrings.keyword` field
-    so users typing the full ISIN/ticker get a top hit immediately.
+    """Match identifiers as the user types — even a single character.
+
+    `identifierStrings.keyword` indexes each identifier verbatim (uppercase
+    for ISINs/tickers). We OR together:
+      * `prefix` on the keyword field (case-sensitive uppercase) — fast,
+        catches "C" → "CH...".
+      * `wildcard` on the keyword field — catches mid-string substrings
+        (slow but OK for ~10²–10³ docs).
+      * `match_phrase_prefix` on the analyzed text — handles tokens like
+        "BBG000RJX2P9" in lowercase + edge tokenisation.
+    A full-match `term` is included so a complete ISIN ranks at the top.
     """
     value = value.strip()
+    upper = value.upper()
     return {
         "bool": {
             "should": [
-                {"term": {"identifierStrings.keyword": value}},
-                {"term": {"identifierStrings.keyword": value.upper()}},
-                {"match": {"identifierStrings": {"query": value, "operator": "and"}}},
-                {"match_phrase_prefix": {"ticker": value}},
+                {"term": {"identifierStrings.keyword": upper}},
+                {"prefix": {"identifierStrings.keyword": upper}},
+                {"wildcard": {"identifierStrings.keyword": f"*{upper}*"}},
+                {"match_phrase_prefix": {"identifierStrings": value}},
+                {"prefix": {"ticker.keyword": upper}},
+                {"prefix": {"valor.keyword": upper}},
             ],
             "minimum_should_match": 1,
         }
@@ -96,27 +129,36 @@ def _identifier_subquery(value: str) -> Dict[str, Any]:
 
 
 def _name_subquery(value: str) -> Dict[str, Any]:
+    """Match longName / shortName as the user types.
+
+    `match_phrase_prefix` is the standard autocomplete pattern: it
+    tokenises the input the same way the index does, and treats the
+    *last* token as a prefix. So "Nest" matches "Nestlé S.A." because
+    the analyser produces "nestl" for both sides.
+    """
     return {
-        "multi_match": {
-            "query": value,
-            "type": "best_fields",
-            "fields": ["longName^3", "shortName^2"],
-            "operator": "and",
+        "bool": {
+            "should": [
+                {"match_phrase_prefix": {"longName": {"query": value, "max_expansions": 50}}},
+                {"match_phrase_prefix": {"shortName": {"query": value, "max_expansions": 50}}},
+                {"match": {"longName": value}},
+                {"match": {"shortName": value}},
+            ],
+            "minimum_should_match": 1,
         }
     }
 
 
 def _issuer_subquery(value: str) -> Dict[str, Any]:
     return {
-        "multi_match": {
-            "query": value,
-            "type": "best_fields",
-            "fields": [
-                "issuerLegalName^3",
-                "managementCompanyName",
-                "promoterName",
+        "bool": {
+            "should": [
+                {"match_phrase_prefix": {"issuerLegalName": {"query": value, "max_expansions": 50}}},
+                {"match_phrase_prefix": {"umbrellaName": {"query": value, "max_expansions": 50}}},
+                {"match_phrase_prefix": {"managementCompanyName": {"query": value, "max_expansions": 50}}},
+                {"match_phrase_prefix": {"promoterName": {"query": value, "max_expansions": 50}}},
             ],
-            "operator": "and",
+            "minimum_should_match": 1,
         }
     }
 

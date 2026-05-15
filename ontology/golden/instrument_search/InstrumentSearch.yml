@@ -108,6 +108,36 @@ ontology:
         promoterName:
           description: Fund only — group / promoter name.
           type: string
+        valor:
+          description: Swiss VALOREN identifier (when present).
+          type: string
+        sector:
+          description: Equity — sector / industry label (yahoo or canonical).
+          type: string
+        couponRate:
+          description: Bond — current coupon rate as a decimal fraction (0.015 = 1.5%).
+          type: number
+        maturityDate:
+          description: Bond — maturity date.
+          type: string
+          format: date
+        issuerRating:
+          description: >
+            Bond — issuer's primary credit-rating notation (e.g. "BBB-").
+            Taken from the first entry of `issuer.creditProfile.issuerRatings`.
+          type: string
+        subFundName:
+          description: Fund — sub-fund name (strategy level).
+          type: string
+        umbrellaName:
+          description: Fund — umbrella legal name (issuer of the share class).
+          type: string
+        fundSubType:
+          description: Fund — sub-type (etf, openEndedMutualFund, …).
+          type: string
+        dividendPolicy:
+          description: Fund — DISTRIBUTING / ACCUMULATING.
+          type: string
         identifiers:
           description: All known identifiers with scheme labels.
           type: array

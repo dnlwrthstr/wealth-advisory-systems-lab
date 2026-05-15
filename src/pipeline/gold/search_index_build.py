@@ -73,6 +73,36 @@ def _country(src: Dict[str, Any]) -> Optional[str]:
     )
 
 
+def _valor(idents: List[Dict[str, str]]) -> Optional[str]:
+    for entry in idents:
+        if (entry.get("type") or "").lower() == "valoren":
+            return entry.get("identifier")
+    return None
+
+
+def _sector(src: Dict[str, Any]) -> Optional[str]:
+    industry = src.get("industrySector") or {}
+    return (
+        industry.get("sectorLabel")
+        or industry.get("canonicalLabel")
+        or industry.get("industryLabel")
+    )
+
+
+def _issuer_rating(src: Dict[str, Any]) -> Optional[str]:
+    issuer = src.get("issuer") or {}
+    credit = issuer.get("creditProfile") or {}
+    ratings = credit.get("issuerRatings") or []
+    if not ratings:
+        return None
+    first = ratings[0]
+    # Rating is now an object {agency, rating, ratingType, ...}; some legacy
+    # docs may still carry a plain string.
+    if isinstance(first, str):
+        return first
+    return first.get("rating") if isinstance(first, dict) else None
+
+
 def _project(src: Dict[str, Any], scope: str) -> Dict[str, Any]:
     primary = src.get("primaryListing") or {}
     idents = _identifiers(src)
@@ -80,6 +110,8 @@ def _project(src: Dict[str, Any], scope: str) -> Dict[str, Any]:
     mc = src.get("managementCompany") or {}
     prom = src.get("promoter") or {}
     record_meta = src.get("recordMeta") or {}
+    sub_fund = src.get("subFund") or {}
+    umbrella = src.get("umbrella") or {}
 
     doc: Dict[str, Any] = {
         "documentId": src.get("goldenId"),
@@ -94,15 +126,25 @@ def _project(src: Dict[str, Any], scope: str) -> Dict[str, Any]:
         "country": _country(src),
         "venueMic": primary.get("mic"),
         "ticker": primary.get("ticker"),
+        "valor": _valor(idents),
         "issuerLegalName": issuer_name,
         "issuerLei": issuer_lei,
-        "managementCompanyName": mc.get("legalName") if scope == "fund" else None,
-        "promoterName": prom.get("legalName") if scope == "fund" else None,
         "identifiers": idents or None,
         "identifierStrings": _identifier_strings(idents) or None,
         "lifecycleStatus": src.get("lifecycleStatus"),
         "qualityScore": record_meta.get("qualityScore"),
         "goldenAsOf": record_meta.get("goldenAsOf"),
+        # Type-specific
+        "sector": _sector(src) if scope == "equity" else None,
+        "couponRate": src.get("currentCouponRate") if scope == "bond" else None,
+        "maturityDate": src.get("maturityDate") if scope == "bond" else None,
+        "issuerRating": _issuer_rating(src) if scope == "bond" else None,
+        "managementCompanyName": mc.get("legalName") if scope == "fund" else None,
+        "promoterName": prom.get("legalName") if scope == "fund" else None,
+        "subFundName": sub_fund.get("name") if scope == "fund" else None,
+        "umbrellaName": umbrella.get("legalName") if scope == "fund" else None,
+        "fundSubType": src.get("fundSubType") if scope == "fund" else None,
+        "dividendPolicy": src.get("dividendPolicy") if scope == "fund" else None,
     }
     return {k: v for k, v in doc.items() if v is not None}
 

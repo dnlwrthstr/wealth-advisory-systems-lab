@@ -2470,3 +2470,79 @@ pre {
   text-transform: uppercase;
   color: #54655d;
 }
+
+/* Compact, scrollable results table (10-row cap) */
+
+.finder-fields-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.finder-table-wrap {
+  background: #fff;
+  border: 1px solid #e3e4dc;
+  border-radius: 10px;
+  max-height: 480px;  /* approximately 10 rows + header */
+  overflow: auto;
+}
+
+.finder-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.finder-table thead {
+  position: sticky;
+  top: 0;
+  background: #f9faf8;
+  z-index: 1;
+}
+
+.finder-table th {
+  text-align: left;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #54655d;
+  font-weight: 600;
+  border-bottom: 1px solid #e3e4dc;
+  white-space: nowrap;
+}
+
+.finder-table td {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid #f0f1ec;
+  vertical-align: middle;
+  color: #1a2823;
+  white-space: nowrap;
+}
+
+.finder-table td.wide,
+.finder-table th.wide {
+  width: 28%;
+  white-space: normal;
+}
+
+.finder-table tbody tr {
+  cursor: pointer;
+  transition: background 80ms;
+}
+
+.finder-table tbody tr:hover { background: #f4f6f1; }
+.finder-table tbody tr.selected { background: #e7efe9; }
+
+.finder-row-name {
+  font-weight: 500;
+  color: #1a2823;
+}
+
+.finder-row-chip {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #eef2ee;
+  font-size: 0.75rem;
+  color: #355c4b;
+  border: 1px solid #d5dbd6;
+}
