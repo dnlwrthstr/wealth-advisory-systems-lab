@@ -81,6 +81,23 @@ YAHOO_QUOTE_TYPE_TO_SUBTYPE: Dict[str, str] = {
     "REIT": "reit",
 }
 
+# Default CFI (ISO 10962) per equity sub-type. CFI is six chars:
+#   pos 1: category    (E = Equity)
+#   pos 2: subcategory (S = Shares/common, D = Depository receipts, P = Preferred)
+#   pos 3: voting      (V = voting, N = non-voting, R = restricted)
+#   pos 4: ownership   (U = unrestricted, R = restricted)
+#   pos 5: payment     (F = fully paid)
+#   pos 6: form        (R = registered, B = bearer)
+# These are the conservative defaults; the real CFI for a specific share
+# class can override via the find-and-parse-factsheet skill.
+CFI_BY_SUBTYPE: Dict[str, str] = {
+    "commonStock": "ESVUFR",
+    "adr":         "EDSXFR",
+    "gdr":         "EDSXFR",
+    "reit":        "ESVUFR",
+    "other":       "ESXXXR",
+}
+
 COUNTRY_NAME_TO_ISO2: Dict[str, str] = {
     "United States": "US", "United Kingdom": "GB",
     "Germany": "DE", "France": "FR", "Switzerland": "CH",
@@ -301,10 +318,9 @@ def yahoo_info_to_golden(
     industry_sector = None
     if sector or industry:
         industry_sector = IndustrySector(
-            scheme="yahoo",
             sectorLabel=sector,
             industryLabel=industry,
-            canonicalLabel=sector,
+            source="yfinance",
         )
 
     first_trading_date = _epoch_to_iso(_safe(info, "firstTradeDateEpochUtc"))
@@ -374,23 +390,44 @@ def yahoo_info_to_golden(
         headquartersCountry=country,
     )
 
+    # CFI code — derived from the equity sub-type. ISO 10962 default for
+    # common stock is ESVUFR (Equity / Shares / Voting / Unrestricted /
+    # Fully paid / Registered). Tagged as `derived-from-cfi-table` in the
+    # provenance, separate from yfinance.
+    cfi_code = CFI_BY_SUBTYPE.get(equity_sub_type, "ESXXXR")
+
     populated = sum(1 for v in info.values() if v not in (None, "", "N/A"))
     quality = round(populated / max(len(info), 1), 3)
+
+    # Build provenance entries reflecting which sources actually filled what.
+    sot_entries: List[SourceAttribution] = [
+        SourceAttribution(fieldGroup="identifiers", source="yfinance", sourceTimestamp=now_iso),
+        SourceAttribution(fieldGroup="primaryListing", source="yfinance", sourceTimestamp=now_iso),
+        SourceAttribution(fieldGroup="marketData", source="yfinance", sourceTimestamp=now_iso),
+        SourceAttribution(fieldGroup="classification", source="cfi-default-table", sourceTimestamp=now_iso),
+    ]
+    if sector or industry:
+        sot_entries.append(
+            SourceAttribution(fieldGroup="industrySector", source="yfinance", sourceTimestamp=now_iso)
+        )
+    if seed:
+        # Parquet contributed at least ISIN + valor + currency baseline.
+        sot_entries.append(
+            SourceAttribution(fieldGroup="seed-identifiers", source="finfox-parquet", sourceTimestamp=now_iso)
+        )
+
     meta = GoldenRecordMeta(
         schemaVersion=SCHEMA_VERSION,
         goldenAsOf=now_iso,
         ingestionRunId=run_id,
-        sourceOfTruth=[
-            SourceAttribution(fieldGroup="identifiers", source="yfinance"),
-            SourceAttribution(fieldGroup="listing", source="yfinance"),
-            SourceAttribution(fieldGroup="marketData", source="yfinance"),
-        ],
+        sourceOfTruth=sot_entries,
         qualityScore=quality,
         isActive=True,
     )
 
     return EquityGolden(
         goldenId=golden_id,
+        cfiCode=cfi_code,
         identifierList=identifier_list,
         longName=long_name,
         shortName=short_name,

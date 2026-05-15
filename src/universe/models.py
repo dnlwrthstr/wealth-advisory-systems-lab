@@ -991,6 +991,9 @@ Normative rules: - Only DIRECT assignments are stored here (no inherited/materia
     icb: Optional[IcbClassification] = Field(None, description="Optional ICB classification for the issuer or instrument.")
     telekurs: Optional[TelekursClassification] = Field(None, description="Optional Telekurs classification for the issuer or instrument.")
     canonical: Optional[List[ClassificationAssignment]] = Field(None, description="Optional canonical classification assignments (typically to Issuer or Instrument). Each assignment points to a system and terminal node and can be time-versioned. Normative rule: - Each item MUST target the owning entity instance via applies_to   (direct assignment only). ")
+    sectorLabel: Optional[str] = Field(None, description="Free-form sector label sourced from a non-canonical taxonomy (e.g., yfinance's \"Consumer Defensive\" / \"Technology\"). Use the structured `gics` / `icb` / `telekurs` / `canonical` fields when a registered classification system is available. This field exists so providers that only expose plain English labels can still populate the panel — without burning a classification system on every Yahoo row. ")
+    industryLabel: Optional[str] = Field(None, description="Free-form industry label, peer of `sectorLabel`. Same rationale: preserves the provider's plain-English categorisation when no registered industry code is on hand. ")
+    source: Optional[str] = Field(None, description="Where `sectorLabel` / `industryLabel` came from (e.g., `yfinance`). The structured classification fields above carry their own provenance via their own enclosing entities, but free-form labels need this field to stay traceable. ")
 
 class Issuer(BaseModel):
     """

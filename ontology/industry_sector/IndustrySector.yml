@@ -39,3 +39,29 @@ ontology:
               (direct assignment only).
           items:
             $ref: "./canonical/Canonical.yml#/ontology/entities/ClassificationAssignment"
+        sectorLabel:
+          description: >
+            Free-form sector label sourced from a non-canonical taxonomy
+            (e.g., yfinance's "Consumer Defensive" / "Technology"). Use the
+            structured `gics` / `icb` / `telekurs` / `canonical` fields when
+            a registered classification system is available. This field
+            exists so providers that only expose plain English labels can
+            still populate the panel — without burning a classification
+            system on every Yahoo row.
+          type: string
+          example: Consumer Defensive
+        industryLabel:
+          description: >
+            Free-form industry label, peer of `sectorLabel`. Same rationale:
+            preserves the provider's plain-English categorisation when no
+            registered industry code is on hand.
+          type: string
+          example: Packaged Foods
+        source:
+          description: >
+            Where `sectorLabel` / `industryLabel` came from (e.g.,
+            `yfinance`). The structured classification fields above carry
+            their own provenance via their own enclosing entities, but
+            free-form labels need this field to stay traceable.
+          type: string
+          example: yfinance
