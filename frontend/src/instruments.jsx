@@ -819,11 +819,18 @@ function EquityDetail({ source }) {
   );
 }
 
+function fmtYears(v) {
+  if (v == null) return EM_DASH;
+  return `${Number(v).toFixed(2)} y`;
+}
+
 function BondDetail({ source }) {
   const issuer = source.issuer || {};
   const primary = source.primaryListing || {};
   const credit = issuer.creditProfile || {};
   const ratings = credit.issuerRatings || [];
+  const md = source.marketData || {};
+  const ccy = source.currencyOfDenomination;
   return (
     <>
       <IdentifierChips identifiers={source.identifierList} />
@@ -880,6 +887,29 @@ function BondDetail({ source }) {
           <Row label="Listing currency" value={<span className="mono">{val(primary.listingCurrency)}</span>} />
           <Row label="Status" value={val(primary.status)} />
           <Row label="First trading" value={<span className="mono">{val(primary.firstTradingDate)}</span>} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="📈" title="Market Data">
+        <KV>
+          <Row label="As of" value={<span className="mono">{val(md.asOf)}</span>} />
+          <Row label="Source MIC" value={<span className="mono">{val(md.sourceMic)}</span>} />
+          <Row label="Clean price" value={md.cleanPrice?.value != null ? `${md.cleanPrice.value} ${md.cleanPrice.currency || ccy || ""}`.trim() : EM_DASH} />
+          <Row label="Dirty price" value={md.dirtyPrice?.value != null ? `${md.dirtyPrice.value} ${md.dirtyPrice.currency || ccy || ""}`.trim() : EM_DASH} />
+          <Row label="Accrued interest" value={md.accruedInterest?.amount != null ? `${md.accruedInterest.amount} ${md.accruedInterest.currency || ccy || ""}`.trim() : EM_DASH} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="%" title="Yield & Duration">
+        <KV>
+          <Row label="Yield to maturity" value={fmtPctVal(md.yieldToMaturity)} />
+          <Row label="Yield to worst" value={fmtPctVal(md.yieldToWorst)} />
+          <Row label="Current yield" value={fmtPctVal(md.currentYield)} />
+          <Row label="Modified duration" value={fmtYears(md.modifiedDuration)} />
+          <Row label="Macaulay duration" value={fmtYears(md.macaulayDuration)} />
+          <Row label="Convexity" value={md.convexity != null ? Number(md.convexity).toFixed(4) : EM_DASH} />
+          <Row label="Spread to benchmark" value={md.spreadToBenchmark != null ? `${md.spreadToBenchmark} bp` : EM_DASH} />
+          <Row label="Z-spread" value={md.zSpread != null ? `${md.zSpread} bp` : EM_DASH} />
         </KV>
       </Subpanel>
 
