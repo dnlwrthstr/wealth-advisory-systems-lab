@@ -674,28 +674,30 @@ function HoldingsPanel({ source, allocation }) {
       {holdings.length === 0 ? (
         <p className="muted">{EM_DASH}</p>
       ) : (
-        <table className="holdings-table">
-          <thead>
-            <tr>
-              <th className="r">#</th>
-              <th>Identifier</th>
-              <th>Name</th>
-              <th>Asset class</th>
-              <th className="r">Weight</th>
-            </tr>
-          </thead>
-          <tbody>
-            {holdings.map((h, i) => (
-              <tr key={`${h.identifier}-${i}`}>
-                <td className="r mono">{i + 1}</td>
-                <td className="mono">{h.identifier}</td>
-                <td>{h.name}</td>
-                <td>{h.assetClass || EM_DASH}</td>
-                <td className="r mono">{(h.weight * 100).toFixed(3)}%</td>
+        <div className={`holdings-scroll${holdings.length > 10 ? " is-scrollable" : ""}`}>
+          <table className="holdings-table">
+            <thead>
+              <tr>
+                <th className="r">#</th>
+                <th>Identifier</th>
+                <th>Name</th>
+                <th>Asset class</th>
+                <th className="r">Weight</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {holdings.map((h, i) => (
+                <tr key={`${h.identifier}-${i}`}>
+                  <td className="r mono">{i + 1}</td>
+                  <td className="mono">{h.identifier}</td>
+                  <td>{h.name}</td>
+                  <td>{h.assetClass || EM_DASH}</td>
+                  <td className="r mono">{(h.weight * 100).toFixed(3)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </Subpanel>
   );

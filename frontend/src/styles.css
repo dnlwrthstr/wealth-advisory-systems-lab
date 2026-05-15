@@ -2860,3 +2860,23 @@ pre {
 }
 
 .holdings-table .r { text-align: right; }
+
+/* Holdings table — cap at ~10 rows, sticky header, scroll the rest */
+
+.holdings-scroll.is-scrollable {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid #e3e4dc;
+  border-radius: 8px;
+}
+
+.holdings-scroll.is-scrollable .holdings-table thead {
+  position: sticky;
+  top: 0;
+  background: #fbfbf9;
+  z-index: 1;
+}
+
+.holdings-scroll.is-scrollable .holdings-table th {
+  border-bottom: 1px solid #d5dbd6;
+}
