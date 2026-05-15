@@ -138,13 +138,20 @@ def gleif_fields(record: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def apply_to_doc(doc: Dict[str, Any], gleif: Dict[str, Any]) -> Dict[str, Any]:
-    """Backfill blanks + refine generic issuerType. Existing non-generic values
-    are preserved.
+    """Overlay GLEIF onto the issuer doc.
+
+    GLEIF is the authoritative source for legal-entity attributes
+    (legalName, domicileCountry, headquartersCountry, ultimateParentLei),
+    so GLEIF values overwrite the upstream pipeline's best-guesses when
+    present. issuerType is more nuanced — the upstream pipelines distinguish
+    roles (`fund_umbrella`, `fund_company`, `promoter`) that GLEIF doesn't
+    know about, so the GLEIF-derived issuerType only takes over when the
+    current value is blank or the generic `corporate` default.
     """
     updated = dict(doc)
     for field in ("legalName", "domicileCountry", "headquartersCountry", "ultimateParentLei"):
         v = gleif.get(field)
-        if v and not updated.get(field):
+        if v:
             updated[field] = v
     new_type = gleif.get("issuerTypeFromGleif")
     if new_type and (not updated.get("issuerType") or updated["issuerType"] == "corporate"):

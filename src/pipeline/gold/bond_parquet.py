@@ -32,6 +32,7 @@ from universe.models import (
     FinancialInstrumentIdentification,
     GoldenRecordMeta,
     IssuerSnapshot,
+    LegalEntityIdentifier,
     ListingSnapshot,
     Rating,
     SourceAttribution,
@@ -75,7 +76,13 @@ def _credit_profile(rating: Optional[str], agency: Optional[str]) -> Optional[Cr
     )
 
 
-def row_to_golden(row: dict, run_id: str, now: datetime) -> Optional[BondGolden]:
+def row_to_golden(
+    row: dict,
+    run_id: str,
+    now: datetime,
+    *,
+    enrich_lei: bool = False,
+) -> Optional[BondGolden]:
     isin = row.get("isin")
     if not isin:
         return None
@@ -87,9 +94,25 @@ def row_to_golden(row: dict, run_id: str, now: datetime) -> Optional[BondGolden]
     issuer_country = row.get("issuer_country")
     country = Country(issuer_country) if issuer_country and len(issuer_country) == 2 else None
 
+    # Best-effort LEI resolution via GLEIF's ISIN filter. When GLEIF has no
+    # record (often the case for XS Eurobonds) we fall back to the
+    # name-derived issuerId so the downstream aggregator still has something
+    # to dedupe by.
+    issuer_lei: Optional[str] = None
+    if enrich_lei:
+        from ._lei_lookup import lei_for_isin
+        issuer_lei = lei_for_isin(isin)
+
+    issuer_name = row.get("issuer_name") or isin
+    if issuer_lei:
+        issuer_id = f"ISS-{issuer_lei}"
+    else:
+        issuer_id = f"ISS-{issuer_name}"
+
     issuer = IssuerSnapshot(
-        issuerId=f"ISS-{row.get('issuer_name') or isin}",
-        legalName=row.get("issuer_name") or isin,
+        issuerId=issuer_id,
+        legalName=issuer_name,
+        lei=LegalEntityIdentifier(issuer_lei) if issuer_lei else None,
         issuerType="corporate" if (row.get("sector") not in (None, "Government", "Sovereign")) else "government",
         domicileCountry=country,
         headquartersCountry=country,
@@ -178,6 +201,15 @@ def main() -> None:
         help="Cap on number of bonds (smoke testing).",
     )
     parser.add_argument(
+        "--enrich-lei", action="store_true",
+        help=(
+            "For each bond ISIN, look up the issuer LEI via the GLEIF "
+            "filter[isin] endpoint (cached on disk). Slow first pass; "
+            "subsequent runs use the cache. Eurobonds often have no GLEIF "
+            "ISIN mapping — those keep the name-derived issuerId."
+        ),
+    )
+    parser.add_argument(
         "--output", "-o", type=Path,
         default=Path("data/opensearch/golden/bond/bonds.ndjson"),
     )
@@ -189,15 +221,25 @@ def main() -> None:
     log.info("Loaded %d bonds from data/universe/bond.parquet", len(master))
     if args.limit:
         master = master.head(args.limit)
+    if args.enrich_lei:
+        log.info("GLEIF ISIN-LEI enrichment enabled (cached under ~/.cache/wealth-advisory-systems-lab/gleif-isin/)")
 
     run_id = f"parquet-bond-{uuid.uuid4().hex[:8]}"
     now = datetime.now(timezone.utc)
     docs = []
-    for row in master.to_dict("records"):
+    resolved = 0
+    for i, row in enumerate(master.to_dict("records"), 1):
         clean = {k: (v if v == v else None) for k, v in row.items()}  # NaN → None
-        golden = row_to_golden(clean, run_id, now)
-        if golden is not None:
-            docs.append(golden)
+        golden = row_to_golden(clean, run_id, now, enrich_lei=args.enrich_lei)
+        if golden is None:
+            continue
+        if golden.issuer.lei:
+            resolved += 1
+        docs.append(golden)
+        if args.enrich_lei and i % 50 == 0:
+            log.info("  [%d/%d] processed; %d LEIs resolved so far", i, len(master), resolved)
+    if args.enrich_lei:
+        log.info("LEI resolution: %d / %d bonds got an issuer LEI", resolved, len(docs))
     n = write_ndjson(docs, args.output)
     log.info("Wrote %d BondGolden documents to %s", n, args.output)
 
