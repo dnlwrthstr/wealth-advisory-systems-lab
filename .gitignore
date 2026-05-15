@@ -24,6 +24,8 @@ data/external/*
 # Generated Parquet files (regenerate with scripts/)
 data/custodian/*.parquet
 data/universe/*.parquet
+data/lake/**/*.parquet
+data/lake/**/_manifest.json
 
 # Environment files
 .env
