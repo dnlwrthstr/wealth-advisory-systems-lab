@@ -17,6 +17,10 @@ async function request(path, options = {}) {
   return response.json();
 }
 
+export function fetchReference() {
+  return request("/custody/reference");
+}
+
 export function listQuestionnaires() {
   return request("/admin/questionnaires");
 }

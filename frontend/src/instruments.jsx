@@ -3,6 +3,7 @@ import {
   cancelOrder,
   fetchInstrumentTypes,
   fetchOrder,
+  fetchReference,
   listPortfolioOrders,
   searchInstruments,
   submitOrder,
@@ -15,6 +16,7 @@ export default function InstrumentsApp() {
   const [typeFilter, setTypeFilter] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState("");
   const [types, setTypes] = useState([]);
+  const [currencies, setCurrencies] = useState([]);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -25,6 +27,7 @@ export default function InstrumentsApp() {
 
   useEffect(() => {
     fetchInstrumentTypes().then(setTypes).catch(() => {});
+    fetchReference().then((ref) => setCurrencies(ref.currency ?? [])).catch(() => {});
   }, []);
 
   const doSearch = useCallback(
@@ -71,14 +74,16 @@ export default function InstrumentsApp() {
               <option key={t} value={t}>{TYPE_LABELS[t] ?? t}</option>
             ))}
           </select>
-          <input
-            className="instr-currency-input"
-            type="text"
-            placeholder="CCY"
-            maxLength={3}
+          <select
+            className="instr-filter-select"
             value={currencyFilter}
-            onChange={(e) => setCurrencyFilter(e.target.value.toUpperCase())}
-          />
+            onChange={(e) => setCurrencyFilter(e.target.value)}
+          >
+            <option value="">All currencies</option>
+            {currencies.map((c) => (
+              <option key={c.value} value={c.value}>{c.value} — {c.label}</option>
+            ))}
+          </select>
         </div>
 
         {error && <p className="instr-error">{error}</p>}
