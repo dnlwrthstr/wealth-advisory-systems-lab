@@ -1,0 +1,133 @@
+ontology:
+  name: Instrument Search
+  version: 0.1.0
+  description: >
+    Denormalised search-and-autocomplete helper index that lets a single
+    OpenSearch query span every instrument family. One document per
+    `(scope, documentId)` pair — same `documentId` as the per-security
+    golden record — containing the fields a UI typically searches on:
+
+      * Every known identifier (ISIN, ticker, valor, CUSIP, FIGI, RIC,
+        SEDOL, WKN, …) flattened into a keyword array for exact match
+        plus an analyzed `text` field for substring match.
+      * Display names — long and short.
+      * Issuer / umbrella / management-company legal name(s) so users
+        can search by issuer regardless of security family.
+      * A few hoisted filter fields — currency, country, asset class,
+        lifecycle status — for facet-style narrowing without touching
+        the per-security index.
+
+    The per-security indices (`pms_golden_{equity,bond,fund}`) remain
+    the source of truth for the full record. This index is rebuilt by
+    `pipeline.gold.search_index_build` after any per-security re-load.
+
+    Distinct from `pms_golden_identifier`, which holds a single
+    `(identifier, scheme, documentId)` row per pair for cross-security
+    identifier resolution. This index packs everything that a search UI
+    needs into one document so a single query returns a renderable hit.
+
+  source_entity: "derived from pms_golden_{equity,bond,fund}"
+
+  entities:
+
+    InstrumentSearch:
+      description: >
+        One search-friendly projection of a per-security golden record.
+        Document `_id` is `<scope>:<documentId>` (e.g. `fund:FG-IE00B4L5Y983-001`).
+      kind: golden_record
+      type: object
+      required:
+        - documentId
+        - scope
+        - longName
+        - assetClass
+      properties:
+        documentId:
+          description: goldenId of the source per-security record.
+          type: string
+          example: FG-IE00B4L5Y983-001
+        scope:
+          description: Which per-security index holds the canonical record.
+          type: string
+          enum:
+            - equity
+            - bond
+            - fund
+          example: fund
+        ow_type:
+          description: >
+            OpenWealth FinancialInstrumentType (`equity`, `simpleBond`,
+            `fund`) — what the frontend type tabs filter on.
+          type: string
+          example: fund
+        longName:
+          description: Full instrument name.
+          type: string
+          example: iShares Core MSCI World UCITS ETF USD (Acc)
+        shortName:
+          description: Short display name.
+          type: string
+        assetClass:
+          description: Resolved asset-class label.
+          type: string
+          example: Fund / UCITS / Equity ETF
+        assetClassId:
+          description: Canonical asset-class id.
+          type: string
+        cfiCode:
+          description: ISO 10962 CFI code.
+          type: string
+        currency:
+          description: ISO 4217 currency code.
+          type: string
+          example: USD
+        country:
+          description: ISO 3166-1 alpha-2 country (incorporation / domicile / risk).
+          type: string
+          example: IE
+        venueMic:
+          description: Primary listing MIC.
+          type: string
+          example: XLON
+        ticker:
+          description: Primary listing ticker.
+          type: string
+          example: SWDA
+        issuerLegalName:
+          description: >
+            Display issuer name. For equities and bonds this is the
+            instrument's issuer. For funds it's the umbrella (legal
+            issuer of the share class).
+          type: string
+        issuerLei:
+          description: LEI of the display issuer if known.
+          type: string
+        managementCompanyName:
+          description: Fund only — operator legal name.
+          type: string
+        promoterName:
+          description: Fund only — group / promoter name.
+          type: string
+        identifiers:
+          description: All known identifiers with scheme labels.
+          type: array
+          items:
+            type: object
+        identifierStrings:
+          description: >
+            Flat list of every identifier value across all schemes —
+            indexed both as `text` (substring search) and `keyword`
+            (exact match). The fastest path for "user typed AAPL".
+          type: array
+          items:
+            type: string
+        lifecycleStatus:
+          description: active / matured / liquidated / inactive / ...
+          type: string
+        qualityScore:
+          description: Provenance quality score copied from recordMeta.
+          type: number
+        goldenAsOf:
+          description: When the source record was last rebuilt.
+          type: string
+          format: date-time

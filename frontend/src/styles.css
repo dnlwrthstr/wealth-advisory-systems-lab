@@ -2053,3 +2053,420 @@ pre {
 }
 .pnl-pos { color: #065f46; font-weight: 600; }
 .pnl-neg { color: #991b1b; font-weight: 600; }
+
+/* ─── Find-an-instrument view ─────────────────────────────────────────── */
+
+.finder {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem 2rem 3rem;
+}
+
+.finder-header {
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(180deg, #fbfbf9 0%, #f4f5f0 100%);
+  border: 1px solid #e3e4dc;
+  box-shadow: 0 4px 14px rgba(15, 26, 22, 0.04);
+}
+
+.finder-header .eyebrow {
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: #355c4b;
+  font-weight: 600;
+}
+
+.finder-icon {
+  display: inline-block;
+  margin-right: 0.35rem;
+  color: #0f6b57;
+}
+
+.finder-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #1a2823;
+  letter-spacing: -0.01em;
+}
+
+.finder-sub {
+  margin: 0 0 1.25rem 0;
+  color: #41504a;
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+.finder-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.finder-tab {
+  min-height: 32px;
+  height: 32px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  border: 1px solid #d5dbd6;
+  background: #fff;
+  color: #1a2823;
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+
+.finder-tab:hover { border-color: #91a89c; }
+.finder-tab.active {
+  background: #14241e;
+  color: #fff;
+  border-color: #14241e;
+}
+
+.finder-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.finder-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.finder-field-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #54655d;
+  font-weight: 600;
+}
+
+.finder-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d5dbd6;
+  border-radius: 8px;
+  padding: 0 0.75rem;
+  height: 44px;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.finder-input-wrap:focus-within {
+  border-color: #0f6b57;
+  box-shadow: 0 0 0 3px rgba(15, 107, 87, 0.12);
+}
+
+.finder-input-icon {
+  color: #6c7d75;
+  margin-right: 0.5rem;
+  font-size: 1rem;
+  width: 16px;
+  display: inline-block;
+  text-align: center;
+}
+
+.finder-input-wrap input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  flex: 1;
+  height: 100%;
+  font-size: 0.95rem;
+}
+
+.finder-advanced-toggle {
+  background: none;
+  color: #355c4b;
+  padding: 0;
+  height: auto;
+  min-height: auto;
+  font-weight: 500;
+  text-align: left;
+}
+
+.finder-advanced-toggle:hover { color: #0f6b57; }
+
+.finder-advanced {
+  margin-top: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px dashed #d5dbd6;
+  border-radius: 8px;
+}
+
+.finder-advanced label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #54655d;
+}
+
+.finder-advanced select,
+.finder-advanced input {
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #d5dbd6;
+  padding: 0 0.6rem;
+  font-size: 0.9rem;
+}
+
+.finder-advanced-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.78rem;
+  color: #6c7d75;
+  font-style: italic;
+}
+
+.finder-error {
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+.finder-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.finder-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #54655d;
+  font-size: 0.85rem;
+}
+
+.finder-count { font-weight: 500; }
+.finder-index-name { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.78rem; opacity: 0.7; }
+
+.finder-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.finder-card {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 0;
+  height: auto;
+  min-height: auto;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 100ms, box-shadow 100ms;
+}
+
+.finder-card:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(15, 26, 22, 0.08); }
+.finder-card.selected { box-shadow: 0 0 0 2px #0f6b57, 0 6px 16px rgba(15, 26, 22, 0.10); }
+
+.finder-card-ident {
+  background: #1a2823;
+  color: #f4f6f5;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  justify-content: space-between;
+}
+
+.finder-card-ident-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.finder-card-ident-isin {
+  font-size: 0.78rem;
+  color: #c5d6cb;
+}
+
+.finder-card-ident-tag {
+  align-self: flex-start;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c5d6cb;
+  font-weight: 700;
+}
+
+.finder-card-ident-ticker { font-size: 0.78rem; color: #8aa39a; }
+
+.finder-card-main {
+  background: linear-gradient(180deg, #20312a 0%, #182520 100%);
+  color: #f4f6f5;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.finder-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8aa39a;
+  font-weight: 600;
+}
+
+.finder-card-class { color: #c5d6cb; }
+.finder-card-status {
+  margin-left: auto;
+  color: #4ade80;
+}
+
+.finder-card-quality {
+  background: rgba(255,255,255,0.06);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  color: #c5d6cb;
+}
+
+.finder-card-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.finder-card-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #b3c5bc;
+}
+
+.finder-card-tags {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}
+
+.finder-tag {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #c5d6cb;
+  font-weight: 500;
+}
+
+.finder-tag-id { background: rgba(99, 132, 255, 0.12); color: #aac5ff; }
+
+.finder-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #54655d;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px dashed #d5dbd6;
+}
+
+/* Detail overlay panel */
+.finder-detail {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: min(420px, calc(100vw - 3rem));
+  max-height: 78vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 26, 22, 0.18);
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e3e4dc;
+  z-index: 50;
+}
+
+.finder-detail-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.finder-detail-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.finder-detail .muted { color: #54655d; font-size: 0.85rem; margin: 0.15rem 0 0 0; }
+
+.finder-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #355c4b;
+  border: 1px solid #d5dbd6;
+}
+
+.finder-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 1rem;
+  row-gap: 0.35rem;
+  margin: 0 0 1rem 0;
+  font-size: 0.88rem;
+}
+
+.finder-dl dt { color: #54655d; }
+.finder-dl dd { margin: 0; color: #1a2823; }
+
+.finder-id-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.finder-id-list li { display: flex; align-items: center; gap: 0.5rem; }
+
+.finder-detail h4 {
+  margin: 0.5rem 0 0.3rem 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #54655d;
+}

@@ -14,6 +14,7 @@ from instruments.opensearch_store import (
     OpenSearchInstrumentStore,
     opensearch_client_from_env,
 )
+from instruments.search_store import OpenSearchInstrumentSearch
 from instruments.service import InstrumentService
 from instruments.store import InstrumentStore
 
@@ -25,9 +26,11 @@ _client = opensearch_client_from_env()
 if _client is not None:
     log.info("instrument_api: using OpenSearch-backed store")
     _store = OpenSearchInstrumentStore(_client)
+    _search_store: OpenSearchInstrumentSearch | None = OpenSearchInstrumentSearch(_client)
 else:
     log.info("instrument_api: using in-memory fixture store (no OPENSEARCH_URL)")
     _store = InstrumentStore(INSTRUMENTS)
+    _search_store = None
 _service = InstrumentService(_store)
 
 app = FastAPI(
@@ -50,4 +53,4 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-app.include_router(build_router(_service))
+app.include_router(build_router(_service, search_store=_search_store))

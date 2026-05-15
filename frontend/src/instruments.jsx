@@ -4,114 +4,237 @@ import {
   fetchInstrumentTypes,
   fetchOrder,
   fetchReference,
+  findInstruments,
   listPortfolioOrders,
-  searchInstruments,
   submitOrder,
 } from "./services/api";
 
-// ─── Instrument search panel ────────────────────────────────────────────────
+// Build the per-result Instrument-shaped object expected by QuickOrderDialog
+// from a search-hit. The hit doesn't carry a `price` field (the helper index
+// stores no live market data), so we leave it null — order dialog will fall
+// back to its limit-price input.
+function hitToInstrument(hit) {
+  const isin =
+    (hit.identifiers || []).find((id) => (id.type || "").toLowerCase() === "isin")?.identifier
+    || "";
+  return {
+    id: hit.document_id,
+    isin,
+    name: hit.long_name,
+    shortName: hit.short_name || hit.ticker || "",
+    type: hit.ow_type,
+    currency: hit.currency || "",
+    price: null,
+    exchange: hit.venue_mic,
+    country: hit.country,
+    sector: null,
+    description: hit.issuer_legal_name || "",
+  };
+}
+
+const TYPE_TABS = [
+  { id: "all", label: "All" },
+  { id: "equity", label: "Equity" },
+  { id: "simpleBond", label: "Bond" },
+  { id: "fund", label: "Fund" },
+];
+
+// ─── Find-an-instrument view ────────────────────────────────────────────────
 
 export default function InstrumentsApp() {
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [name, setName] = useState("");
+  const [issuer, setIssuer] = useState("");
+  const [typeTab, setTypeTab] = useState("all");
   const [currencyFilter, setCurrencyFilter] = useState("");
-  const [types, setTypes] = useState([]);
+  const [countryFilter, setCountryFilter] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   const [currencies, setCurrencies] = useState([]);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selected, setSelected] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [showOrder, setShowOrder] = useState(false);
 
   const debounceRef = useRef(null);
 
   useEffect(() => {
-    fetchInstrumentTypes().then(setTypes).catch(() => {});
+    fetchInstrumentTypes().catch(() => {}); // keep the call to warm the type index
     fetchReference().then((ref) => setCurrencies(ref.currency ?? [])).catch(() => {});
   }, []);
 
   const doSearch = useCallback(
-    (q, type, currency) => {
+    (params) => {
       clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         setLoading(true);
         setError(null);
         try {
-          const data = await searchInstruments({ q, type: type || null, currency: currency || null });
-          setResults(data);
+          setResults(await findInstruments(params));
         } catch (err) {
           setError(err.message);
         } finally {
           setLoading(false);
         }
-      }, 300);
+      }, 250);
     },
     []
   );
 
   useEffect(() => {
-    doSearch(query, typeFilter, currencyFilter);
-  }, [query, typeFilter, currencyFilter, doSearch]);
+    doSearch({
+      identifier,
+      name,
+      issuer,
+      type: typeTab,
+      currency: currencyFilter || null,
+      country: countryFilter || null,
+    });
+  }, [identifier, name, issuer, typeTab, currencyFilter, countryFilter, doSearch]);
+
+  const items = results?.items ?? [];
+  const total = results?.total ?? 0;
+  const selected = items.find((h) => h.document_id === selectedId) || null;
 
   return (
-    <div className="instr-layout">
-      <div className="instr-search-col">
-        <div className="instr-toolbar">
-          <input
-            className="instr-search-input"
-            type="search"
-            placeholder="Search by name, ISIN, or ticker…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <select
-            className="instr-filter-select"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="">All types</option>
-            {types.map((t) => (
-              <option key={t} value={t}>{TYPE_LABELS[t] ?? t}</option>
-            ))}
-          </select>
-          <select
-            className="instr-filter-select"
-            value={currencyFilter}
-            onChange={(e) => setCurrencyFilter(e.target.value)}
-          >
-            <option value="">All currencies</option>
-            {currencies.map((c) => (
-              <option key={c.value} value={c.value}>{c.value} — {c.label}</option>
-            ))}
-          </select>
+    <div className="finder">
+      <header className="finder-header">
+        <p className="eyebrow"><span className="finder-icon">⌕</span> INSTRUMENT SEARCH</p>
+        <h1 className="finder-title">Find an instrument</h1>
+        <p className="finder-sub">
+          Search the golden records across equity, bond, and fund indices. Use the
+          type tabs to narrow, or leave on "All" to search everywhere at once.
+          Advanced filters adapt to the selected type.
+        </p>
+
+        <div className="finder-tabs" role="tablist">
+          {TYPE_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              type="button"
+              className={`finder-tab${typeTab === tab.id ? " active" : ""}`}
+              onClick={() => setTypeTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {error && <p className="instr-error">{error}</p>}
+        <div className="finder-fields">
+          <label className="finder-field">
+            <span className="finder-field-label">Identifier</span>
+            <span className="finder-input-wrap">
+              <span className="finder-input-icon mono">#</span>
+              <input
+                type="search"
+                value={identifier}
+                placeholder="ISIN / ticker / valor / CUSIP"
+                onChange={(e) => setIdentifier(e.target.value)}
+              />
+            </span>
+          </label>
+          <label className="finder-field">
+            <span className="finder-field-label">Name</span>
+            <span className="finder-input-wrap">
+              <span className="finder-input-icon">⌕</span>
+              <input
+                type="search"
+                value={name}
+                placeholder="Short or long name"
+                onChange={(e) => setName(e.target.value)}
+              />
+            </span>
+          </label>
+          <label className="finder-field">
+            <span className="finder-field-label">Issuer</span>
+            <span className="finder-input-wrap">
+              <span className="finder-input-icon">⌂</span>
+              <input
+                type="search"
+                value={issuer}
+                placeholder="Issuer legal name"
+                onChange={(e) => setIssuer(e.target.value)}
+              />
+            </span>
+          </label>
+        </div>
 
-        <InstrumentTable
-          results={results}
-          loading={loading}
-          selected={selected}
-          onSelect={setSelected}
-        />
-      </div>
-
-      <div className="instr-detail-col">
-        {selected ? (
-          <InstrumentDetail
-            instrument={selected}
-            onTrade={() => setShowOrder(true)}
-          />
-        ) : (
-          <div className="instr-detail-empty">
-            <p>Select an instrument to view details</p>
+        <button
+          type="button"
+          className="finder-advanced-toggle"
+          onClick={() => setAdvancedOpen((v) => !v)}
+        >
+          {advancedOpen ? "▾" : "▸"} Advanced filters
+        </button>
+        {advancedOpen && (
+          <div className="finder-advanced">
+            <label>
+              Currency
+              <select value={currencyFilter} onChange={(e) => setCurrencyFilter(e.target.value)}>
+                <option value="">Any</option>
+                {currencies.map((c) => (
+                  <option key={c.value} value={c.value}>{c.value} — {c.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Country (ISO-2)
+              <input
+                type="text"
+                maxLength={2}
+                placeholder="e.g. CH"
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value.toUpperCase())}
+              />
+            </label>
+            <p className="finder-advanced-note">
+              Type-specific filters (sector for equities, coupon range for bonds, fund
+              sub-type for funds) coming next; the helper index already carries the
+              fields.
+            </p>
           </div>
         )}
-      </div>
+      </header>
+
+      {error && <p className="finder-error">{error}</p>}
+
+      <section className="finder-results">
+        <div className="finder-results-header">
+          <span className="finder-count">
+            {loading ? "Searching…" : `${total} result${total === 1 ? "" : "s"}`}
+          </span>
+          <span className="finder-index-name">Index: pms_golden_instrumentsearch</span>
+        </div>
+
+        {!loading && items.length === 0 && (
+          <p className="finder-empty">No instruments matched.</p>
+        )}
+
+        <ul className="finder-list">
+          {items.map((hit) => (
+            <ResultCard
+              key={`${hit.scope}:${hit.document_id}`}
+              hit={hit}
+              selected={selectedId === hit.document_id}
+              onSelect={() => setSelectedId(hit.document_id)}
+            />
+          ))}
+        </ul>
+      </section>
+
+      {selected && (
+        <DetailPanel
+          hit={selected}
+          onClose={() => setSelectedId(null)}
+          onTrade={() => setShowOrder(true)}
+        />
+      )}
 
       {showOrder && selected && (
         <QuickOrderDialog
-          instrument={selected}
+          instrument={hitToInstrument(selected)}
           onClose={() => setShowOrder(false)}
         />
       )}
@@ -119,121 +242,99 @@ export default function InstrumentsApp() {
   );
 }
 
-// ─── Instrument table ────────────────────────────────────────────────────────
+// ─── Result card ────────────────────────────────────────────────────────────
 
-function InstrumentTable({ results, loading, selected, onSelect }) {
-  if (loading && !results) {
-    return <div className="instr-loading">Searching…</div>;
-  }
-
-  const items = results?.items ?? [];
-  const total = results?.total ?? 0;
-
-  if (!loading && items.length === 0) {
-    return <div className="instr-empty">No instruments found.</div>;
-  }
+function ResultCard({ hit, selected, onSelect }) {
+  const isin =
+    (hit.identifiers || []).find((id) => (id.type || "").toLowerCase() === "isin")?.identifier
+    || "";
+  const ticker = hit.ticker || hit.short_name || "";
+  const quality = hit.quality_score != null ? `${Math.round(hit.quality_score * 100)}%` : null;
+  const subtitle = hit.short_name || hit.issuer_legal_name || "";
 
   return (
-    <div className="instr-table-wrap">
-      {total > 0 && (
-        <div className="instr-result-count">
-          {total} instrument{total !== 1 ? "s" : ""}
-          {loading && <span className="instr-refreshing"> · refreshing…</span>}
+    <li>
+      <button
+        type="button"
+        className={`finder-card${selected ? " selected" : ""}`}
+        onClick={onSelect}
+      >
+        <aside className="finder-card-ident">
+          <strong className="finder-card-ident-name">{hit.long_name}</strong>
+          <span className="finder-card-ident-isin mono">{isin || hit.document_id}</span>
+          <span className="finder-card-ident-tag">{labelForType(hit.ow_type)}</span>
+          {ticker && <span className="finder-card-ident-ticker mono">{ticker}</span>}
+        </aside>
+        <div className="finder-card-main">
+          <div className="finder-card-head">
+            <span className="finder-card-class">{hit.asset_class || ""}</span>
+            <span className="finder-card-status">{hit.lifecycle_status || "active"}</span>
+            {quality && <span className="finder-card-quality">Quality {quality}</span>}
+          </div>
+          <h3 className="finder-card-title">{hit.long_name}</h3>
+          {subtitle && <p className="finder-card-sub">{subtitle}</p>}
+          {hit.issuer_legal_name && hit.scope === "fund" && (
+            <p className="finder-card-sub">Umbrella: {hit.issuer_legal_name}</p>
+          )}
+          <div className="finder-card-tags">
+            <span className="finder-tag finder-tag-id mono">{hit.document_id}</span>
+            {hit.ow_type && <span className="finder-tag">{labelForType(hit.ow_type).toLowerCase()}</span>}
+            {hit.country && <span className="finder-tag">{hit.country}</span>}
+            {hit.currency && <span className="finder-tag">{hit.currency}</span>}
+            {hit.cfi_code && <span className="finder-tag mono">CFI {hit.cfi_code}</span>}
+          </div>
         </div>
-      )}
-      <table className="instr-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>ISIN</th>
-            <th>Type</th>
-            <th>CCY</th>
-            <th className="r">Price</th>
-            <th>Exchange</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((instr) => (
-            <tr
-              key={instr.id}
-              className={selected?.id === instr.id ? "selected" : ""}
-              onClick={() => onSelect(instr)}
-            >
-              <td>
-                <span className="instr-name">{instr.name}</span>
-                <small className="instr-ticker">{instr.shortName}</small>
-              </td>
-              <td><span className="mono">{instr.isin}</span></td>
-              <td>
-                <span className="instr-type-chip">{TYPE_LABELS[instr.type] ?? instr.type}</span>
-              </td>
-              <td><span className="mono">{instr.currency}</span></td>
-              <td className="r mono">{fmtPrice(instr.price, instr.currency)}</td>
-              <td>{instr.exchange ?? "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      </button>
+    </li>
   );
 }
 
-// ─── Instrument detail panel ─────────────────────────────────────────────────
+function labelForType(t) {
+  return ({ equity: "EQUITY", simpleBond: "BOND", fund: "FUND" })[t] || t.toUpperCase();
+}
 
-function InstrumentDetail({ instrument: i, onTrade }) {
+// ─── Detail panel (overlay) ─────────────────────────────────────────────────
+
+function DetailPanel({ hit, onClose, onTrade }) {
   return (
-    <div className="instr-detail">
-      <div className="instr-detail-header">
+    <aside className="finder-detail" aria-label="Instrument detail">
+      <div className="finder-detail-head">
         <div>
-          <h2 className="instr-detail-name">{i.name}</h2>
-          <p className="instr-detail-sub">
-            <span className="instr-type-chip">{TYPE_LABELS[i.type] ?? i.type}</span>
-            {i.exchange && <span className="instr-tag">{i.exchange}</span>}
-            {i.country && <span className="instr-tag">{i.country}</span>}
-          </p>
+          <h3>{hit.long_name}</h3>
+          <p className="muted">{hit.asset_class}</p>
         </div>
-        <button type="button" className="btn-primary" onClick={onTrade}>
-          Place Order
-        </button>
+        <div className="finder-detail-actions">
+          <button type="button" className="btn-primary" onClick={onTrade}>Place Order</button>
+          <button type="button" className="btn-ghost" onClick={onClose}>Close</button>
+        </div>
       </div>
-
-      <dl className="instr-dl">
-        <dt>ISIN</dt>
-        <dd className="mono">{i.isin}</dd>
-        <dt>Ticker</dt>
-        <dd className="mono">{i.shortName}</dd>
-        <dt>Currency</dt>
-        <dd className="mono">{i.currency}</dd>
-        <dt>Price</dt>
-        <dd className="mono">{fmtPrice(i.price, i.currency)}</dd>
-        {i.sector && (
-          <>
-            <dt>Sector</dt>
-            <dd>{i.sector.replace(/_/g, " ")}</dd>
-          </>
-        )}
-        {i.couponPct != null && (
-          <>
-            <dt>Coupon</dt>
-            <dd className="mono">{i.couponPct.toFixed(3)} %</dd>
-          </>
-        )}
-        {i.maturityDate && (
-          <>
-            <dt>Maturity</dt>
-            <dd className="mono">{i.maturityDate}</dd>
-          </>
-        )}
-        {i.yieldPct != null && (
-          <>
-            <dt>Yield</dt>
-            <dd className="mono">{i.yieldPct.toFixed(3)} %</dd>
-          </>
-        )}
+      <dl className="finder-dl">
+        <dt>Document</dt><dd className="mono">{hit.scope}/{hit.document_id}</dd>
+        {hit.cfi_code && (<><dt>CFI</dt><dd className="mono">{hit.cfi_code}</dd></>)}
+        {hit.currency && (<><dt>Currency</dt><dd className="mono">{hit.currency}</dd></>)}
+        {hit.country && (<><dt>Country</dt><dd className="mono">{hit.country}</dd></>)}
+        {hit.venue_mic && (<><dt>Primary venue</dt><dd className="mono">{hit.venue_mic}</dd></>)}
+        {hit.ticker && (<><dt>Ticker</dt><dd className="mono">{hit.ticker}</dd></>)}
+        {hit.issuer_legal_name && (<><dt>Issuer</dt><dd>{hit.issuer_legal_name}</dd></>)}
+        {hit.issuer_lei && (<><dt>Issuer LEI</dt><dd className="mono">{hit.issuer_lei}</dd></>)}
+        {hit.management_company_name && (<><dt>Management Co.</dt><dd>{hit.management_company_name}</dd></>)}
+        {hit.promoter_name && (<><dt>Promoter</dt><dd>{hit.promoter_name}</dd></>)}
+        {hit.lifecycle_status && (<><dt>Lifecycle</dt><dd>{hit.lifecycle_status}</dd></>)}
       </dl>
-
-      {i.description && <p className="instr-desc">{i.description}</p>}
-    </div>
+      {(hit.identifiers || []).length > 0 && (
+        <section>
+          <h4>Identifiers</h4>
+          <ul className="finder-id-list">
+            {(hit.identifiers || []).map((id) => (
+              <li key={`${id.type}:${id.identifier}`}>
+                <span className="finder-tag">{(id.type || "").toUpperCase()}</span>
+                <span className="mono">{id.identifier}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </aside>
   );
 }
 

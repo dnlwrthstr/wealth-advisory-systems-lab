@@ -1557,6 +1557,33 @@ class AccrualsSnapshot(BaseModel):
     numberOfDaysAccrued: Optional[int] = Field(None, description="Number of days of accrued interest.")
     pendingDividends: Optional[CurrencyAmount] = Field(None, description="Declared but not yet paid dividend amount.")
 
+class InstrumentSearch(BaseModel):
+    """
+    One search-friendly projection of a per-security golden record. Document `_id` is `<scope>:<documentId>` (e.g. `fund:FG-IE00B4L5Y983-001`).
+
+    """
+    documentId: str = Field(..., description="goldenId of the source per-security record.")
+    scope: str = Field(..., description="Which per-security index holds the canonical record.")
+    ow_type: Optional[str] = Field(None, description="OpenWealth FinancialInstrumentType (`equity`, `simpleBond`, `fund`) — what the frontend type tabs filter on. ")
+    longName: str = Field(..., description="Full instrument name.")
+    shortName: Optional[str] = Field(None, description="Short display name.")
+    assetClass: str = Field(..., description="Resolved asset-class label.")
+    assetClassId: Optional[str] = Field(None, description="Canonical asset-class id.")
+    cfiCode: Optional[str] = Field(None, description="ISO 10962 CFI code.")
+    currency: Optional[str] = Field(None, description="ISO 4217 currency code.")
+    country: Optional[str] = Field(None, description="ISO 3166-1 alpha-2 country (incorporation / domicile / risk).")
+    venueMic: Optional[str] = Field(None, description="Primary listing MIC.")
+    ticker: Optional[str] = Field(None, description="Primary listing ticker.")
+    issuerLegalName: Optional[str] = Field(None, description="Display issuer name. For equities and bonds this is the instrument's issuer. For funds it's the umbrella (legal issuer of the share class). ")
+    issuerLei: Optional[str] = Field(None, description="LEI of the display issuer if known.")
+    managementCompanyName: Optional[str] = Field(None, description="Fund only — operator legal name.")
+    promoterName: Optional[str] = Field(None, description="Fund only — group / promoter name.")
+    identifiers: Optional[List[Dict[str, Any]]] = Field(None, description="All known identifiers with scheme labels.")
+    identifierStrings: Optional[List[str]] = Field(None, description="Flat list of every identifier value across all schemes — indexed both as `text` (substring search) and `keyword` (exact match). The fastest path for \"user typed AAPL\". ")
+    lifecycleStatus: Optional[str] = Field(None, description="active / matured / liquidated / inactive / ...")
+    qualityScore: Optional[float] = Field(None, description="Provenance quality score copied from recordMeta.")
+    goldenAsOf: Optional[datetime] = Field(None, description="When the source record was last rebuilt.")
+
 class Identifier(BaseModel):
     """
     One (security, identifier) entry. The combination of `(scheme, identifier, documentId)` is the natural unique key (also used as the OpenSearch `_id`).

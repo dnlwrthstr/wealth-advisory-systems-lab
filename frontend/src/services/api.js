@@ -95,6 +95,28 @@ export function searchInstruments({ q = "", type = null, currency = null, limit 
   return request(`/instruments?${params}`);
 }
 
+// New helper-index-backed search (Find-an-instrument UI). Hits
+// pms_golden_instrumentsearch via /instruments/search.
+export function findInstruments({
+  identifier = "",
+  name = "",
+  issuer = "",
+  type = null,
+  currency = null,
+  country = null,
+  limit = 25,
+  offset = 0,
+} = {}) {
+  const params = new URLSearchParams({ limit, offset });
+  if (identifier) params.set("identifier", identifier);
+  if (name) params.set("name", name);
+  if (issuer) params.set("issuer", issuer);
+  if (type && type !== "all") params.set("type", type);
+  if (currency) params.set("currency", currency);
+  if (country) params.set("country", country);
+  return request(`/instruments/search?${params}`);
+}
+
 export function fetchInstrumentTypes() {
   return request("/instruments/types");
 }
