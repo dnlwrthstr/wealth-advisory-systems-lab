@@ -33,6 +33,32 @@ def _cache_path(isin: str) -> Path:
     return CACHE_DIR / f"{isin}.json"
 
 
+# Sector label mapping: yfinance returns underscored lower-case keys; the
+# ontology examples use Title-Case display labels.
+_SECTOR_LABEL = {
+    "technology": "Information Technology",
+    "financial_services": "Financial Services",
+    "healthcare": "Health Care",
+    "consumer_cyclical": "Consumer Cyclical",
+    "consumer_defensive": "Consumer Defensive",
+    "industrials": "Industrials",
+    "communication_services": "Communication Services",
+    "energy": "Energy",
+    "basic_materials": "Basic Materials",
+    "utilities": "Utilities",
+    "realestate": "Real Estate",
+}
+
+_ASSET_CLASS_LABEL = {
+    "stockPosition": "EQUITY",
+    "bondPosition": "FIXED_INCOME",
+    "cashPosition": "CASH",
+    "preferredPosition": "EQUITY",
+    "convertiblePosition": "FIXED_INCOME",
+    "otherPosition": "OTHER",
+}
+
+
 def _project_yahoo_info(info: Dict[str, Any]) -> Dict[str, Any]:
     """Keep the fields we'll actually use. Smaller cache + easier debugging."""
     return {
@@ -65,8 +91,68 @@ def _project_yahoo_info(info: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _project_funds_data(fd: Any) -> Dict[str, Any]:
+    """Project Yahoo's funds_data — top holdings, sector + asset-class
+    weights — into FundGolden.assetAllocation shape.
+    """
+    out: Dict[str, Any] = {}
+
+    # Top holdings → TopHolding[] (look-through, typically top 10).
+    try:
+        df = fd.top_holdings
+        if df is not None and not df.empty:
+            out["topHoldings"] = [
+                {
+                    "identifier": str(symbol),
+                    "name": row.get("Name") or str(symbol),
+                    "weight": float(row.get("Holding Percent") or 0.0),
+                    "assetClass": "EQUITY",
+                }
+                for symbol, row in df.iterrows()
+                if (row.get("Holding Percent") or 0.0) > 0
+            ]
+    except Exception:  # noqa: BLE001 — funds_data shapes vary
+        pass
+
+    # Sector weightings → bySector[]
+    try:
+        sw = fd.sector_weightings or {}
+        if sw:
+            out["bySector"] = [
+                {"sector": _SECTOR_LABEL.get(k, k.replace("_", " ").title()), "percentage": float(v)}
+                for k, v in sw.items()
+                if v is not None and float(v) > 0
+            ]
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Asset-class buckets → byAssetClass[]
+    try:
+        ac = fd.asset_classes or {}
+        if ac:
+            agg: Dict[str, float] = {}
+            for k, v in ac.items():
+                if v is None:
+                    continue
+                bucket = _ASSET_CLASS_LABEL.get(k, "OTHER")
+                agg[bucket] = agg.get(bucket, 0.0) + float(v)
+            out["byAssetClass"] = [
+                {"type": k, "percentage": round(v, 6)} for k, v in agg.items() if v > 0
+            ]
+    except Exception:  # noqa: BLE001
+        pass
+
+    return out
+
+
 def fetch_yahoo_fund(isin: str, *, use_cache: bool = True) -> Optional[Dict[str, Any]]:
-    """Look up `isin` on yfinance, projected and disk-cached."""
+    """Look up `isin` on yfinance, projected and disk-cached.
+
+    Pulls `Ticker.info` (NAV / TER / OHLCV / …) and `Ticker.funds_data`
+    (top holdings, sector weights, asset-class split) in one shot. Cache
+    entry contains both projections so the frontend can render the
+    allocation sub-panels without a second API call.
+    """
     cached = _cache_path(isin)
     if use_cache and cached.exists():
         try:
@@ -77,7 +163,8 @@ def fetch_yahoo_fund(isin: str, *, use_cache: bool = True) -> Optional[Dict[str,
     import yfinance as yf
 
     try:
-        info = yf.Ticker(isin).info or {}
+        ticker = yf.Ticker(isin)
+        info = ticker.info or {}
     except Exception as exc:  # noqa: BLE001 — yfinance throws everything
         log.warning("  %s: yfinance error %s", isin, exc)
         return None
@@ -88,6 +175,11 @@ def fetch_yahoo_fund(isin: str, *, use_cache: bool = True) -> Optional[Dict[str,
         return None
 
     projected = _project_yahoo_info(info)
+    try:
+        projected["assetAllocation"] = _project_funds_data(ticker.funds_data)
+    except Exception:  # noqa: BLE001 — funds_data may not exist for this ticker
+        projected["assetAllocation"] = {}
+
     try:
         cached.write_text(json.dumps(projected), encoding="utf-8")
     except OSError as exc:
@@ -165,6 +257,21 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
             for e in ids
         ):
             ids.append({"identifier": yhoo_symbol, "type": "tickerSymbol"})
+
+    # ── Asset allocation + look-through ────────────────────────────────
+    alloc = yhoo.get("assetAllocation") or {}
+    if alloc:
+        existing = doc.get("assetAllocation") or {}
+        # Fill missing dimensions only — don't overwrite curated allocations.
+        for key in ("topHoldings", "bySector", "byAssetClass", "byRegion"):
+            if alloc.get(key) and not existing.get(key):
+                existing[key] = alloc[key]
+        if existing:
+            doc["assetAllocation"] = existing
+            if alloc.get("topHoldings") and not doc.get("holdingsCount"):
+                # yfinance doesn't expose total constituent count, but we can
+                # at least note "top N" so the panel can show 'top 10 of —'.
+                doc["holdingsCount"] = None  # leave for fact-sheet skill to fill
 
     return doc
 

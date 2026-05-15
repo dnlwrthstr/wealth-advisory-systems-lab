@@ -612,7 +612,86 @@ function FundDetail({ source }) {
           <Row label="Source MIC" value={<span className="mono">{val(md.sourceMic)}</span>} />
         </KV>
       </Subpanel>
+
+      <AllocationPanel allocation={source.assetAllocation} />
+      <TopHoldingsPanel allocation={source.assetAllocation} />
     </>
+  );
+}
+
+function AllocationPanel({ allocation }) {
+  const byAsset = (allocation?.byAssetClass || []).filter((r) => r.percentage > 0);
+  const bySector = (allocation?.bySector || []).filter((r) => r.percentage > 0);
+  const byRegion = (allocation?.byRegion || []).filter((r) => r.percentage > 0);
+  const empty = byAsset.length === 0 && bySector.length === 0 && byRegion.length === 0;
+  return (
+    <Subpanel icon="◐" title="Asset Allocation">
+      {empty && <p className="muted">{EM_DASH}</p>}
+      {byAsset.length > 0 && <AllocationBars title="By asset class" rows={byAsset.map((r) => [r.type, r.percentage])} />}
+      {byRegion.length > 0 && <AllocationBars title="By region" rows={byRegion.map((r) => [r.region, r.percentage])} />}
+      {bySector.length > 0 && <AllocationBars title="By sector" rows={bySector.map((r) => [r.sector, r.percentage])} />}
+    </Subpanel>
+  );
+}
+
+function AllocationBars({ title, rows }) {
+  // Sort descending; cap to 8 rows; collapse the rest into "Other".
+  const sorted = [...rows].sort((a, b) => b[1] - a[1]);
+  const top = sorted.slice(0, 8);
+  const tail = sorted.slice(8);
+  if (tail.length) {
+    const tailSum = tail.reduce((s, [, w]) => s + w, 0);
+    if (tailSum > 0) top.push(["Other", tailSum]);
+  }
+  return (
+    <div className="alloc-block">
+      <p className="alloc-title">{title}</p>
+      <ul className="alloc-bars">
+        {top.map(([label, pct]) => (
+          <li key={label}>
+            <span className="alloc-label">{label}</span>
+            <span className="alloc-bar-wrap">
+              <span className="alloc-bar" style={{ width: `${Math.min(100, pct * 100)}%` }} />
+            </span>
+            <span className="alloc-pct mono">{(pct * 100).toFixed(2)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TopHoldingsPanel({ allocation }) {
+  const holdings = (allocation?.topHoldings || []).filter((h) => h.weight > 0);
+  return (
+    <Subpanel icon="⛁" title={`Top Holdings (Look-through)${holdings.length ? ` · ${holdings.length}` : ""}`} span={2}>
+      {holdings.length === 0 ? (
+        <p className="muted">{EM_DASH}</p>
+      ) : (
+        <table className="holdings-table">
+          <thead>
+            <tr>
+              <th className="r">#</th>
+              <th>Identifier</th>
+              <th>Name</th>
+              <th>Asset class</th>
+              <th className="r">Weight</th>
+            </tr>
+          </thead>
+          <tbody>
+            {holdings.map((h, i) => (
+              <tr key={`${h.identifier}-${i}`}>
+                <td className="r mono">{i + 1}</td>
+                <td className="mono">{h.identifier}</td>
+                <td>{h.name}</td>
+                <td>{h.assetClass || EM_DASH}</td>
+                <td className="r mono">{(h.weight * 100).toFixed(3)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Subpanel>
   );
 }
 

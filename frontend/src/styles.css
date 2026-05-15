@@ -2786,3 +2786,77 @@ pre {
 
 /* The old floating .finder-detail overlay class is no longer rendered;
    keep its rules above for back-compat in case anything still references it. */
+
+/* Asset allocation bars + top-holdings table */
+
+.alloc-block { margin-bottom: 0.5rem; }
+.alloc-block:last-child { margin-bottom: 0; }
+
+.alloc-title {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #54655d;
+  font-weight: 600;
+}
+
+.alloc-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.alloc-bars li {
+  display: grid;
+  grid-template-columns: minmax(110px, max-content) 1fr 64px;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+}
+
+.alloc-label { color: #1a2823; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alloc-pct { text-align: right; color: #355c4b; font-weight: 500; }
+
+.alloc-bar-wrap {
+  height: 8px;
+  background: #eef2ee;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.alloc-bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #0f6b57 0%, #2d8a76 100%);
+  border-radius: 999px;
+  transition: width 200ms ease;
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.holdings-table th {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #54655d;
+  font-weight: 600;
+  border-bottom: 1px solid #e3e4dc;
+}
+
+.holdings-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #f0f1ec;
+}
+
+.holdings-table .r { text-align: right; }
