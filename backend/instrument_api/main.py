@@ -1,14 +1,33 @@
-"""FastAPI app — instrument universe search service."""
+"""FastAPI app — instrument universe search service.
+
+Backed by OpenSearch (against the `pms_golden_equity` index produced by
+the gold-tier pipeline) when `OPENSEARCH_URL` is set in the environment;
+falls back to the in-memory fixture store otherwise.
+"""
+
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from instruments.data import INSTRUMENTS
+from instruments.opensearch_store import (
+    OpenSearchInstrumentStore,
+    opensearch_client_from_env,
+)
 from instruments.service import InstrumentService
 from instruments.store import InstrumentStore
 
 from .router import build_router
 
-_store = InstrumentStore(INSTRUMENTS)
+log = logging.getLogger("instrument_api")
+
+_client = opensearch_client_from_env()
+if _client is not None:
+    log.info("instrument_api: using OpenSearch-backed store")
+    _store = OpenSearchInstrumentStore(_client)
+else:
+    log.info("instrument_api: using in-memory fixture store (no OPENSEARCH_URL)")
+    _store = InstrumentStore(INSTRUMENTS)
 _service = InstrumentService(_store)
 
 app = FastAPI(

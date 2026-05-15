@@ -84,6 +84,8 @@ Services: frontend `localhost:3000`, custodian-api `localhost:8001`, profile-api
 
 OpenSearch runs with the security plugin disabled (dev mode, no auth, plain HTTP). The `opensearch-init` one-shot service creates the five `pms_golden_*` indices from `data/opensearch/golden/` on first `up`; it is idempotent — `docker compose run --rm opensearch-init` re-applies safely (existing indices are skipped). Regenerate mappings after ontology edits with `PYTHONPATH=src python -m ontology_tools.golden_record_2_opensearch.convert_to_opensearch -i ontology -o data/opensearch/golden`.
 
+`instrument-api` reads from OpenSearch (`pms_golden_equity`) when `OPENSEARCH_URL` is set; without it the service falls back to the static `INSTRUMENTS` fixture in `src/instruments/data.py` so unit tests still work. Populate the index with `PYTHONPATH=src python -m pipeline.gold.equity_yahoo --universe smi` followed by `python -m pipeline.gold.load -i data/opensearch/golden/equity/equities.ndjson -x pms_golden_equity`. The `pipeline.gold.equity_yahoo` builder constructs validated `EquityGolden` pydantic instances, then post-processes the dump to flatten `Currency` (object) → ISO code string before writing NDJSON — the ontology defines `Currency` as a value object but the OpenSearch mapping (and the bundled `fund_golden_example.ndjson`) store the bare ISO 4217 code. The same flattening applies to `Country` and `CfiCode` via their `RootModel[str]` definitions in `src/universe/models.py`.
+
 API docs: `http://localhost:8001/docs` and `http://localhost:8002/docs`.
 
 ```bash

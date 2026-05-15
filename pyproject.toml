@@ -19,12 +19,17 @@ dependencies = [
   "pydantic>=2.7.0",
   "pytest>=8.0.0",
   "PyYAML>=6.0",
+  "lxml>=5.0.0",
+  "opensearch-py>=2.6.0",
   "uvicorn[standard]>=0.30.0",
+  "yfinance>=0.2.40",
 ]
 
 [project.scripts]
 ontology_2_pydantic = "ontology_tools.ontology_2_pydantic.convert_to_pydantic:main"
 golden_record_2_opensearch = "ontology_tools.golden_record_2_opensearch.convert_to_opensearch:main"
+equity_golden_from_yahoo = "pipeline.gold.equity_yahoo:main"
+load_golden_to_opensearch = "pipeline.gold.load:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

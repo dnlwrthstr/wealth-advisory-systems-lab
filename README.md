@@ -88,6 +88,24 @@ PYTHONPATH=src python -m ontology_tools.golden_record_2_opensearch.convert_to_op
 docker compose run --rm opensearch-init
 ```
 
+### Populating the equity index
+
+The gold-tier pipeline fetches real equities from Yahoo Finance and bulk-loads
+them into `pms_golden_equity` (the same index the frontend instrument search
+reads from when `OPENSEARCH_URL` is set on `instrument-api`):
+
+```bash
+# 1. Fetch (writes data/opensearch/golden/equity/equities.ndjson)
+PYTHONPATH=src python -m pipeline.gold.equity_yahoo --universe smi
+
+# 2. Load
+PYTHONPATH=src python -m pipeline.gold.load \
+  -i data/opensearch/golden/equity/equities.ndjson -x pms_golden_equity
+```
+
+Supported universes: `smi`, `sp500`, `nasdaq100`, `dax40`, `ftse100`. Add
+`--limit N` for smoke testing.
+
 If the browser still shows an older frontend after changes, rebuild and recreate the frontend container:
 
 ```bash

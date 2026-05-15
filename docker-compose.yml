@@ -54,8 +54,13 @@ services:
     build:
       context: .
       dockerfile: backend/instrument_api/Dockerfile
+    environment:
+      OPENSEARCH_URL: http://opensearch:9200
     ports:
       - "8003:8003"
+    depends_on:
+      opensearch:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health').read()"]
       interval: 10s
