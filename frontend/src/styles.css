@@ -2953,3 +2953,13 @@ pre {
   color: #1a2823;
   text-align: right;
 }
+
+/* One-line truncation for fund names (FIRDS returns long, repetitive ALL-CAPS names). */
+.finder-row-name-truncate {
+  display: inline-block;
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}

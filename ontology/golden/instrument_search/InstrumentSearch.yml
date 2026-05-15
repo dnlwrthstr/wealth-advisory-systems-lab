@@ -138,6 +138,12 @@ ontology:
         dividendPolicy:
           description: Fund — DISTRIBUTING / ACCUMULATING.
           type: string
+        totalExpenseRatio:
+          description: Fund — TER as a decimal fraction (0.002 = 0.20 %).
+          type: number
+        primaryAssetClassExposure:
+          description: Fund — dominant underlying exposure (equity / fixedIncome / mixed_balanced / …).
+          type: string
         identifiers:
           description: All known identifiers with scheme labels.
           type: array

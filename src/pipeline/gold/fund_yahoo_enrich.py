@@ -234,13 +234,21 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
     touched_groups: List[str] = []
 
     # ── Fees ────────────────────────────────────────────────────────────
+    # yfinance returns `netExpenseRatio` in percentage form (0.2 = 0.20 %).
+    # The ontology schema is decimal (0.002 = 0.20 %), so divide. Sanity bound
+    # at 5 % — anything higher is definitely the yfinance percentage form;
+    # anything ≤ 0.05 is already a decimal (this also catches re-runs against
+    # docs we wrote pre-fix).
     ter = yhoo.get("expenseRatio")
-    if ter is not None and doc.get("totalExpenseRatio") is None:
-        doc["totalExpenseRatio"] = ter
-        fees = doc.setdefault("fees", {})
-        ongoing = fees.setdefault("ongoing", {})
-        ongoing.setdefault("totalExpenseRatio", ter)
-        touched_groups.append("fees")
+    if ter is not None:
+        ter_decimal = ter / 100.0 if ter > 0.05 else ter
+        existing = doc.get("totalExpenseRatio")
+        if existing is None or existing > 0.05:
+            doc["totalExpenseRatio"] = round(ter_decimal, 6)
+            fees = doc.setdefault("fees", {})
+            ongoing = fees.setdefault("ongoing", {})
+            ongoing["totalExpenseRatio"] = round(ter_decimal, 6)
+            touched_groups.append("fees")
 
     # ── Market data ─────────────────────────────────────────────────────
     md = doc.get("marketData") or {}

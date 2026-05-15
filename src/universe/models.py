@@ -1590,6 +1590,8 @@ class InstrumentSearch(BaseModel):
     umbrellaName: Optional[str] = Field(None, description="Fund — umbrella legal name (issuer of the share class).")
     fundSubType: Optional[str] = Field(None, description="Fund — sub-type (etf, openEndedMutualFund, …).")
     dividendPolicy: Optional[str] = Field(None, description="Fund — DISTRIBUTING / ACCUMULATING.")
+    totalExpenseRatio: Optional[float] = Field(None, description="Fund — TER as a decimal fraction (0.002 = 0.20 %).")
+    primaryAssetClassExposure: Optional[str] = Field(None, description="Fund — dominant underlying exposure (equity / fixedIncome / mixed_balanced / …).")
     identifiers: Optional[List[Dict[str, Any]]] = Field(None, description="All known identifiers with scheme labels.")
     identifierStrings: Optional[List[str]] = Field(None, description="Flat list of every identifier value across all schemes — indexed both as `text` (substring search) and `keyword` (exact match). The fastest path for \"user typed AAPL\". ")
     lifecycleStatus: Optional[str] = Field(None, description="active / matured / liquidated / inactive / ...")

@@ -270,6 +270,67 @@ function fmtPct(decimal) {
   return `${(decimal * 100).toFixed(3)} %`;
 }
 
+function fmtPctShort(decimal) {
+  // For TER and other fund fees — 2dp is conventional.
+  if (decimal == null) return "—";
+  return `${(decimal * 100).toFixed(2)} %`;
+}
+
+// FIRDS returns fund names in ALL CAPS. Soften to Title Case for the table.
+// Keep ETF / UCITS / USD / EUR / GBP / SICAV / PLC / S.A. recognisable.
+const _KEEP_UPPER = new Set([
+  "ETF","UCITS","SICAV","ICAV","PLC","SA","SARL","GMBH","AG","NV","SE","KGAA",
+  "USD","EUR","GBP","CHF","JPY","AUD","CAD","SGD","HKD","NOK","SEK","DKK","NZD",
+  "EU","US","UK","EM","DM","IG","HY","JP","CN","HK","SG","AU",
+  "BNP","UBS","ESG","SRI","ETC","ETN","REIT","MSCI","FTSE","DAX","SMI","CAC","DJ","STOXX","IBOXX","S&P",
+  "ACC","DIST","DLY","INC","CAP","AT","XAMC","XBLE","XLEM",
+  "I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII",
+]);
+
+// Pretty labels for camelCase enums coming out of the projection.
+const STRATEGY_LABEL = {
+  equity:          "Equity",
+  fixedIncome:     "Fixed Income",
+  mixed_balanced:  "Multi-Asset",
+  moneyMarket:     "Money Market",
+  alternative:     "Alternative",
+  realEstate:      "Real Estate",
+  commodity:       "Commodities",
+  other:           "Other",
+};
+
+const FUND_TYPE_LABEL = {
+  etf:                  "ETF",
+  openEndedMutualFund:  "Mutual",
+  closeEndedFund:       "Closed-End",
+  moneyMarketFund:      "MMF",
+  hedgeFund:            "Hedge",
+  privateEquity:        "PE",
+  realEstateFund:       "REIF",
+  structuredFund:       "Structured",
+  fundOfFunds:          "FoF",
+  other:                "Other",
+};
+
+function tidyFundName(name) {
+  if (!name) return "";
+  return name
+    .split(/\s+/)
+    .map((tok) => {
+      // Preserve currency / class / Roman-numeral tokens as-is.
+      const clean = tok.replace(/[().,]/g, "");
+      if (_KEEP_UPPER.has(clean.toUpperCase()) && clean === clean.toUpperCase()) {
+        return tok;
+      }
+      // Otherwise title-case if the whole token is uppercase.
+      if (tok === tok.toUpperCase() && /[A-Z]/.test(tok)) {
+        return tok.charAt(0) + tok.slice(1).toLowerCase();
+      }
+      return tok;
+    })
+    .join(" ");
+}
+
 // Columns keyed by the active type tab. Each entry: {label, render(hit)}.
 const COLUMNS = {
   all: [
@@ -300,14 +361,16 @@ const COLUMNS = {
     { key: "ccy",    label: "CCY",         render: (h) => <span className="mono">{h.currency || "—"}</span> },
   ],
   fund: [
-    { key: "isin",   label: "ISIN",        render: (h) => <span className="mono">{isinFor(h) || "—"}</span> },
-    { key: "valor",  label: "Valor",       render: (h) => <span className="mono">{h.valor || "—"}</span> },
-    { key: "name",   label: "Share Class", render: (h) => <span className="finder-row-name">{h.long_name}</span>, wide: true },
-    { key: "sub",    label: "Sub-fund",    render: (h) => h.sub_fund_name || "—" },
-    { key: "umb",    label: "Umbrella",    render: (h) => h.umbrella_name || h.issuer_legal_name || "—" },
-    { key: "sub_t",  label: "Sub-type",    render: (h) => <span className="finder-row-chip">{h.fund_sub_type || "—"}</span> },
-    { key: "div",    label: "Policy",      render: (h) => h.dividend_policy || "—" },
-    { key: "ccy",    label: "CCY",         render: (h) => <span className="mono">{h.currency || "—"}</span> },
+    { key: "isin",   label: "ISIN",     render: (h) => <span className="mono">{isinFor(h) || "—"}</span> },
+    { key: "valor",  label: "Valor",    render: (h) => <span className="mono">{h.valor || "—"}</span> },
+    { key: "ticker", label: "Ticker",   render: (h) => <span className="mono">{h.ticker || "—"}</span> },
+    { key: "name",   label: "Name",     render: (h) => <span className="finder-row-name finder-row-name-truncate" title={h.long_name}>{tidyFundName(h.long_name)}</span>, wide: true },
+    { key: "type",   label: "Type",     render: (h) => <span className="finder-row-chip">{FUND_TYPE_LABEL[h.fund_sub_type] || h.fund_sub_type || "—"}</span> },
+    { key: "strat",  label: "Strategy", render: (h) => STRATEGY_LABEL[h.primary_asset_class_exposure] || h.primary_asset_class_exposure || "—" },
+    { key: "ter",    label: "TER",      render: (h) => <span className="mono">{fmtPctShort(h.total_expense_ratio)}</span> },
+    { key: "ccy",    label: "CCY",      render: (h) => <span className="mono">{h.currency || "—"}</span> },
+    { key: "policy", label: "Policy",   render: (h) => h.dividend_policy ? <span className="finder-row-chip">{h.dividend_policy === "ACCUMULATING" ? "Acc" : "Dist"}</span> : "—" },
+    { key: "country",label: "Domicile", render: (h) => <span className="mono">{h.country || "—"}</span> },
   ],
 };
 

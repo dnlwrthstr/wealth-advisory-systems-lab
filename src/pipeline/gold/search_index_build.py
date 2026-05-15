@@ -145,6 +145,8 @@ def _project(src: Dict[str, Any], scope: str) -> Dict[str, Any]:
         "umbrellaName": umbrella.get("legalName") if scope == "fund" else None,
         "fundSubType": src.get("fundSubType") if scope == "fund" else None,
         "dividendPolicy": src.get("dividendPolicy") if scope == "fund" else None,
+        "totalExpenseRatio": src.get("totalExpenseRatio") if scope == "fund" else None,
+        "primaryAssetClassExposure": src.get("primaryAssetClassExposure") if scope == "fund" else None,
     }
     return {k: v for k, v in doc.items() if v is not None}
 

@@ -56,6 +56,8 @@ class SearchHit:
     umbrella_name: Optional[str]
     fund_sub_type: Optional[str]
     dividend_policy: Optional[str]
+    total_expense_ratio: Optional[float]
+    primary_asset_class_exposure: Optional[str]
     # Common
     identifiers: List[Dict[str, str]]
     lifecycle_status: Optional[str]
@@ -91,6 +93,8 @@ def _hit_to_search(hit: Dict[str, Any]) -> SearchHit:
         umbrella_name=src.get("umbrellaName"),
         fund_sub_type=src.get("fundSubType"),
         dividend_policy=src.get("dividendPolicy"),
+        total_expense_ratio=src.get("totalExpenseRatio"),
+        primary_asset_class_exposure=src.get("primaryAssetClassExposure"),
         identifiers=list(src.get("identifiers") or []),
         lifecycle_status=src.get("lifecycleStatus"),
         quality_score=src.get("qualityScore"),
