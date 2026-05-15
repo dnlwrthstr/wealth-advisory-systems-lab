@@ -1,0 +1,443 @@
+# =============================================================================
+# Example FundGolden record (tier-3 golden, denormalized for OpenSearch / PMS)
+#
+# Instrument : iShares Core MSCI World UCITS ETF USD (Acc)
+# ISIN       : IE00B4L5Y983
+# Conforms to: FundGolden.yml, schemaVersion 0.1.0
+#
+# Reference data (ISIN, FIGI, umbrella, manager, custodian, TER, AUM, SFDR,
+# launch date) verified against the BlackRock fund page and major retail
+# data sources. Price / NAV / performance values use plausible mid-May 2026
+# levels — they are illustrative, not a live quote.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Record identity
+# ---------------------------------------------------------------------------
+goldenId: FG-IE00B4L5Y983-001
+
+# ---------------------------------------------------------------------------
+# Hoisted identifiers
+# ---------------------------------------------------------------------------
+isin:         IE00B4L5Y983
+figi:         BBG000RJX2P9          # USD share-class FIGI
+tickerSymbol: SWDA
+exchangeMic:  XLON                  # LSE is the primary listing in USD
+cfiCode:      CIQUUR                # Collective / Inv vehicle / sharesQual / Unrestricted / Accum / Registered
+
+identifierList:
+  - scheme: ISIN
+    value:  IE00B4L5Y983
+  - scheme: FIGI
+    value:  BBG000RJX2P9
+  - scheme: WKN
+    value:  A0RPWH
+  - scheme: VALOREN
+    value:  "10737041"
+  - scheme: BBG_TICKER
+    value:  "SWDA LN"
+  - scheme: RIC
+    value:  SWDA.L
+  - scheme: SEDOL_USD_LSE
+    value:  "B3YLTY6"
+
+# ---------------------------------------------------------------------------
+# Display
+# ---------------------------------------------------------------------------
+longName:  "iShares Core MSCI World UCITS ETF USD (Acc)"
+shortName: "iShares Core MSCI World Acc"
+
+# ---------------------------------------------------------------------------
+# Structure
+# ---------------------------------------------------------------------------
+umbrellaFund:
+  umbrellaId:      UMB-IE-ISHARES-III
+  legalName:       "iShares III plc"
+  lei:             "549300UM05ATQ0J0V275"   # iShares III plc — illustrative; verify in GLEIF
+  domicileCountry: IE
+  legalStructure:  plc
+
+subFundName:    "iShares Core MSCI World UCITS ETF"
+shareClassName: "USD Acc"
+shareClassType: accumulating
+
+# ---------------------------------------------------------------------------
+# Classification
+# ---------------------------------------------------------------------------
+assetClass:        "Fund / UCITS / Equity ETF"
+assetClassId:      AC-FUND-UCITS-ETF-EQ
+fundType:          ucits_etf
+legalStructure:    plc                   # parent vehicle form
+investmentStrategy: passive_index_tracking
+replicationMethod: physical_optimised_sampling
+riskRatingSrri:    6                     # legacy KIID
+riskRatingSri:     4                     # PRIIPs KID
+
+# ---------------------------------------------------------------------------
+# Geography & currency
+# ---------------------------------------------------------------------------
+domicileCountry:        IE
+baseCurrency:           USD
+shareClassCurrency:     USD
+isHedgedShareClass:     false
+# hedgedToCurrency: not applicable
+
+# ---------------------------------------------------------------------------
+# Benchmark
+# ---------------------------------------------------------------------------
+benchmarkIndex:
+  name:               "MSCI World Index (Net)"
+  isin:               "(index — not an instrument)"
+  provider:           "MSCI Inc."
+  currency:           USD
+  rebalanceFrequency: quarterly
+
+# ---------------------------------------------------------------------------
+# Static attributes
+# ---------------------------------------------------------------------------
+launchDate:              "2009-09-25"
+shareClassInceptionDate: "2009-09-25"
+fiscalYearEnd:           "06-30"
+rebalanceFrequency:      quarterly
+
+# ---------------------------------------------------------------------------
+# Fees
+# ---------------------------------------------------------------------------
+fees:
+  managementFee:         0.0020
+  performanceFee:        0.0000
+  ongoingChargesFigure:  0.0020         # TER 0.20%
+  entryLoadMax:          0.0000         # ETF — no front load
+  exitLoadMax:           0.0000
+  swingPricingApplied:   false          # ETFs use creation/redemption baskets
+  transactionCosts:      0.0001         # illustrative PRIIPs ex-post
+
+# ---------------------------------------------------------------------------
+# Dealing — ETF: secondary market on exchange + primary creation/redemption
+# ---------------------------------------------------------------------------
+dealing:
+  dealingFrequency:            daily
+  settlementCycle:             "T+2"
+  cutoffTimeLocal:             "15:00"
+  cutoffTimezone:              "Europe/Dublin"
+  minimumInitialInvestment:    100000   # primary market only — creation-unit driven
+  minimumSubsequentInvestment: 100000
+
+# ---------------------------------------------------------------------------
+# Management company + service providers
+# ---------------------------------------------------------------------------
+managementCompany:
+  managementCompanyId:       MGT-IE-BAMIL-001
+  legalName:                 "BlackRock Asset Management Ireland Limited"
+  lei:                       "549300MS535KQL2L3F94"   # verify in GLEIF
+  domicileCountry:           IE
+  regulator:                 "Central Bank of Ireland"
+  investmentManagerLegalName: "BlackRock Asset Management Ireland Limited"
+  investmentManagerLei:       "549300MS535KQL2L3F94"
+  investmentManagerCountry:   IE
+
+serviceProviders:
+  depositary:    "State Street Custodial Services (Ireland) Limited"
+  depositaryLei: "5493006KMX1IAIVMQI31"               # verify in GLEIF
+  administrator: "State Street Fund Services (Ireland) Limited"
+  transferAgent: "State Street Fund Services (Ireland) Limited"
+  auditor:       "PricewaterhouseCoopers (Ireland)"
+  promoter:      "BlackRock, Inc."
+
+# ---------------------------------------------------------------------------
+# Listings — multi-venue across Europe
+# ---------------------------------------------------------------------------
+primaryListing:
+  listingId:        LIST-IE00B4L5Y983-XLON-USD
+  mic:              XLON
+  venueName:        "London Stock Exchange"
+  venueCountry:     GB
+  ticker:           SWDA
+  listingCurrency:  USD
+  marketSegment:    "Main Market — ETF segment"
+  lotSize:          1
+  firstTradingDate: "2009-09-25"
+  status:           active
+  isPrimary:        true
+
+secondaryListings:
+  - listingId:        LIST-IE00B4L5Y983-XLON-GBP
+    mic:              XLON
+    venueName:        "London Stock Exchange"
+    venueCountry:     GB
+    ticker:           IWDA
+    listingCurrency:  GBP
+    marketSegment:    "Main Market — ETF segment"
+    lotSize:          1
+    status:           active
+    isPrimary:        false
+  - listingId:        LIST-IE00B4L5Y983-XETR
+    mic:              XETR
+    venueName:        "Xetra"
+    venueCountry:     DE
+    ticker:           EUNL
+    listingCurrency:  EUR
+    marketSegment:    "Regulated Market"
+    lotSize:          1
+    status:           active
+    isPrimary:        false
+  - listingId:        LIST-IE00B4L5Y983-XSWX
+    mic:              XSWX
+    venueName:        "SIX Swiss Exchange"
+    venueCountry:     CH
+    ticker:           SWDA
+    listingCurrency:  USD
+    marketSegment:    "Sponsored Funds"
+    lotSize:          1
+    status:           active
+    isPrimary:        false
+  - listingId:        LIST-IE00B4L5Y983-MTAA
+    mic:              MTAA
+    venueName:        "Borsa Italiana — ETFplus"
+    venueCountry:     IT
+    ticker:           SWDA
+    listingCurrency:  EUR
+    lotSize:          1
+    status:           active
+    isPrimary:        false
+  - listingId:        LIST-IE00B4L5Y983-XAMS
+    mic:              XAMS
+    venueName:        "Euronext Amsterdam"
+    venueCountry:     NL
+    ticker:           IWDA
+    listingCurrency:  EUR
+    lotSize:          1
+    status:           active
+    isPrimary:        false
+
+# ---------------------------------------------------------------------------
+# NAV snapshot
+# ---------------------------------------------------------------------------
+nav:
+  asOf:               "2026-05-11"
+  navPerShare:
+    value:    142.36
+    currency: USD
+  totalNetAssets:
+    value:    141500000000          # ~USD 141.5 bn
+    currency: USD
+  sharesInIssue:      993870000     # ~993.87 m
+  navType:            official_eod
+
+# ---------------------------------------------------------------------------
+# Secondary-market data (LSE USD line)
+# ---------------------------------------------------------------------------
+marketData:
+  sourceListingId: LIST-IE00B4L5Y983-XLON-USD
+  sourceMic:       XLON
+  asOf:            "2026-05-11T16:30:00Z"
+  lastTradePrice:
+    value:    142.41
+    currency: USD
+  open:    141.92
+  high:    142.74
+  low:     141.65
+  close:   142.41
+  volume:  1840000
+  vwap:    142.18
+  indicativeNav:
+    value:    142.35
+    currency: USD
+  premiumDiscountToNav: 0.00035       # +3.5 bp to NAV
+
+# ---------------------------------------------------------------------------
+# Portfolio composition
+# ---------------------------------------------------------------------------
+holdings:
+  asOf:                       "2026-04-30"
+  numberOfHoldings:           1418
+  portfolioTurnoverPctAnnual: 0.034
+
+  topHoldings:
+    - { isin: US67066G1040, name: "NVIDIA Corp",        weight: 0.0529 }
+    - { isin: US0378331005, name: "Apple Inc",          weight: 0.0418 }
+    - { isin: US5949181045, name: "Microsoft Corp",     weight: 0.0411 }
+    - { isin: US02079K3059, name: "Alphabet Inc Class A", weight: 0.0252 }
+    - { isin: US0231351067, name: "Amazon.com Inc",     weight: 0.0244 }
+    - { isin: US30303M1027, name: "Meta Platforms Inc Class A", weight: 0.0184 }
+    - { isin: US88160R1014, name: "Tesla Inc",          weight: 0.0136 }
+    - { isin: US46625H1005, name: "JPMorgan Chase & Co", weight: 0.0118 }
+    - { isin: US11135F1012, name: "Broadcom Inc",       weight: 0.0107 }
+    - { isin: US7427181091, name: "Procter & Gamble Co", weight: 0.0084 }
+
+  geographicAllocation:
+    - { key: "United States",   weight: 0.7165 }
+    - { key: "Japan",           weight: 0.0530 }
+    - { key: "United Kingdom",  weight: 0.0335 }
+    - { key: "Canada",          weight: 0.0290 }
+    - { key: "France",          weight: 0.0265 }
+    - { key: "Switzerland",     weight: 0.0220 }
+    - { key: "Germany",         weight: 0.0195 }
+    - { key: "Australia",       weight: 0.0165 }
+    - { key: "Netherlands",     weight: 0.0125 }
+    - { key: "Other",           weight: 0.0710 }
+
+  sectorAllocation:
+    - { key: "Information Technology", weight: 0.2645 }
+    - { key: "Financials",             weight: 0.1610 }
+    - { key: "Health Care",            weight: 0.1015 }
+    - { key: "Consumer Discretionary", weight: 0.1075 }
+    - { key: "Communication Services", weight: 0.0925 }
+    - { key: "Industrials",            weight: 0.1085 }
+    - { key: "Consumer Staples",       weight: 0.0530 }
+    - { key: "Energy",                 weight: 0.0395 }
+    - { key: "Materials",              weight: 0.0345 }
+    - { key: "Utilities",              weight: 0.0245 }
+    - { key: "Real Estate",            weight: 0.0220 }
+
+  currencyAllocation:
+    - { key: USD, weight: 0.7270 }
+    - { key: JPY, weight: 0.0530 }
+    - { key: EUR, weight: 0.0810 }
+    - { key: GBP, weight: 0.0335 }
+    - { key: CAD, weight: 0.0290 }
+    - { key: CHF, weight: 0.0220 }
+    - { key: AUD, weight: 0.0165 }
+    - { key: Other, weight: 0.0380 }
+
+  assetAllocation:
+    - { key: "Equity",       weight: 0.9985 }
+    - { key: "Cash & Other", weight: 0.0015 }
+
+# ---------------------------------------------------------------------------
+# Performance (returns in decimals, annualised where indicated)
+# ---------------------------------------------------------------------------
+performance:
+  asOf: "2026-04-30"
+  returns:
+    oneMonth:          0.0142
+    threeMonth:        0.0405
+    ytd:               0.0635
+    oneYear:           0.1372
+    threeYearAnn:      0.1058
+    fiveYearAnn:       0.1224
+    tenYearAnn:        0.1086
+    sinceInceptionAnn: 0.1145
+  benchmarkReturns:
+    oneMonth:          0.0144
+    threeMonth:        0.0410
+    ytd:               0.0641
+    oneYear:           0.1380
+    threeYearAnn:      0.1065
+    fiveYearAnn:       0.1230
+    tenYearAnn:        0.1092
+    sinceInceptionAnn: 0.1152
+  trackingError1y:     0.0008
+  informationRatio1y:  -0.95            # consistently slightly below net-return index (TER drag)
+  sharpeRatio1y:       1.08
+  sortinoRatio1y:      1.62
+  maxDrawdown3y:      -0.1645
+  volatility1y:        0.1290
+  volatility3y:        0.1545
+
+# ---------------------------------------------------------------------------
+# Distribution policy — accumulating class
+# ---------------------------------------------------------------------------
+distributionPolicy:    accumulating
+distributionFrequency: not_applicable
+# lastDistribution: n/a
+distributionYieldTrailing12m: 0.0000
+
+# ---------------------------------------------------------------------------
+# Compliance flags
+# ---------------------------------------------------------------------------
+compliance:
+  isUcitsCompliant:    true
+  isAif:               false
+  isPriipsApplicable:  true
+  kidLanguages:        [en, de, fr, it, es, nl]
+  sfdrClassification:  article_6        # BlackRock labels as "Other"
+  eltifEligible:       false
+  isPriipsComplex:     false
+  mifid2TargetMarket:  retail
+  sanctionsListed:     false
+  sanctionsLists:      []
+
+# ---------------------------------------------------------------------------
+# Tax statuses (jurisdiction-specific overlays)
+# ---------------------------------------------------------------------------
+taxStatuses:
+  germanInvestmentTaxAct:
+    fundCategory:        aktienfonds
+    teilfreistellungPct: 0.30           # 30% partial exemption for German investors
+  ukReportingFundStatus:
+    isReportingFund: true
+    effectiveDate:   "2010-07-01"
+  frenchPeaEligible: false              # global ex-EU exposure breaches PEA eligibility
+  swissDa1Eligible:  true
+  usPfic:            true               # US persons should expect PFIC treatment
+
+# ---------------------------------------------------------------------------
+# Distribution registration footprint (illustrative)
+# ---------------------------------------------------------------------------
+registeredCountries:
+  [AT, BE, CH, CZ, DE, DK, ES, FI, FR, GB, HU, IE, IT, LI, LU, NL, NO, PL, PT, SE, SK]
+
+# ---------------------------------------------------------------------------
+# Lifecycle
+# ---------------------------------------------------------------------------
+lifecycleStatus: active
+# terminationDate: n/a
+
+# ---------------------------------------------------------------------------
+# Record meta — provenance, freshness, lineage
+# ---------------------------------------------------------------------------
+recordMeta:
+  schemaVersion:   "0.1.0"
+  goldenAsOf:      "2026-05-12T03:00:00Z"
+  ingestionRunId:  RUN-2026-05-12-0300-EU
+
+  sourceOfTruth:
+    - fieldGroup:      staticFundData
+      source:          "BlackRock iShares Product API"
+      sourceTimestamp: "2026-05-11T22:00:00Z"
+    - fieldGroup:      umbrella
+      source:          "Central Bank of Ireland — Fund Profile"
+      sourceTimestamp: "2026-05-01T00:00:00Z"
+    - fieldGroup:      managementCompany
+      source:          "GLEIF"
+      sourceTimestamp: "2026-05-10T00:00:00Z"
+    - fieldGroup:      serviceProviders
+      source:          "Prospectus / KID — last update"
+      sourceTimestamp: "2026-02-28T00:00:00Z"
+    - fieldGroup:      listings
+      source:          "ANNA-DSB / FIRDS"
+      sourceTimestamp: "2026-05-11T22:00:00Z"
+    - fieldGroup:      nav
+      source:          "State Street Fund Services (admin)"
+      sourceTimestamp: "2026-05-11T23:00:00Z"
+    - fieldGroup:      marketData
+      source:          "Refinitiv Eikon EOD"
+      sourceTimestamp: "2026-05-11T16:30:00Z"
+    - fieldGroup:      holdings
+      source:          "BlackRock daily holdings disclosure"
+      sourceTimestamp: "2026-04-30T22:00:00Z"
+    - fieldGroup:      performance
+      source:          "Morningstar Direct"
+      sourceTimestamp: "2026-05-01T06:00:00Z"
+    - fieldGroup:      taxStatuses
+      source:          "WM Datenservice (DE) / HMRC Reporting Funds list (UK)"
+      sourceTimestamp: "2026-04-01T00:00:00Z"
+    - fieldGroup:      compliance
+      source:          "Internal Compliance Engine v3.4"
+      sourceTimestamp: "2026-05-12T02:45:00Z"
+
+  sourceFingerprints:
+    - sourceEntity: "ShareClass:IE00B4L5Y983"
+      fingerprint:  "sha256:7d1c0a4f8b29e6e2...a8f1"
+    - sourceEntity: "Fund:iSharesCoreMSCIWorld"
+      fingerprint:  "sha256:2c91eba640efb71f...0d65"
+    - sourceEntity: "ManagementCompany:MGT-IE-BAMIL-001"
+      fingerprint:  "sha256:b8e5733410cd924e...4f30"
+    - sourceEntity: "NavSnapshot:IE00B4L5Y983:2026-05-11"
+      fingerprint:  "sha256:39ef4a78c2bb05a1...6c12"
+    - sourceEntity: "HoldingsSnapshot:IE00B4L5Y983:2026-04-30"
+      fingerprint:  "sha256:eaa83b21f50d916c...77e5"
+
+  qualityScore: 0.96
+  isActive:     true

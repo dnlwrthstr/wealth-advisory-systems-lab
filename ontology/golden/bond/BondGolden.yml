@@ -1,0 +1,525 @@
+ontology:
+  name: BondGolden
+  version: 0.2.0
+  description: >
+    Tier-3 (golden) read-model for a Bond instrument, denormalized for storage
+    and retrieval in OpenSearch within a Portfolio Management System (PMS).
+
+    The golden record composes data from the canonical (tier-2) ontology
+    entities — Bond, Issuer, Listing, MarketDataSnapshot, industry/sector
+    classifications and ratings — into a single, search-optimised document.
+
+    v0.2.0 — identifier index migration:
+      * Drop the redundant hoisted identifier scalars (`isin`, `figi`).
+        They duplicated values already in semantic positions
+        (`primaryListing.mic`, `issuer.lei`) and in `identifierList`.
+      * Keep `identifierList` — per-instrument completeness (ISIN,
+        FIGI, SEDOL, CUSIP, RIC, …).
+      * Keep `cfiCode` — classification, not identification.
+      * Cross-security identifier lookups go through the dedicated
+        `pms_golden_identifier` helper index.
+      * `goldenId` remains the doc primary key; opaque from a query
+        perspective.
+
+    Field selection follows PMS access patterns: fixed-income screens
+    (maturity buckets, rating, coupon type, yield), issuer credit attributes
+    and the latest pricing / accrual snapshot.
+
+    Derived: silver `Bond.yml` is the source of truth; this record is rebuilt
+    by the enrichment pipeline and never edited directly.
+  source_entity: "../../securities/debt_instrument/Bond/Bond.yml#/ontology/entities/Bond"
+
+  entities:
+
+    BondGolden:
+      description: >
+        Golden (tier-3) record for a Bond instrument. One document per
+        instrument, keyed by `goldenId`.
+      kind: golden_record
+      type: object
+      required:
+        - goldenId
+        - longName
+        - assetClass
+        - currencyOfDenomination
+        - issuer
+        - maturityDate
+        - recordMeta
+      properties:
+
+        # ---------------------------------------------------------------------
+        # Record identity
+        #
+        # Cross-security identifier *lookups* go through the dedicated
+        # `pms_golden_identifier` helper index — see Identifier.yml.
+        #
+        # Hoisted identifier scalars (`isin`, `figi`) intentionally do
+        # NOT appear here — they duplicated semantic positions
+        # (`primaryListing.mic`, `issuer.lei`) and `identifierList`.
+        # ---------------------------------------------------------------------
+        goldenId:
+          description: Stable internal primary key of the golden record.
+          type: string
+          example: BG-DE0001102309-001
+        cfiCode:
+          description: >
+            ISO 10962 CFI code (classification, NOT an identifier).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CfiCode"
+        identifierList:
+          description: >
+            Per-instrument completeness — every identifier known for this
+            bond (ISIN, FIGI, CUSIP, SEDOL, RIC, Bloomberg, …).
+          type: array
+          items:
+            common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/FinancialInstrumentIdentification"
+
+        # ---------------------------------------------------------------------
+        # Display / descriptive fields
+        # ---------------------------------------------------------------------
+        longName:
+          description: Full bond name (issuer + coupon + maturity), used for free-text search.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/LongText"
+        shortName:
+          description: Short bond name for grids.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/ShortText"
+
+        # ---------------------------------------------------------------------
+        # Classification (hoisted for filters / aggregations)
+        # ---------------------------------------------------------------------
+        assetClass:
+          description: Resolved asset class label (e.g., "Fixed Income / Government Bond").
+          type: string
+          example: Fixed Income / Government Bond
+        assetClassId:
+          description: Reference to the canonical AssetClass record used for roll-ups.
+          type: string
+          example: AC-FI-GOVT
+        bondSubType:
+          description: Bond sub-type capturing the structural variant.
+          type: string
+          enum:
+            - government
+            - sovereignSupranational
+            - municipal
+            - corporateInvestmentGrade
+            - corporateHighYield
+            - covered
+            - convertible
+            - inflationLinked
+            - zeroCoupon
+            - perpetual
+            - subordinated
+            - securitised
+            - other
+          example: government
+        seniority:
+          description: Bond seniority in the issuer's capital structure.
+          type: string
+          enum:
+            - senior_secured
+            - senior_unsecured
+            - senior_non_preferred
+            - subordinated
+            - junior_subordinated
+            - tier1
+            - tier2
+            - other
+          example: senior_unsecured
+        industrySector:
+          description: Canonical industry/sector classification of the issuer.
+          common_ontology: "../../industry_sector/IndustrySector.yml#/ontology/entities/IndustrySector"
+        countryOfRisk:
+          description: ISO 3166-1 alpha-2 country of risk (typically issuer domicile).
+          type: Country
+          example: DE
+        currencyOfDenomination:
+          description: ISO 4217 currency in which the bond is denominated.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        # ---------------------------------------------------------------------
+        # Static bond attributes (from silver Bond)
+        # ---------------------------------------------------------------------
+        issueDate:
+          description: Issue date of the bond.
+          type: string
+          format: date
+        maturityDate:
+          description: Maturity date of the bond.
+          type: string
+          format: date
+        maturityBucket:
+          description: Derived maturity bucket used by screens.
+          type: string
+          enum:
+            - shortTerm_lt1y
+            - shortTerm_1y_3y
+            - intermediate_3y_5y
+            - intermediate_5y_10y
+            - longTerm_10y_30y
+            - veryLongTerm_gt30y
+            - perpetual
+          example: longTerm_10y_30y
+        interestRate:
+          description: Interest-rate definition (fixed / floating / staggered, day-count, payment cadence).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRate"
+        couponType:
+          description: Coupon type, hoisted from interestRate.type for fast filters.
+          type: string
+          enum:
+            - fixed
+            - variable
+            - staggered
+            - zero
+          example: fixed
+        currentCouponRate:
+          description: Currently effective coupon rate (decimal, hoisted for screens).
+          type: number
+          example: 0.0125
+        minimumDenomination:
+          description: Minimum denomination allowed for trading.
+          type: number
+          example: 10000
+        minimumIncrement:
+          description: Minimum tradable increment.
+          type: number
+          example: 1000
+        isCallable:
+          description: True if the bond carries an issuer call option.
+          type: boolean
+        isPuttable:
+          description: True if the bond carries a holder put option.
+          type: boolean
+        isConvertible:
+          description: True if the bond converts to equity under defined terms.
+          type: boolean
+        conversionPrice:
+          description: Conversion price for convertible bonds.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        underlyingIsin:
+          description: ISIN of the underlying instrument for structured / convertible bonds.
+          type: string
+        lifecycleStatus:
+          description: Lifecycle status of the bond.
+          type: string
+          enum:
+            - active
+            - called
+            - matured
+            - defaulted
+            - restructured
+            - inactive
+          example: active
+
+        # ---------------------------------------------------------------------
+        # Issuer snapshot (denormalized from Issuer.yml)
+        # ---------------------------------------------------------------------
+        issuer:
+          description: Flattened issuer snapshot — legal name, LEI, domicile, credit, ESG.
+          ref: IssuerSnapshot
+
+        # ---------------------------------------------------------------------
+        # Listings — primary plus all secondary venues
+        # ---------------------------------------------------------------------
+        primaryListing:
+          description: Primary trading venue listing for the bond.
+          ref: ListingSnapshot
+        secondaryListings:
+          description: All other venues where the bond is listed.
+          type: array
+          items:
+            ref: ListingSnapshot
+
+        # ---------------------------------------------------------------------
+        # Latest pricing / yield / accrual snapshot
+        # ---------------------------------------------------------------------
+        marketData:
+          description: >
+            Last-known market data snapshot (typically EOD), including bond-
+            specific yields and accrued interest. For intraday valuations the
+            PMS should still query the pricing service.
+          ref: BondMarketDataSnapshotEmbedded
+
+        # ---------------------------------------------------------------------
+        # Credit risk profile (instrument-level)
+        # ---------------------------------------------------------------------
+        creditRisk:
+          description: Credit risk profile of the bond instrument (issue-level).
+          common_ontology: "../../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditRisk"
+        instrumentEsgProfile:
+          description: ESG profile of the bond (instrument-specific overlay).
+          common_ontology: "../../rating/esg/ESGRating.yml#/ontology/entities/ESGInstrumentProfile"
+
+        # ---------------------------------------------------------------------
+        # Regulatory / compliance flags
+        # ---------------------------------------------------------------------
+        compliance:
+          description: Pre-resolved compliance flags used in screens and PMS rules.
+          ref: ComplianceFlags
+
+        # ---------------------------------------------------------------------
+        # Record meta — provenance, indexing, freshness
+        # ---------------------------------------------------------------------
+        recordMeta:
+          description: Provenance and freshness metadata for the golden record.
+          ref: GoldenRecordMeta
+
+    # =========================================================================
+    # Embedded snapshots
+    # =========================================================================
+
+    IssuerSnapshot:
+      description: Flattened issuer view denormalized into the bond golden record.
+      kind: value_object
+      type: object
+      required:
+        - issuerId
+        - legalName
+      properties:
+        issuerId:
+          description: Internal stable issuer id (matches Issuer.id in silver).
+          type: string
+        legalName:
+          description: Official registered name of the issuer.
+          type: string
+          example: Federal Republic of Germany
+        lei:
+          description: ISO 17442 Legal Entity Identifier.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+        issuerType:
+          description: Issuer classification.
+          type: string
+          enum:
+            - corporate
+            - government
+            - supranational
+            - spv
+            - bank
+            - insurance_company
+            - fund_company
+        domicileCountry:
+          description: Country of domicile of the issuer.
+          type: Country
+        headquartersCountry:
+          description: Country where the issuer's headquarters are located.
+          type: Country
+        ultimateParentLei:
+          description: LEI of the ultimate parent entity, if different.
+          type: string
+        guarantorLei:
+          description: LEI of the guarantor, if the bond is guaranteed by a third party.
+          type: string
+        creditProfile:
+          description: Snapshot of the issuer's creditworthiness profile.
+          common_ontology: "../../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditProfile"
+        esgProfile:
+          description: Snapshot of the issuer's ESG profile.
+          common_ontology: "../../rating/esg/ESGRating.yml#/ontology/entities/ESGProfile"
+
+    ListingSnapshot:
+      description: Denormalized venue listing for the bond.
+      kind: value_object
+      type: object
+      required:
+        - mic
+        - listingCurrency
+      properties:
+        listingId:
+          description: Internal listing identifier.
+          type: string
+        mic:
+          description: ISO 10383 Market Identifier Code of the venue.
+          type: string
+        venueName:
+          description: Human-readable venue name.
+          type: string
+        venueCountry:
+          description: Country of the trading venue.
+          type: Country
+        ticker:
+          description: Venue-specific trading symbol, if any.
+          type: string
+        listingCurrency:
+          description: ISO 4217 currency of trades on this listing.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        marketSegment:
+          description: Venue market segment.
+          type: string
+        firstTradingDate:
+          description: Date the bond first traded on this venue.
+          type: string
+          format: date
+        status:
+          description: Status of the listing on this venue.
+          type: string
+          enum:
+            - active
+            - suspended
+            - delisted
+        isPrimary:
+          description: True if this is the primary listing.
+          type: boolean
+
+    BondMarketDataSnapshotEmbedded:
+      description: >
+        Last-known market data values for a bond, including yields and
+        accruals not present in the equity snapshot.
+      kind: value_object
+      type: object
+      properties:
+        sourceListingId:
+          description: Listing the snapshot was sourced from.
+          type: string
+        sourceMic:
+          description: MIC of the source listing.
+          type: string
+        asOf:
+          description: Timestamp of the snapshot.
+          type: string
+          format: date-time
+        cleanPrice:
+          description: Clean price (excluding accrued interest).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        dirtyPrice:
+          description: Dirty price (including accrued interest).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        accruedInterest:
+          description: Accrued interest at the snapshot.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        yieldToMaturity:
+          description: Yield to maturity (decimal).
+          type: number
+          example: 0.0245
+        yieldToWorst:
+          description: Yield to worst (decimal).
+          type: number
+        currentYield:
+          description: Current yield (coupon / price, decimal).
+          type: number
+        modifiedDuration:
+          description: Modified duration in years.
+          type: number
+        macaulayDuration:
+          description: Macaulay duration in years.
+          type: number
+        convexity:
+          description: Convexity of the bond.
+          type: number
+        spreadToBenchmark:
+          description: Spread (bp) to the relevant benchmark curve.
+          type: number
+        zSpread:
+          description: Z-spread (bp).
+          type: number
+        oasSpread:
+          description: Option-adjusted spread (bp).
+          type: number
+
+    ComplianceFlags:
+      description: Pre-resolved regulatory / compliance flags for the bond.
+      kind: value_object
+      type: object
+      properties:
+        isUcitsEligible:
+          description: True if eligible for UCITS portfolios.
+          type: boolean
+        isPrIIPs:
+          description: True if a PRIIPs KID applies.
+          type: boolean
+        isSanctionsListed:
+          description: True if the issuer or instrument appears on a tracked sanctions list.
+          type: boolean
+        sanctionsLists:
+          description: Sanctions lists where the instrument or issuer is currently listed.
+          type: array
+          items:
+            type: string
+        isHighYield:
+          description: True if classified as high-yield (sub-investment-grade).
+          type: boolean
+        isGreenBond:
+          description: True if labelled as a green bond per ICMA principles.
+          type: boolean
+        isSocialBond:
+          description: True if labelled as a social bond per ICMA principles.
+          type: boolean
+        isSustainabilityLinked:
+          description: True if structured as a sustainability-linked bond.
+          type: boolean
+        mifid2TargetMarket:
+          description: MiFID II target-market category.
+          type: string
+          enum:
+            - retail
+            - professional
+            - eligibleCounterparty
+
+    GoldenRecordMeta:
+      description: Provenance, freshness and lineage metadata for the golden record.
+      kind: value_object
+      type: object
+      required:
+        - schemaVersion
+        - goldenAsOf
+        - sourceOfTruth
+      properties:
+        schemaVersion:
+          description: Version of the BondGolden schema this document conforms to.
+          type: string
+          example: 0.1.0
+        goldenAsOf:
+          description: Timestamp at which this golden record was assembled.
+          type: string
+          format: date-time
+        ingestionRunId:
+          description: Run id of the enrichment pipeline that produced this record.
+          type: string
+        sourceOfTruth:
+          description: Map of field-group to source system.
+          type: array
+          items:
+            ref: SourceAttribution
+        sourceFingerprints:
+          description: Content hashes of contributing silver documents.
+          type: array
+          items:
+            ref: SourceFingerprint
+        qualityScore:
+          description: Aggregate data-quality score (0.0 - 1.0).
+          type: number
+        isActive:
+          description: True if this is the currently active golden record for the instrument.
+          type: boolean
+
+    SourceAttribution:
+      description: Records which upstream system contributed a particular field group.
+      kind: value_object
+      type: object
+      required:
+        - fieldGroup
+        - source
+      properties:
+        fieldGroup:
+          description: Field group inside the golden record.
+          type: string
+        source:
+          description: Upstream system or vendor.
+          type: string
+        sourceTimestamp:
+          description: Timestamp at the source when the data was produced.
+          type: string
+          format: date-time
+
+    SourceFingerprint:
+      description: Content hash of an upstream silver document.
+      kind: value_object
+      type: object
+      required:
+        - sourceEntity
+        - fingerprint
+      properties:
+        sourceEntity:
+          description: Silver entity reference (e.g., "Bond:DE0001102309").
+          type: string
+        fingerprint:
+          description: Stable hash (e.g., SHA-256) at assembly time.
+          type: string

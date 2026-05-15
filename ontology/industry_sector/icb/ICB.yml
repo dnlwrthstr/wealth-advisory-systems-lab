@@ -1,0 +1,96 @@
+ontology:
+  name: ICB
+  namespace: bank_data.securities_domain
+  version: "1.0"
+  description: >
+    Industry Classification Benchmark (ICB) is a proprietary, hierarchical 
+    industry classification system developed and maintained by FTSE Russell. 
+    It is used for categorizing companies based on their primary business activity.
+
+  entities:
+    IcbClassification:
+      description: >
+        Classification of an issuer or instrument according to the ICB hierarchy.
+      properties:
+        industryCode:
+          type: string
+          description: Code representing the ICB Industry (Level 1).
+        supersectorCode:
+          type: string
+          description: Code representing the ICB Supersector (Level 2).
+        sectorCode:
+          type: string
+          description: Code representing the ICB Sector (Level 3).
+        subsectorCode:
+          type: string
+          description: Code representing the ICB Subsector (Level 4).
+
+    IcbReferenceData:
+      description: Structure for ICB reference data including the hierarchy.
+      properties:
+        standard:
+          ref: IcbStandardInfo
+        hierarchy:
+          type: array
+          items:
+            ref: IcbIndustry
+
+    IcbStandardInfo:
+      description: General information about the ICB standard.
+      properties:
+        name:
+          type: string
+        abbreviation:
+          type: string
+        owners:
+          type: array
+          items:
+            type: string
+        standardType:
+          type: string
+        isoStandard:
+          type: boolean
+
+    IcbIndustry:
+      description: ICB Industry (Level 1).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        supersectors:
+          type: array
+          items:
+            ref: IcbSupersector
+
+    IcbSupersector:
+      description: ICB Supersector (Level 2).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        sectors:
+          type: array
+          items:
+            ref: IcbSector
+
+    IcbSector:
+      description: ICB Sector (Level 3).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        subsectors:
+          type: array
+          items:
+            ref: IcbSubsector
+
+    IcbSubsector:
+      description: ICB Subsector (Level 4).
+      properties:
+        code:
+          type: string
+        name:
+          type: string

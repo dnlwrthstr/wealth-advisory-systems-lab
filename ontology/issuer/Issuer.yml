@@ -1,0 +1,165 @@
+ontology:
+  name: Issuer
+  version: 1.1.0
+  description: >
+    Ontology for modelling issuers of financial instruments, including corporate,
+    government, supranational and SPV issuers. Links to FinancialInstrument
+    via "issues" and optional guarantees.
+
+  root_entity: Issuer
+
+  entities:
+
+    Issuer:
+      description: The legal entity responsible for issuing a financial instrument.
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the issuer.
+        issuerCategory:
+          type: string
+          description: Category of the entity (e.g., Issuer).
+        identifiers:
+          type: array
+          items:
+            ref: IssuerIdentifier
+          description: List of identifiers for the issuer (e.g., LEI).
+        legalIdentity:
+          ref: LegalIdentity
+          description: Legal identity details of the issuer.
+        corporateHierarchy:
+          ref: CorporateHierarchy
+          description: Corporate hierarchy details.
+        regulatoryRoles:
+          type: array
+          items:
+            type: string
+          description: List of regulatory roles (e.g., issuer, counterparty).
+        metadata:
+          ref: IssuerMetadata
+          description: Metadata about the issuer record.
+        issuerName:
+          type: string
+          description: Name of the issuer.
+        issuerType:
+          type: string
+          enum: [corporate, government, supranational, spv, bank, insurance_company, fund_company]
+          description: Classification of the issuer type.
+        domicileRegion:
+          type: string
+          description: Link to the Geography semantic taxonomy.
+        regulator:
+          type: string
+          description: Supervisory authority overseeing this issuer.
+        creditProfile:
+          common_ontology: "../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditProfile"
+          description: Creditworthiness profile of the issuer.
+        esgProfile:
+          common_ontology: "../rating/esg/ESGRating.yml#/ontology/entities/ESGProfile"
+          description: ESG profile of the issuer.
+        incorporationDate:
+          type: string
+          format: date
+          description: Date of incorporation.
+
+        industrySector:
+          description: >
+            Industry/sector classification assignments for this issuer (e.g., GICS, ICB,
+            Telekurs, or bank-specific systems) represented in canonical form.
+          common_ontology: "../industry_sector/IndustrySector.yml#/ontology/entities/IndustrySector"
+
+      relations:
+        issues:
+          target: FinancialInstrument
+          description: Instruments issued by this issuer.
+        parentCompany:
+          target: Issuer
+          description: Direct parent company.
+        subsidiaries:
+          target: Issuer
+          description: List of subsidiaries.
+        isGuaranteedBy:
+          target: Issuer
+          description: Entity guaranteeing the issuer’s obligations.
+
+    IssuerIdentifier:
+      description: Formal identification of the legal entity.
+      properties:
+        id:
+          type: string
+          description: Local identifier for this record.
+        identifierType:
+          type: string
+          description: Type of identifier (e.g., LegalEntityIdentifier).
+        scheme:
+          type: string
+          description: >
+            Identification scheme. Recommended values: 
+            ISO_17442 (LEI), ISO_9362 (BIC), ISO_10383 (MIC), 
+            US_SEC_CIK, US_FRB_RSSD, CH_UID, FATCA_GIIN, DNB_DUNS.
+        value:
+          type: string
+          description: The actual identifier value.
+        issuingAuthority:
+          type: string
+          description: Organization that issued the identifier.
+        status:
+          type: string
+          description: Status of the identifier (e.g., active).
+        globallyUnique:
+          type: boolean
+          description: Whether the identifier is globally unique.
+
+    LegalIdentity:
+      description: Legal identification details of the entity.
+      properties:
+        legalName:
+          type: string
+          description: Official registered name.
+        legalForm:
+          type: string
+          description: e.g., corporation, cooperative, foundation, SPV.
+        domicileCountry:
+          type: Country
+          description: Country of domicile.
+        registeredAddressCountry:
+          type: Country
+          description: Country of the registered address.
+        headquartersCountry:
+          type: Country
+          description: Country where the headquarters are located.
+
+    CorporateHierarchy:
+      description: Information about the parent entities.
+      properties:
+        directParent:
+          ref: ParentLink
+          description: Information about the direct parent.
+        ultimateParent:
+          ref: ParentLink
+          description: Information about the ultimate parent.
+
+    ParentLink:
+      description: Link to a parent entity.
+      properties:
+        lei:
+          type: string
+          format: lei
+          description: LEI of the parent entity.
+
+    IssuerMetadata:
+      description: Metadata regarding the issuer information.
+      properties:
+        sourceOfTruth:
+          type: string
+          description: The source from which the data was obtained.
+        publicReference:
+          type: boolean
+          description: Whether this is a public reference.
+        renewalRequired:
+          type: boolean
+          description: Whether the data requires periodic renewal.
+
+    Guarantor:
+      description: Entity offering a guarantee for certain instruments.
+      is_a: Issuer

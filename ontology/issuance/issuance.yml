@@ -1,0 +1,107 @@
+ontology:
+  name: Issuance
+  version: 1.0.0
+  description: >
+    Ontology for financial instrument issuance, defining the relationship between
+    an Issuer, a Financial Instrument, and the Issuance Event.
+  
+  root_entity: IssuanceRecord
+
+  entities:
+
+    IssuanceRecord:
+      description: >
+        The central record for a security's birth, linking the legal entity (Issuer)
+        to the instrument definition and the primary market event.
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the issuance record.
+        status:
+          ref: IssuanceStatus
+          description: The current state of the issuance in its lifecycle.
+        issuer:
+          common_ontology: "../issuer/Issuer.yml#/ontology/entities/Issuer"
+          description: The legal entity that is issuing the instrument.
+        instrument:
+          common_ontology: "../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+          description: The static security definition of the issued instrument.
+        primaryMarketEvent:
+          ref: PrimaryMarketEvent
+          description: Details of the issuance in the primary market.
+        secondaryMarketConfig:
+          ref: SecondaryMarketConfig
+          description: Configuration and linkage for secondary market trading.
+
+    IssuanceStatus:
+      description: The lifecycle state of a security issuance.
+      kind: value_object
+      type: string
+      enum:
+        - proposed      # The issuance is in the "roadshow" or underwriting phase.
+        - bookBuilding  # Active phase of gathering investor interest.
+        - active        # The security is trading in the secondary market.
+        - matured       # The issuance has reached its end of life (e.g., bonds).
+        - redeemed      # The security has been bought back by the issuer.
+        - cancelled     # The issuance was abandoned before being finalized.
+
+    PrimaryMarketEvent:
+      description: Metadata tracking the issuance function in the primary market.
+      properties:
+        announcementDate:
+          type: string
+          format: date
+          description: When the market is first informed about the issuance.
+        issueDate:
+          type: string
+          format: date
+          description: The official "birthday" of the security.
+        datedDate:
+          type: string
+          format: date
+          description: When interest begins to accrue (relevant for fixed income).
+        offeringPrice:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+          description: The "Book Price" set by the underwriter in the primary market.
+        totalAuthorizedAmount:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+          description: Total authorized value of the issuance.
+        totalAuthorizedQuantity:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Quantity"
+          description: Total authorized shares or units.
+        underwritingSyndicate:
+          ref: UnderwritingSyndicate
+          description: Details of the firms managing the issuance.
+
+    UnderwritingSyndicate:
+      description: Information about the lead and co-managers of the issuance.
+      properties:
+        leadManager:
+          type: string
+          description: The primary financial institution managing the issuance.
+        coManagers:
+          type: array
+          items:
+            type: string
+          description: List of additional financial institutions in the syndicate.
+        underwritingFeeBps:
+          type: integer
+          description: Fees expressed in basis points (1/100th of a percent) to avoid precision errors.
+
+    SecondaryMarketConfig:
+      description: External data hooks and configuration for secondary market trading.
+      properties:
+        primaryExchange:
+          type: string
+          description: The main exchange where the security is traded.
+        marketMakerIds:
+          type: array
+          items:
+            type: string
+          description: Identifiers for institutions providing liquidity.
+        liquidityScore:
+          type: string
+          description: Assessment of the security's liquidity (e.g., HIGH, MEDIUM, LOW).
+        pricingSource:
+          type: string
+          description: Preferred source for market data (e.g., BLOOMBERG, REFINITIV).

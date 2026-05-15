@@ -1,0 +1,71 @@
+ontology:
+  name: Credit Rating
+  version: 1.0.0
+  description: >
+    Ontology for credit ratings, including issuer ratings and instrument-specific
+    credit risk assessments. Supports multiple agencies and historical tracking.
+
+  entities:
+
+    Rating:
+      description: A credit rating assigned by an agency.
+      properties:
+        agency:
+          type: string
+          description: The credit rating agency (e.g., S&P, Moody's, Fitch).
+        rating:
+          type: string
+          description: The assigned rating symbol (e.g., AAA, Baa1).
+        ratingType:
+          type: string
+          description: The type of rating (e.g., issuer_credit_rating, issue_credit_rating).
+        outlook:
+          type: string
+          description: The rating outlook (e.g., stable, positive, negative).
+        scale:
+          type: string
+          description: The rating scale (e.g., long_term, short_term).
+        dateAssigned:
+          type: string
+          format: date
+          description: The date when the rating was assigned.
+        status:
+          type: string
+          description: The status of the rating (e.g., active, withdrawn).
+
+    CreditProfile:
+      description: Creditworthiness profile of an issuer.
+      properties:
+        issuerRatings:
+          type: array
+          items:
+            ref: Rating
+          description: List of ratings assigned to the issuer.
+
+    CreditRisk:
+      description: Credit risk profile of a specific financial instrument.
+      properties:
+        instrumentRatings:
+          type: array
+          items:
+            ref: Rating
+          description: List of ratings assigned to the instrument.
+        recoveryAssumptions:
+          ref: RecoveryAssumptions
+          description: Assumptions about recovery in case of default.
+
+    RecoveryAssumptions:
+      description: Recovery and notching details.
+      properties:
+        agency:
+          type: string
+          description: The agency providing the recovery assessment.
+        recoveryRating:
+          type: string
+          description: Recovery rating (e.g., 1 to 6).
+        expectedRecoveryPercent:
+          type: string
+          description: Expected recovery percentage range.
+        methodology:
+          type: string
+          description: The methodology used for the assessment.

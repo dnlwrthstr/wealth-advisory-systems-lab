@@ -1,0 +1,80 @@
+ontology:
+  name: BarrierReverseConvertible
+  version: 1.0.0
+  description: >
+    Ontology representation of the BarrierReverseConvertible financial instrument schema.
+    BarrierReverseConvertible inherits from FinancialInstrument and introduces structured
+    product attributes for coupon, denomination, barrier mechanics, and settlement.
+  is a: FinancialInstrument
+  common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    BarrierReverseConvertible:
+      description: Barrier reverse convertible structured product.
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        issuer:
+          description: Financial institution issuing and guaranteeing the product.
+          type: array
+          items:
+            common_ontology: "../issuer/Issuer.yml#/ontology/entities/Issuer"
+          minItems: 1
+          maxItems: 1
+
+        couponRate:
+          description: Guaranteed annual coupon rate paid regardless of barrier events.
+          required: true
+          type: number
+          format: decimal
+
+        denomination:
+          description: Face value per unit of the product.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        maturityDate:
+          description: Final date of the contract and principal repayment.
+          required: true
+          type: string
+          format: date
+
+        underlyingFinancialInstrument:
+          description: Reference underlying asset for the barrier observation.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+        strikePrice:
+          description: Strike price level, typically set at the initial fixing price.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+
+        barrierLevel:
+          description: Barrier threshold as a percentage or level of the initial price.
+          required: true
+          type: number
+          format: decimal
+
+        barrierType:
+          description: Barrier observation type (continuous or European).
+          type: string
+          enum:
+            - continuous
+            - european
+          required: true
+
+        barrierEvent:
+          description: Indicates whether the barrier has been breached.
+          type: boolean
+          required: true
+
+        settlementType:
+          description: Settlement method at maturity (cash or physical delivery).
+          type: string
+          enum:
+            - cash
+            - physical
+          required: true

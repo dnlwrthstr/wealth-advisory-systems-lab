@@ -1,0 +1,13 @@
+ontology:
+  name: Country Reference
+  version: 1.0.0
+  description: >
+    Shared ISO 3166-1 alpha-2 country code value object used across the ontology.
+
+  entities:
+    Country:
+      description: ISO 3166-1 alpha-2 country code.
+      kind: value_object
+      type: string
+      pattern: '^[A-Z]{2}$'
+      example: CH

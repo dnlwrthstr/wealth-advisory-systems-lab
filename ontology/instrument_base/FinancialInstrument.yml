@@ -1,0 +1,31 @@
+ontology:
+  name: Financial Instrument
+  version: 1.0.0
+  description: >
+    Ontology for financial instruments based on the OpenAPI discriminator
+    schema. FinancialInstrument is the root concept; all listed instrument
+    types are specializations.
+
+  root_entity: FinancialInstrument
+
+  entities:
+
+    FinancialInstrument:
+      description: Financial instrument entity (root of the hierarchy).
+      type: abstract
+      properties:
+        longName:
+          description: Name of the financial instrument in free text.
+          common_ontology: "../partner/PartnerBase.yml#/ontology/entities/LongText"
+        shortName:
+          description: Short name of the financial instrument.
+          common_ontology: "../partner/PartnerBase.yml#/ontology/entities/ShortText"
+        identificationList:
+          description: List of instrument identifications.
+          type: array
+          items:
+            common_ontology: "FinancialInstrumentBase.yml#/ontology/entities/FinancialInstrumentIdentification"
+          minItems: 1
+        cfiCode:
+          description: CFI classification code of the instrument.
+          type: CfiCode

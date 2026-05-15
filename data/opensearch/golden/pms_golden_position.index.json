@@ -1,0 +1,774 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    }
+  },
+  "mappings": {
+    "dynamic": false,
+    "_meta": {
+      "ontology": "PositionGolden",
+      "ontology_version": "0.1.0",
+      "source_entity": "../../portfolio/valuated_position.yml#/ontology/entities/ValuatedPosition",
+      "source_file": "golden/position/PositionGolden.yml",
+      "tier": "golden"
+    },
+    "properties": {
+      "goldenId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "positionId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "portfolioId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "portfolioName": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "accountId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "accountName": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "accountType": {
+        "type": "keyword"
+      },
+      "custodianId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "custodianBic": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "customerId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "relationshipManagerId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "instrumentRef": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "instrumentGoldenId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "instrumentType": {
+            "type": "keyword"
+          },
+          "isin": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "figi": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "tickerSymbol": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "exchangeMic": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "cfiCode": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "longName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "shortName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "assetClass": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "assetClassId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "industrySector": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "gics": {
+                "type": "object",
+                "dynamic": false,
+                "properties": {
+                  "sectorCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "industryGroupCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "industryCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "subIndustryCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  }
+                }
+              },
+              "icb": {
+                "type": "object",
+                "dynamic": false,
+                "properties": {
+                  "industryCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "supersectorCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "sectorCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "subsectorCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  }
+                }
+              },
+              "telekurs": {
+                "type": "object",
+                "dynamic": false,
+                "properties": {
+                  "sectorCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "industryGroupCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "industryCode": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  }
+                }
+              },
+              "canonical": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "countryOfRisk": {
+            "type": "keyword"
+          },
+          "instrumentCurrency": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "issuerLei": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "issuerName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          }
+        }
+      },
+      "positionDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd"
+      },
+      "endOfDayIndicator": {
+        "type": "boolean"
+      },
+      "tradeDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd"
+      },
+      "settlementDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd"
+      },
+      "quantity": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "type": {
+            "type": "keyword"
+          },
+          "value": {
+            "type": "double"
+          }
+        }
+      },
+      "blockedQuantity": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "type": {
+            "type": "keyword"
+          },
+          "value": {
+            "type": "double"
+          }
+        }
+      },
+      "settledQuantity": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "type": {
+            "type": "keyword"
+          },
+          "value": {
+            "type": "double"
+          }
+        }
+      },
+      "pendingQuantity": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "type": {
+            "type": "keyword"
+          },
+          "value": {
+            "type": "double"
+          }
+        }
+      },
+      "valuation": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "valuationDate": {
+            "type": "date",
+            "format": "yyyy-MM-dd"
+          },
+          "marketPrice": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "type": {
+                "type": "keyword"
+              },
+              "value": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "priceType": {
+            "type": "keyword"
+          },
+          "valueInPositionCurrency": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "valueInReferenceCurrency": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "costBasis": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "averageCostPrice": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "type": {
+                "type": "keyword"
+              },
+              "value": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "totalAcquisitionCost": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "costForeignExchangeRate": {
+            "type": "double"
+          },
+          "unrealizedPL": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "unrealizedPLInReferenceCurrency": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "unrealizedPLPercentage": {
+            "type": "double"
+          },
+          "bookValue": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "accruals": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "accruedInterest": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "numberOfDaysAccrued": {
+            "type": "long"
+          },
+          "pendingDividends": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "portfolioCurrency": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "positionCurrency": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "fxRateToPortfolio": {
+        "type": "double"
+      },
+      "portfolioWeight": {
+        "type": "double"
+      },
+      "lifecycleStatus": {
+        "type": "keyword"
+      },
+      "isShortPosition": {
+        "type": "boolean"
+      },
+      "isHedge": {
+        "type": "boolean"
+      },
+      "recordMeta": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "goldenAsOf": {
+            "type": "date"
+          },
+          "ingestionRunId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "sourceOfTruth": {
+            "type": "nested",
+            "dynamic": false,
+            "properties": {
+              "fieldGroup": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "source": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "sourceTimestamp": {
+                "type": "date"
+              }
+            }
+          },
+          "sourceFingerprints": {
+            "type": "nested",
+            "dynamic": false,
+            "properties": {
+              "sourceEntity": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "fingerprint": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "qualityScore": {
+            "type": "double"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

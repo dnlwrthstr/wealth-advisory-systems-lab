@@ -1,0 +1,322 @@
+ontology:
+  name: Partner Ontology
+  version: 1.0.0
+  description: >
+    Core partner entities and their relationships.
+  
+  entities:
+
+    Partner:
+      description: Base entity for all types of partners (natural, legal, advisory unit).
+      properties:
+        partnerId:
+          description: Unique identifier for the partner.
+          type: string
+        partnerInternalId:
+          description: Internal system identifier for the partner.
+          type: string
+        externalIds:
+          description: External identifiers for the partner.
+          type: array
+          items:
+            type: string
+        partnerType:
+          description: The type of partner.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/PartnerType"
+        primaryName:
+          description: Primary name of the partner.
+          type: string
+        country:
+          description: Home country of the partner.
+          type: Country
+        legalResidence:
+          description: Legal residence of the partner.
+          type: Country
+        preferredLanguage:
+          description: Preferred language for communication.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/Language"
+        preferredReferenceCurrency:
+          description: Preferred currency for reports and valuations.
+          common_ontology: "../reference_data/currency/Currency.yml#/ontology/entities/Currency"
+        companyIdentifier:
+          description: Identifier for the company (if applicable).
+          type: string
+        advisors:
+          description: Advisors associated with this partner.
+          type: array
+          items:
+            ref: AdvisoryUnit
+        partnerFlags:
+          description: Flags associated with the partner.
+          type: array
+          items:
+            type: string
+        partnerStatus:
+          description: Current status of the partner.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/PartnerStatus"
+        partnerDetails:
+          description: Detailed information about the partner.
+          ref: PartnerDetails
+
+    NaturalPerson:
+      description: A partner who is a natural person.
+      is_a: Partner
+      composition:
+        all_of:
+          - Partner
+      properties:
+        firstName:
+          description: First name of the person.
+          type: string
+        lastName:
+          description: Last name of the person.
+          type: string
+        title:
+          description: Academic or professional title.
+          type: string
+        salutation:
+          description: Salutation (e.g., Mr., Ms.).
+          type: string
+        suffix:
+          description: Name suffix.
+          type: string
+        gender:
+          description: Gender of the person.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/Gender"
+        birthDate:
+          description: Date of birth.
+          type: string
+          format: date
+        nationality:
+          description: Nationality of the person.
+          type: Country
+        countryOfBirth:
+          description: Country where the person was born.
+          type: Country
+
+    LegalPartner:
+      description: A partner who is a legal entity.
+      is_a: Partner
+      composition:
+        all_of:
+          - Partner
+      properties:
+        organizationName:
+          description: Name of the organization.
+          type: string
+        organizationType:
+          description: Type of the organization.
+          type: string
+        legalForm:
+          description: Legal form of the entity (e.g., AG, GmbH).
+          type: string
+
+    AdvisoryUnit:
+      description: An entity representing an advisory team or person.
+      is_a: Partner
+      composition:
+        all_of:
+          - Partner
+      properties:
+        associationName:
+          description: Name of the advisory association.
+          type: string
+        associationType:
+          description: Type of advisory association.
+          type: string
+
+    PartnerDetails:
+      description: Detailed attributes of a partner.
+      properties:
+        communicationChannels:
+          description: List of communication channels.
+          type: array
+          items:
+            ref: CommunicationChannel
+        categorization:
+          description: Partner categorization.
+          ref: Categorization
+        customerAttributes:
+          description: Additional customer attributes.
+          ref: CustomerAttributes
+        regulatory:
+          description: Regulatory information.
+          ref: Regulatory
+
+    Categorization:
+      description: Categorization details for a partner.
+      properties:
+        partnerSegment:
+          description: Main segment of the partner.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/Segment"
+        partnerSegmentGroup:
+          description: Segment group.
+          type: string
+        partnerRating:
+          description: Internal or external rating.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/Rating"
+        riskTolerance:
+          description: Risk tolerance.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/RiskTolerance"
+        riskAbility:
+          description: Risk ability.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/RiskAbility"
+
+    CustomerAttributes:
+      description: Custom attributes for the partner.
+      properties:
+        occupation:
+          description: Occupation of the partner.
+          type: string
+        employer:
+          description: Employer of the partner.
+          type: string
+
+    Regulatory:
+      description: Regulatory compliance information.
+      properties:
+        mifid:
+          description: MiFID related information.
+          ref: MIFID
+        fidleg:
+          description: FIDLEG related information.
+          ref: FIDLEG
+        taxes:
+          description: Tax related information.
+          ref: Taxes
+        fatca:
+          description: FATCA status.
+          ref: FATCA
+        qi:
+          description: Qualified Intermediary status.
+          ref: QI
+
+    MIFID:
+      description: MiFID classification.
+      properties:
+        category:
+          description: MiFID category.
+          type: string
+        investorType:
+          description: Type of investor.
+          type: string
+
+    FIDLEG:
+      description: FIDLEG classification (Swiss regulation).
+      properties:
+        category:
+          description: FIDLEG category.
+          type: string
+        investorType:
+          description: Type of investor.
+          type: string
+
+    Taxes:
+      description: Tax residency and related info.
+      properties:
+        taxCountry:
+          description: Primary tax country.
+          type: Country
+        taxStayType:
+          description: Type of tax stay.
+          type: string
+
+    FATCA:
+      description: FATCA compliance status.
+      properties:
+        status:
+          description: FATCA status.
+          type: string
+        document:
+          description: Reference to FATCA document.
+          type: string
+
+    QI:
+      description: Qualified Intermediary status.
+      properties:
+        status:
+          description: QI status.
+          type: string
+        document:
+          description: Reference to QI document.
+          type: string
+
+    CommunicationChannel:
+      description: Base for communication channels.
+      properties:
+        type:
+          description: Type of channel.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/ContactType"
+        value:
+          description: The actual address or number.
+          type: string
+        priority:
+          description: Priority of this channel.
+          type: integer
+
+    Phone:
+      description: Phone communication channel.
+      is_a: CommunicationChannel
+      composition:
+        all_of:
+          - CommunicationChannel
+      properties:
+        phoneNumber:
+          description: The phone number.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/PhoneNumber"
+
+    Email:
+      description: Email communication channel.
+      is_a: CommunicationChannel
+      composition:
+        all_of:
+          - CommunicationChannel
+      properties:
+        emailAddress:
+          description: The email address.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/EmailAddress"
+
+    Fax:
+      description: Fax communication channel.
+      is_a: CommunicationChannel
+      composition:
+        all_of:
+          - CommunicationChannel
+      properties:
+        faxNumber:
+          description: The fax number.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/PhoneNumber"
+
+    TeamAdvisor:
+      description: An advisory team.
+      is_a: AdvisoryUnit
+      composition:
+        all_of:
+          - AdvisoryUnit
+      properties:
+        teamId:
+          description: Identifier for the team.
+          type: string
+        teamName:
+          description: Name of the team.
+          type: string
+
+    PersonAdvisor:
+      description: An individual advisor.
+      is_a: AdvisoryUnit
+      composition:
+        all_of:
+          - AdvisoryUnit
+      properties:
+        advisorId:
+          description: Identifier for the advisor.
+          type: string
+        firstName:
+          description: First name of the advisor.
+          type: string
+        lastName:
+          description: Last name of the advisor.
+          type: string
+        role:
+          description: Role of the advisor.
+          common_ontology: "./PartnerBase.yml#/ontology/entities/Role"

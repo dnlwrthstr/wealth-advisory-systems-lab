@@ -1,0 +1,282 @@
+ontology:
+  name: Common Financial Instrument Ontology
+  version: 1.0.0
+  source: "sources/Custody Services API.yaml"
+  description: >
+    These are the base entities referenced by specific
+    financial instrument types (Cash, Bond, Equity, etc.).
+
+  entities:
+
+    Currency:
+      description: ISO 4217 currency code.
+      common_ontology: "../reference_data/currency/Currency.yml#/ontology/entities/Currency"
+
+    LegalEntityIdentifier:
+      description: Legal Entity Identifier (LEI) according to ISO 17442.
+      kind: value_object
+      type: string
+      example: 54930084UKR0MPOU8F65
+
+    CurrencyPair:
+      description: Currency pair expressed as BASE/QUOTE (e.g., EUR/USD).
+      kind: value_object
+      type: string
+      example: EUR/USD
+
+    ForwardRate:
+      description: Agreed FX forward rate for the settlement date.
+      kind: value_object
+      type: number
+      format: decimal
+      example: 1.085
+
+    CreditSupport:
+      description: Credit support or collateral agreement governing the FX forward.
+      kind: value_object
+      type: string
+      enum:
+        - csaAgreement
+        - marginAgreement
+        - other
+
+    # Date and DateTime are now handled as basic types (string with format date/date-time)
+    # in the property definitions to avoid unnecessary wrapper classes.
+
+    ContractSize:
+      description: Contract size of an instrument.
+      kind: value_object
+      type: number
+      example: 100
+      default: 1
+
+    TickSize:
+      description: Minimum price fluctuation (tick size) for a traded contract.
+      kind: value_object
+      type: number
+      example: 0.01
+
+    ExpiryCode:
+      description: Contract expiry code representing month and year (e.g., H6).
+      kind: value_object
+      type: string
+      example: H6
+
+    OptionType:
+      description: >
+        Specifies whether it is a Call option (right to purchase a specific
+        underlying asset) or a Put option (right to sell a specific underlying asset).
+      kind: value_object
+      type: string
+      example: call
+      enum:
+        - call
+        - put
+
+    OptionStyle:
+      description: Specifies how an option can be exercised.
+      kind: value_object
+      type: string
+      example: american
+      enum:
+        - american
+        - european
+        - bermudan
+        - asian
+
+    Price:
+      description: Price entity with type, numeric value, and optional currency.
+      kind: value_object
+      type: object
+      required:
+        - type
+        - value
+      properties:
+        type:
+          description: >
+            Indicates whether the price is an actual currency amount per unit
+            or a percentage.
+          type: string
+          enum:
+            - actual
+            - percentage
+          example: percentage
+        value:
+          description: Signed decimal price value.
+          type: number
+          format: decimal
+          example: 12000
+        currency:
+          description: Currency of the price, if applicable.
+          ref: Currency
+
+    CurrencyAmount:
+      description: Amount denoted in a given currency.
+      kind: value_object
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          description: Signed amount.
+          type: number
+          format: decimal
+          example: 12000
+        currency:
+          description: Currency of the amount.
+          ref: Currency
+
+    DayCountBasis:
+      description: Day count convention used for interest calculation.
+      kind: value_object
+      type: string
+      example: u30_360
+      enum:
+        - act_360
+        - act_365
+        - act_actIcma
+        - act_actIsda
+        - act_actAfb
+        - act_365L
+        - bus_252
+        - u30_360
+        - u30E_360Icma
+        - u30E_360Isda
+        - u30E_360
+        - u30U_360
+
+    InterestRate:
+      description: >
+        Per annum interest rate definition, including type (fixed/variable/
+        staggered), optional value, basis, and payment characteristics.
+      kind: value_object
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          description: >
+            Type of interest:
+            - fixed: fixed interest rate
+            - variable: floating rate based on a benchmark
+            - staggered: rate set at different levels for different periods
+          type: string
+          enum:
+            - fixed
+            - variable
+            - staggered
+          example: fixed
+        value:
+          description: Current rate as decimal (e.g. 0.00125).
+          type: number
+          example: 0.00125
+        dayCountBasis:
+          description: Day count basis for interest calculation.
+          ref: DayCountBasis
+        paymentDate:
+          description: Date of the next interest payment.
+          type: string
+          format: date
+        paymentFrequency:
+          description: Frequency of interest payments.
+          type: string
+          enum:
+            - annual
+            - monthly
+            - quarterly
+            - semiAnnual
+            - weekly
+            - atMaturity
+            - other
+          example: quarterly
+        basis:
+          description: >
+            Benchmark rate used for floating interest (e.g. LIBOR, EURIBOR).
+          type: string
+          example: LIBOR
+        spread:
+          description: >
+            Spread added to the base rate (basis) for floating rates.
+          type: number
+          example: 0.001
+
+    FinancialInstrumentIdentification:
+      description: >
+        Financial instrument identification in the form of a key–value pair
+        (identifier + type).
+      kind: value_object
+      type: object
+      required:
+        - identifier
+        - type
+      properties:
+        identifier:
+          description: Instrument identification string.
+          type: string
+          maxLength: 128
+          example: CH0012005267
+        type:
+          description: >
+            Type of instrument identifier (ISIN preferred, but other schemes
+            are possible).
+          type: string
+          enum:
+            - isin
+            - sedol
+            - cusip
+            - ric
+            - tickerSymbol
+            - bloomberg
+            - cta
+            - quick
+            - wertpapier
+            - dutch
+            - valoren
+            - sicovam
+            - belgian
+            - common
+            - iso3
+            - otherProprietaryIdentification
+          example: isin
+
+
+
+
+
+
+
+    CfiCode:
+      description: >
+        Classification of financial instrument (CFI) code according to ISO 10962.
+        At least the CFI Category (1st char) and Group (2nd char) must be present.
+      kind: value_object
+      classification_ref: "../reference_data/cfi/CFI.yml#/ontology/entities/CFI"
+      type: string
+      pattern: '^[A-Z]{2,6}$'
+      minLength: 2
+      maxLength: 6
+      example: ESVUFR
+
+
+    Quantity:
+      description: Quantity representation (unit, face amount, amortised value, token units).
+      kind: value_object
+      type: object
+      required:
+        - type
+        - value
+      properties:
+        type:
+          description: Type of the quantity.
+          type: string
+          enum:
+            - unit
+            - faceAmount
+            - amortisedValue
+            - digitalTokenUnit
+          example: unit
+        value:
+          description: Signed decimal amount.
+          type: number
+          example: 12000

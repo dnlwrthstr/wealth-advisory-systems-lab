@@ -1,0 +1,177 @@
+ontology:
+  name: Equity
+  version: 1.0.0
+  description: >
+    Ontology representation of the Equity financial instrument schema.
+    Equity specializes the generic FinancialInstrument schema and
+    adds equity-specific attributes.
+  common_ontology: "../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    Equity:
+      description: Equity financial instrument.
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+      properties:
+        issuer:
+          description: >
+            The legal entity that is contractually responsible for the rights or
+            obligations embedded in this instrument.
+          type: array
+          items:
+            common_ontology: "../../issuer/Issuer.yml#/ontology/entities/Issuer"
+          minItems: 1
+          maxItems: 1
+        tickerSymbol:
+          description: Exchange-specific ticker symbol for the equity.
+          type: string
+          example: AAPL
+
+        exchangeMic:
+          description: Market Identifier Code (MIC) of the primary exchange.
+          type: string
+          example: XNAS
+
+        shareClass:
+          description: Share class (e.g., Class A, Class B, Preferred).
+          type: string
+          example: Class A
+
+        equitySubType:
+          description: >
+            Equity sub-type capturing the legal/structural variant of the share
+            (Common, Preferred, ADR/GDR, REIT, MLP, Convertible Preferred, etc.).
+          type: string
+          enum:
+            - commonStock
+            - preferredStock
+            - adr
+            - gdr
+            - reit
+            - mlp
+            - convertiblePreferred
+            - other
+          example: commonStock
+
+        sharesOutstanding:
+          description: Total shares currently issued and outstanding.
+          type: number
+          example: 15500000000
+
+        firstTradingDate:
+          description: Date the equity was first admitted to trading.
+          type: string
+          format: date
+
+        delistingDate:
+          description: Date of delisting, if applicable.
+          type: string
+          format: date
+
+        lifecycleStatus:
+          description: Lifecycle status of the equity instrument.
+          type: string
+          enum:
+            - active
+            - suspended
+            - delisted
+            - merged
+            - inactive
+          example: active
+
+        parValue:
+          description: Nominal par value stated in the corporate charter.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        votingRatio:
+          description: Number of votes per share.
+          type: number
+          example: 1.0
+
+        hasVotingRights:
+          description: Indicates whether the equity carries voting rights.
+          type: boolean
+          example: true
+
+        incorporationCountry:
+          description: Country of incorporation of the issuing company.
+          type: Country
+
+        currencyOfDenomination:
+          description: Currency in which the equity is denominated.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        industrySector:
+          description: Industry/sector classification of the issuing company.
+          common_ontology: "../../industry_sector/IndustrySector.yml#/ontology/entities/IndustrySector"
+
+        dividendStatus:
+          description: Indicates whether the equity currently pays dividends.
+          type: boolean
+          example: true
+
+        dividendPolicy:
+          description: Dividend policy details for the equity.
+          ref: DividendPolicy
+
+        keyFigures:
+          description: Key valuation figures related to the equity.
+          ref: KeyFigures
+
+        marketData:
+          description: Dynamic market data points for the equity.
+          ref: MarketData
+
+    DividendPolicy:
+      description: Dividend policy details for an equity instrument.
+      kind: value_object
+      type: object
+      properties:
+        dividendYield:
+          description: Last reported dividend yield (decimal or percent).
+          type: number
+          example: 0.015
+        lastDividendDate:
+          description: Date of the last dividend payment.
+          type: string
+          format: date
+        frequency:
+          description: Dividend frequency (e.g., annual, quarterly).
+          type: string
+          example: quarterly
+
+    KeyFigures:
+      description: Key valuation figures for an equity instrument.
+      kind: value_object
+      type: object
+      properties:
+        marketCapitalization:
+          description: Total market value of the company's outstanding shares.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        earningsPerShare:
+          description: Company's profit divided by the outstanding shares.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        priceToEarningsRatio:
+          description: Price-to-earnings ratio (P/E).
+          type: number
+          example: 28.5
+        volatility:
+          description: Equity price volatility measure (e.g., historical or implied).
+          type: number
+          example: 0.22
+
+    MarketData:
+      description: Market data fields for an equity instrument.
+      kind: value_object
+      type: object
+      properties:
+        lastTradePrice:
+          description: Most recent price at which the equity traded.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        marketCapCategory:
+          description: Market capitalization category (e.g., Large-Cap, Mid-Cap, Small-Cap).
+          type: string
+          example: Large-Cap

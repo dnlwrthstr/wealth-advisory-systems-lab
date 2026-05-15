@@ -1,0 +1,195 @@
+ontology:
+  name: InstrumentListingWithMarketData
+  version: 1.1.0
+  description: >
+    Ontology describing financial instruments, their venue-specific listings,
+    and the corresponding dynamic market data (quotes, trades, order book).
+    Market data is never embedded inside a Listing; instead it references
+    the Listing as its key.
+
+  entities:
+
+    Instrument:
+      description: >
+        Venue-independent representation of a financial instrument (security master).
+      properties:
+        isin:
+          type: string
+          format: isin
+        figi:
+          type: string
+          optional: true
+        cfiCode:
+          type: CfiCode
+        instrumentType:
+          type: string
+          enum: [equity, bond, fund, derivative, structured_product, other]
+        currency:
+          type: string
+          format: iso4217
+        issuer:
+          relation: Issuer
+        listings:
+          type: array
+          items:
+            relation: Listing
+
+    Listing:
+      description: >
+        A listing is the admission of an Instrument to trading on a specific
+        trading venue. It contains static venue-specific attributes only.
+      properties:
+        listingId:
+          type: string
+        instrument:
+          relation: Instrument
+        venue:
+          relation: TradingVenue
+        mic:
+          type: string
+          format: mic
+        ticker:
+          type: string
+          description: Venue-specific trading symbol.
+        listingCurrency:
+          type: string
+          format: iso4217
+        marketSegment:
+          type: string
+        firstTradingDate:
+          type: date
+          optional: true
+        lotSize:
+          type: integer
+        tickSizeTable:
+          type: string
+          optional: true
+        status:
+          type: string
+          enum: [active, suspended, delisted]
+
+    TradingVenue:
+      description: >
+        A trading venue such as an exchange or MTF.
+      properties:
+        mic:
+          type: string
+          format: mic
+          primaryKey: true
+        name:
+          type: string
+        country:
+          type: Country
+        venueType:
+          type: string
+          enum: [regulated_market, exchange, mtf, si]
+        timezone:
+          type: string
+        operator:
+          type: string
+
+    MarketDataSnapshot:
+      description: >
+        End-of-day or periodic snapshot of market data for a specific listing.
+        Represents dynamic values at a timestamp (not historical stream).
+      properties:
+        snapshotId:
+          type: string
+        listing:
+          relation: Listing
+        timestamp:
+          type: datetime
+        open:
+          type: number
+          optional: true
+        high:
+          type: number
+          optional: true
+        low:
+          type: number
+          optional: true
+        close:
+          type: number
+          optional: true
+        last:
+          type: number
+          optional: true
+        volume:
+          type: number
+          optional: true
+        turnover:
+          type: number
+          optional: true
+        vwap:
+          type: number
+          optional: true
+
+    MarketDataStream:
+      description: >
+        Real-time or intraday tick data stream for quotes and trades.
+        This entity can be used to store historical ticks or to reference an external feed.
+      properties:
+        eventId:
+          type: string
+        listing:
+          relation: Listing
+        timestamp:
+          type: datetime
+        eventType:
+          type: string
+          enum: [quote, trade]
+        bid:
+          type: number
+          optional: true
+        ask:
+          type: number
+          optional: true
+        bidSize:
+          type: number
+          optional: true
+        askSize:
+          type: number
+          optional: true
+        lastPrice:
+          type: number
+          optional: true
+        lastSize:
+          type: number
+          optional: true
+        tradeConditions:
+          type: array
+          items:
+            type: string
+          optional: true
+
+    OrderBook:
+      description: >
+        Snapshot of the order book for a given listing at a precise timestamp.
+        Supports Level I and Level II data.
+      properties:
+        orderbookId:
+          type: string
+        listing:
+          relation: Listing
+        timestamp:
+          type: datetime
+        bids:
+          type: array
+          items:
+            relation: OrderBookLevel
+        asks:
+          type: array
+          items:
+            relation: OrderBookLevel
+
+    OrderBookLevel:
+      description: >
+        Represents a price level in the order book.
+      properties:
+        price:
+          type: number
+        size:
+          type: number
+        level:
+          type: integer
+          description: Price-depth level (1 = best bid/ask)

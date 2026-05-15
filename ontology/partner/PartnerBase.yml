@@ -1,0 +1,112 @@
+ontology:
+  name: Partner Base Ontology
+  version: 1.0.0
+  description: >
+    Common value objects and enums used across the partner domain.
+
+  entities:
+
+    PartnerType:
+      description: Type of the partner (e.g., natural person, legal entity).
+      kind: value_object
+      type: string
+      enum:
+        - naturalPerson
+        - legalEntity
+        - advisoryUnit
+
+    PartnerStatus:
+      description: Status of the partner in the system.
+      kind: value_object
+      type: string
+      enum:
+        - active
+        - inactive
+        - prospect
+
+    Gender:
+      description: Gender of a natural person.
+      kind: value_object
+      type: string
+      enum:
+        - male
+        - female
+        - other
+        - unknown
+
+    Language:
+      description: ISO 639-1 language code.
+      kind: value_object
+      type: string
+      pattern: '^[a-z]{2}$'
+      example: de
+
+    Date:
+      description: Date according to ISO 8601 (YYYY-MM-DD).
+      kind: value_object
+      type: string
+      format: date
+      example: "1980-01-01"
+
+    Boolean:
+      description: Boolean value.
+      kind: value_object
+      type: boolean
+
+    ShortText:
+      description: A short string of text.
+      kind: value_object
+      type: string
+      maxLength: 255
+
+    LongText:
+      description: A longer string of text.
+      kind: value_object
+      type: string
+
+    EmailAddress:
+      description: Email address.
+      kind: value_object
+      type: string
+      format: email
+
+    PhoneNumber:
+      description: Phone number in international format.
+      kind: value_object
+      type: string
+
+    RiskAbility:
+      description: Risk ability level.
+      kind: value_object
+      type: string
+
+    RiskTolerance:
+      description: Risk tolerance level.
+      kind: value_object
+      type: string
+
+    ContactType:
+      description: Type of communication channel.
+      kind: value_object
+      type: string
+      enum:
+        - phone
+        - email
+        - fax
+        - mobile
+        - mail
+
+    Role:
+      description: Role of a person in an organization or relationship.
+      kind: value_object
+      type: string
+
+    Segment:
+      description: Customer segment.
+      kind: value_object
+      type: string
+
+    Rating:
+      description: Credit or internal rating.
+      kind: value_object
+      type: string

@@ -1,0 +1,500 @@
+ontology:
+  name: EquityGolden
+  version: 0.2.0
+  description: >
+    Tier-3 (golden) read-model for an Equity instrument, denormalized for storage
+    and retrieval in OpenSearch within a Portfolio Management System (PMS).
+
+    The golden record composes data from the canonical (tier-2) ontology entities
+    — Equity, Issuer, Listing, MarketDataSnapshot, industry/sector classifications
+    and ratings — into a single, search-optimised document. It is a derived view:
+    the tier-2 entities remain the source of truth; this record is rebuilt by the
+    enrichment pipeline and never edited directly.
+
+    v0.2.0 — identifier index migration:
+      * Drop the redundant hoisted identifier scalars (`isin`, `figi`,
+        `tickerSymbol`, `exchangeMic`). They duplicated values already in
+        semantic positions (`primaryListing.ticker`, `primaryListing.mic`,
+        `issuer.lei`) and in `identifierList`.
+      * Keep `identifierList` — per-instrument completeness (ISIN, FIGI,
+        SEDOL, CUSIP, RIC, …).
+      * Keep `cfiCode` — classification, not identification.
+      * Cross-security identifier lookups go through the dedicated
+        `pms_golden_identifier` helper index.
+      * `goldenId` remains the doc primary key; opaque from a query
+        perspective. UIs search the helper index, not this one.
+
+    Field selection follows the access patterns of a PMS: classification
+    filters (assetClass, sector, countryOfIncorporation), valuation snapshots,
+    and issuer / corporate metadata required by reporting and compliance.
+  source_entity: "../../securities/equity/Equity.yml#/ontology/entities/Equity"
+
+  entities:
+
+    EquityGolden:
+      description: >
+        Golden (tier-3) record for an Equity instrument. One document per
+        instrument, keyed by `goldenId`. Designed to be the primary OpenSearch
+        document a PMS reads to render instrument detail, run screens, and
+        attribute positions without joining secondary stores.
+      kind: golden_record
+      type: object
+      required:
+        - goldenId
+        - longName
+        - assetClass
+        - currencyOfDenomination
+        - primaryListing
+        - issuer
+        - recordMeta
+      properties:
+
+        # ---------------------------------------------------------------------
+        # Record identity
+        #
+        # Cross-security identifier *lookups* go through the dedicated
+        # `pms_golden_identifier` helper index — see Identifier.yml.
+        #
+        # Hoisted identifier scalars (`isin`, `figi`, `tickerSymbol`,
+        # `exchangeMic`) intentionally do NOT appear here — they
+        # duplicated semantic positions (`primaryListing.ticker`,
+        # `primaryListing.mic`, `issuer.lei`) and `identifierList`.
+        # ---------------------------------------------------------------------
+        goldenId:
+          description: >
+            Stable, internal primary key of the golden record. Independent of
+            external identifiers so the record survives corporate-action
+            re-identification (re-ISIN, ticker change).
+          type: string
+          example: EQG-AAPL-XNAS-001
+        cfiCode:
+          description: >
+            ISO 10962 CFI code (classification, NOT an identifier).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CfiCode"
+        identifierList:
+          description: >
+            Per-instrument completeness — every identifier known for this
+            security (ISIN, FIGI, SEDOL, CUSIP, RIC, WKN, VALOREN,
+            Bloomberg, …).
+          type: array
+          items:
+            common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/FinancialInstrumentIdentification"
+
+        # ---------------------------------------------------------------------
+        # Display / descriptive fields
+        # ---------------------------------------------------------------------
+        longName:
+          description: Full instrument name, used for free-text search and display.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/LongText"
+        shortName:
+          description: Short instrument name, for grids and compact UIs.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/ShortText"
+
+        # ---------------------------------------------------------------------
+        # Classification (hoisted for filters and aggregations)
+        # ---------------------------------------------------------------------
+        assetClass:
+          description: >
+            Resolved asset class label (e.g., "Equity / Common Stock"). Derived
+            from AssetClass mapping rules against the CFI code and instrument type.
+          type: string
+          example: Equity / Common Stock
+        assetClassId:
+          description: Reference to the canonical AssetClass record used for roll-ups.
+          type: string
+          example: AC-EQ-COMMON
+        equitySubType:
+          description: Equity sub-type (Common, Preferred, ADR, GDR, REIT, etc.).
+          type: string
+          enum:
+            - commonStock
+            - preferredStock
+            - adr
+            - gdr
+            - reit
+            - mlp
+            - convertiblePreferred
+            - other
+          example: commonStock
+        shareClass:
+          description: Share class (e.g., Class A, Class B, Preferred).
+          type: string
+          example: Class A
+        industrySector:
+          description: >
+            Canonical industry/sector classification snapshot. Includes the
+            assigned taxonomy code (GICS/ICB/Telekurs) and the canonical label
+            used by the PMS for cross-source comparability.
+          common_ontology: "../../industry_sector/IndustrySector.yml#/ontology/entities/IndustrySector"
+        incorporationCountry:
+          description: ISO 3166-1 alpha-2 country of incorporation of the issuing company.
+          type: Country
+          example: US
+        currencyOfDenomination:
+          description: ISO 4217 currency in which the equity is denominated.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        # ---------------------------------------------------------------------
+        # Static equity attributes (from tier-2 Equity)
+        # ---------------------------------------------------------------------
+        parValue:
+          description: Nominal par value stated in the corporate charter.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        votingRatio:
+          description: Number of votes per share.
+          type: number
+          example: 1.0
+        hasVotingRights:
+          description: True if the equity carries voting rights.
+          type: boolean
+          example: true
+        sharesOutstanding:
+          description: Total shares currently issued and outstanding.
+          type: number
+          example: 15500000000
+
+        # ---------------------------------------------------------------------
+        # Issuer snapshot (denormalized from Issuer.yml)
+        # ---------------------------------------------------------------------
+        issuer:
+          description: >
+            Flattened snapshot of issuer attributes a PMS needs at the equity
+            row level — legal name, LEI, domicile, ratings — without joining
+            to the issuer store.
+          ref: IssuerSnapshot
+
+        # ---------------------------------------------------------------------
+        # Listings — primary plus all secondary venues
+        # ---------------------------------------------------------------------
+        primaryListing:
+          description: Primary trading venue listing for the equity.
+          ref: ListingSnapshot
+        secondaryListings:
+          description: All other venues where the equity is listed.
+          type: array
+          items:
+            ref: ListingSnapshot
+
+        # ---------------------------------------------------------------------
+        # Latest pricing / market data snapshot
+        # ---------------------------------------------------------------------
+        marketData:
+          description: >
+            Last-known market data snapshot (typically EOD). For intraday
+            valuations the PMS should still query the pricing service; this
+            snapshot is the OpenSearch-resident fallback and search input.
+          ref: MarketDataSnapshotEmbedded
+
+        # ---------------------------------------------------------------------
+        # Income / dividend
+        # ---------------------------------------------------------------------
+        dividendStatus:
+          description: True if the equity currently pays dividends.
+          type: boolean
+          example: true
+        dividendPolicy:
+          description: Dividend policy snapshot (yield, frequency, last payment date).
+          common_ontology: "../../securities/equity/Equity.yml#/ontology/entities/DividendPolicy"
+
+        # ---------------------------------------------------------------------
+        # Key valuation figures
+        # ---------------------------------------------------------------------
+        keyFigures:
+          description: Key valuation figures (market cap, EPS, P/E, volatility).
+          common_ontology: "../../securities/equity/Equity.yml#/ontology/entities/KeyFigures"
+
+        # ---------------------------------------------------------------------
+        # Regulatory / compliance flags relevant to a PMS
+        # ---------------------------------------------------------------------
+        compliance:
+          description: Pre-resolved compliance flags used in screens and PMS rules.
+          ref: ComplianceFlags
+
+        # ---------------------------------------------------------------------
+        # Lifecycle status of the instrument (from silver Equity)
+        # ---------------------------------------------------------------------
+        lifecycleStatus:
+          description: Lifecycle status of the equity (active / suspended / delisted / merged).
+          type: string
+          enum:
+            - active
+            - suspended
+            - delisted
+            - merged
+            - inactive
+          example: active
+        firstTradingDate:
+          description: Date the equity was first admitted to trading.
+          type: string
+          format: date
+        delistingDate:
+          description: Date of delisting, if applicable.
+          type: string
+          format: date
+
+        # ---------------------------------------------------------------------
+        # Record meta — provenance, indexing, freshness
+        # ---------------------------------------------------------------------
+        recordMeta:
+          description: Provenance and freshness metadata for the golden record.
+          ref: GoldenRecordMeta
+
+    # =========================================================================
+    # Embedded snapshots
+    # =========================================================================
+
+    IssuerSnapshot:
+      description: >
+        Flattened issuer view denormalized into the equity golden record.
+        Mirrors the most frequently filtered fields from Issuer.yml.
+      kind: value_object
+      type: object
+      required:
+        - issuerId
+        - legalName
+      properties:
+        issuerId:
+          description: Internal stable issuer id (matches Issuer.id in tier-2).
+          type: string
+        legalName:
+          description: Official registered name of the issuer.
+          type: string
+          example: Apple Inc.
+        lei:
+          description: ISO 17442 Legal Entity Identifier of the issuer.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+        issuerType:
+          description: Issuer classification (corporate, bank, sovereign, ...).
+          type: string
+          enum:
+            - corporate
+            - government
+            - supranational
+            - spv
+            - bank
+            - insurance_company
+            - fund_company
+        domicileCountry:
+          description: Country of domicile of the issuer.
+          type: Country
+        headquartersCountry:
+          description: Country where the issuer's headquarters are located.
+          type: Country
+        ultimateParentLei:
+          description: LEI of the ultimate parent entity, if different from the issuer.
+          type: string
+        creditProfile:
+          description: Snapshot of the issuer's creditworthiness profile.
+          common_ontology: "../../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditProfile"
+        esgProfile:
+          description: Snapshot of the issuer's ESG profile.
+          common_ontology: "../../rating/esg/ESGRating.yml#/ontology/entities/ESGProfile"
+
+    ListingSnapshot:
+      description: >
+        Denormalized venue listing for the equity, including the venue
+        identification needed to interpret the ticker.
+      kind: value_object
+      type: object
+      required:
+        - mic
+        - ticker
+        - listingCurrency
+      properties:
+        listingId:
+          description: Internal listing identifier (matches Listing.listingId in tier-2).
+          type: string
+        mic:
+          description: ISO 10383 Market Identifier Code of the venue.
+          type: string
+          example: XNAS
+        venueName:
+          description: Human-readable venue name (e.g., "NASDAQ Global Select Market").
+          type: string
+        venueCountry:
+          description: Country of the trading venue.
+          type: Country
+        ticker:
+          description: Venue-specific trading symbol.
+          type: string
+          example: AAPL
+        listingCurrency:
+          description: ISO 4217 currency of trades on this listing.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        marketSegment:
+          description: Venue market segment (e.g., "Global Select", "Premium Standard").
+          type: string
+        lotSize:
+          description: Standard trading lot size on this venue.
+          type: integer
+          example: 1
+        firstTradingDate:
+          description: Date the equity first traded on this venue.
+          type: string
+          format: date
+        status:
+          description: Status of the listing on this venue.
+          type: string
+          enum:
+            - active
+            - suspended
+            - delisted
+        isPrimary:
+          description: True if this listing is the issuer's primary listing.
+          type: boolean
+          example: true
+
+    MarketDataSnapshotEmbedded:
+      description: >
+        Last-known market data values for the equity, denormalized for inclusion
+        in the golden record. References the source listing by MIC + listingId.
+      kind: value_object
+      type: object
+      properties:
+        sourceListingId:
+          description: Listing the snapshot was sourced from.
+          type: string
+        sourceMic:
+          description: MIC of the listing the snapshot was sourced from.
+          type: string
+        asOf:
+          description: Timestamp of the snapshot.
+          type: string
+          format: date-time
+        lastTradePrice:
+          description: Most recent traded price.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        open:
+          description: Opening price of the trading session.
+          type: number
+        high:
+          description: Intraday or session high price.
+          type: number
+        low:
+          description: Intraday or session low price.
+          type: number
+        close:
+          description: Closing price of the trading session.
+          type: number
+        volume:
+          description: Traded volume for the period of the snapshot.
+          type: number
+        vwap:
+          description: Volume-weighted average price for the period.
+          type: number
+        marketCapCategory:
+          description: Market-cap bucket (Large-Cap, Mid-Cap, Small-Cap, etc.).
+          type: string
+          example: Large-Cap
+
+    ComplianceFlags:
+      description: >
+        Pre-resolved regulatory / compliance flags relevant to a PMS at the
+        equity level. Computed from the regulatory and rating domains.
+      kind: value_object
+      type: object
+      properties:
+        isUcitsEligible:
+          description: True if the instrument is eligible for UCITS portfolios.
+          type: boolean
+        isPrIIPs:
+          description: True if a PRIIPs KID applies to the instrument.
+          type: boolean
+        isSanctionsListed:
+          description: True if the issuer or instrument appears on any tracked sanctions list.
+          type: boolean
+        sanctionsLists:
+          description: Names of sanctions lists where the instrument or issuer is currently listed.
+          type: array
+          items:
+            type: string
+        shortSellingAllowed:
+          description: True if short selling of this equity is currently permitted.
+          type: boolean
+        mifid2TargetMarket:
+          description: MiFID II target-market category (retail, professional, eligibleCounterparty).
+          type: string
+          enum:
+            - retail
+            - professional
+            - eligibleCounterparty
+
+    GoldenRecordMeta:
+      description: >
+        Provenance, freshness and lineage metadata for the golden record. Used
+        by the enrichment pipeline and by audit / lineage queries in the PMS.
+      kind: value_object
+      type: object
+      required:
+        - schemaVersion
+        - goldenAsOf
+        - sourceOfTruth
+      properties:
+        schemaVersion:
+          description: Version of the EquityGolden schema this document conforms to.
+          type: string
+          example: 0.1.0
+        goldenAsOf:
+          description: Timestamp at which this golden record was assembled.
+          type: string
+          format: date-time
+        ingestionRunId:
+          description: Run id of the enrichment pipeline that produced this record.
+          type: string
+        sourceOfTruth:
+          description: >
+            Map of field-group to source system (e.g., issuer → "GLEIF",
+            marketData → "SIX", classification → "MSCI/GICS"). Stored as a
+            list to keep the OpenSearch mapping flat.
+          type: array
+          items:
+            ref: SourceAttribution
+        sourceFingerprints:
+          description: >
+            Content hashes of the contributing tier-2 documents so downstream
+            systems can detect when a rebuild is required.
+          type: array
+          items:
+            ref: SourceFingerprint
+        qualityScore:
+          description: Aggregate data-quality score for the record (0.0 - 1.0).
+          type: number
+          example: 0.97
+        isActive:
+          description: True if this is the currently active golden record for the instrument.
+          type: boolean
+          example: true
+
+    SourceAttribution:
+      description: Records which upstream system contributed a particular field group.
+      kind: value_object
+      type: object
+      required:
+        - fieldGroup
+        - source
+      properties:
+        fieldGroup:
+          description: Field group inside the golden record (e.g., "issuer", "marketData").
+          type: string
+        source:
+          description: Upstream system or vendor that provided the data.
+          type: string
+        sourceTimestamp:
+          description: Timestamp at the source when the data was produced.
+          type: string
+          format: date-time
+
+    SourceFingerprint:
+      description: Content hash of an upstream tier-2 document used to assemble this record.
+      kind: value_object
+      type: object
+      required:
+        - sourceEntity
+        - fingerprint
+      properties:
+        sourceEntity:
+          description: Tier-2 entity reference (e.g., "Equity:EQ-AAPL-NASDAQ").
+          type: string
+        fingerprint:
+          description: Stable hash (e.g., SHA-256) of the source document at assembly time.
+          type: string

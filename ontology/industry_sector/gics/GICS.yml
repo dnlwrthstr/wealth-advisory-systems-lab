@@ -1,0 +1,96 @@
+ontology:
+  name: GICS
+  namespace: bank_data.securities_domain
+  version: "1.0"
+  description: >
+    Global Industry Classification Standard (GICS) is a global framework 
+    classifying companies by primary economic activity. It is region-agnostic; 
+    geography is modeled separately.
+
+  entities:
+    GicsClassification:
+      description: >
+        Classification of an issuer or instrument according to the GICS hierarchy.
+      properties:
+        sectorCode:
+          type: string
+          description: 2-digit code representing the GICS Sector.
+        industryGroupCode:
+          type: string
+          description: 4-digit code representing the GICS Industry Group.
+        industryCode:
+          type: string
+          description: 6-digit code representing the GICS Industry.
+        subIndustryCode:
+          type: string
+          description: 8-digit code representing the GICS Sub-Industry.
+
+    GicsReferenceData:
+      description: Structure for GICS reference data including the hierarchy.
+      properties:
+        standard:
+          ref: GicsStandardInfo
+        hierarchy:
+          type: array
+          items:
+            ref: GicsSector
+
+    GicsStandardInfo:
+      description: General information about the GICS standard.
+      properties:
+        name:
+          type: string
+        abbreviation:
+          type: string
+        owners:
+          type: array
+          items:
+            type: string
+        standardType:
+          type: string
+        isoStandard:
+          type: boolean
+
+    GicsSector:
+      description: GICS Sector (Level 1).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        industryGroups:
+          type: array
+          items:
+            ref: GicsIndustryGroup
+
+    GicsIndustryGroup:
+      description: GICS Industry Group (Level 2).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        industries:
+          type: array
+          items:
+            ref: GicsIndustry
+
+    GicsIndustry:
+      description: GICS Industry (Level 3).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        subIndustries:
+          type: array
+          items:
+            ref: GicsSubIndustry
+
+    GicsSubIndustry:
+      description: GICS Sub-Industry (Level 4).
+      properties:
+        code:
+          type: string
+        name:
+          type: string

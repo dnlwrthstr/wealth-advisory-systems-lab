@@ -1,0 +1,1013 @@
+ontology:
+  name: FundGolden
+  version: 0.4.0
+  description: >
+    Tier-3 (golden) read-model for a Fund instrument (mutual fund, ETF, SICAV
+    sub-fund, etc.), denormalized for OpenSearch within a PMS.
+
+    Composes data from silver `Fund.yml`, Issuer, Listing, MarketData and
+    classifications into a single, search-optimised document. Field selection
+    follows PMS access patterns: identifier lookups, screen filters (legal
+    framework, domicile, fee bands), look-through holdings and NAV history.
+
+    v0.4.0 — identifier index migration:
+      * Drop the redundant hoisted identifier scalars (`isin`, `figi`,
+        `tickerSymbol`, `exchangeMic`). They duplicated values that already
+        live in semantic positions (`shareClass.isin`,
+        `primaryListing.ticker`, `primaryListing.mic`,
+        `marketData.sourceMic`) and inside `identifierList`.
+      * Keep `identifierList` — it remains the canonical per-instrument
+        completeness record (all known identifier schemes for this
+        security: ISIN, FIGI, SEDOL, CUSIP, RIC, WKN, VALOREN, Bloomberg,
+        etc.). Different purpose from the helper index: this list
+        describes ONE security; the helper index lets you find ONE
+        security by ANY identifier across the whole universe.
+      * Keep `cfiCode` (ISO 10962). It is classification, not
+        identification — it stays as a top-level attribute.
+      * Cross-security identifier lookups go through the dedicated
+        `pms_golden_identifier` helper index (see `Identifier.yml`).
+      * `goldenId` remains the doc's primary key and (by convention) still
+        embeds the ISIN substring for legibility — but it's opaque from a
+        query perspective. UIs search the helper index, not the
+        per-security index.
+
+    v0.3.0 cleanup (semantic accuracy):
+      * Rename `issuer` -> `managementCompany`. The legal issuer of a UCITS
+        share class is the umbrella entity; the `managementCompany` is the
+        operator. `IssuerSnapshot` -> `OrganisationSnapshot`.
+      * Add `investmentManager` (UCITS ManCos commonly delegate portfolio
+        management to a separately licensed entity, e.g. BlackRock Advisors UK).
+      * Move `promoter` from `serviceProviders` to a top-level field with the
+        same shape as managementCompany — promoter is corporate hierarchy,
+        not a fund-administration service.
+      * Drop the flat `umbrellaName` shortcut; readers use `umbrella.legalName`.
+      * Group share-class scalars into a `shareClass` object and add a
+        `subFund` object; ISIN belongs to the share class semantically.
+
+    v0.2.0 extensions: share-class details, umbrella snapshot, KID/KIID risk
+    ratings, dealing terms, service providers, jurisdiction tax statuses,
+    extended performance metrics, fund-level fee detail (swing pricing,
+    transaction costs) and OHLC + iNAV in the market-data snapshot.
+
+    Derived: silver `Fund.yml` is the source of truth.
+  source_entity: "../../securities/fund/Fund.yml#/ontology/entities/Fund"
+
+  entities:
+
+    FundGolden:
+      description: >
+        Golden (tier-3) record for a Fund instrument. One document per share
+        class / sub-fund, keyed by `goldenId`.
+      kind: golden_record
+      type: object
+      required:
+        - goldenId
+        - longName
+        - assetClass
+        - currencyOfDenomination
+        - managementCompany
+        - recordMeta
+      properties:
+
+        # ---------------------------------------------------------------------
+        # Record identity
+        #
+        # Cross-security identifier *lookups* (ISIN / FIGI / ticker /
+        # SEDOL / etc.) go through the dedicated `pms_golden_identifier`
+        # helper index — see Identifier.yml.
+        #
+        # Hoisted identifier scalars (`isin`, `figi`, `tickerSymbol`,
+        # `exchangeMic`) intentionally do NOT appear here — they're
+        # redundant with the semantic positions and with `identifierList`.
+        # Semantic positions inside this doc:
+        #   * shareClass.isin / shareClass.currency
+        #   * primaryListing.ticker / primaryListing.mic
+        #   * marketData.sourceMic
+        # ---------------------------------------------------------------------
+        goldenId:
+          description: >
+            Stable internal primary key of the golden record. By convention
+            embeds the ISIN substring for legibility but is otherwise opaque.
+          type: string
+          example: FG-IE00B4L5Y983-001
+        cfiCode:
+          description: >
+            ISO 10962 CFI code (classification, NOT an identifier).
+            Stays at top level because the fund itself is classified;
+            same code for every share class of the same sub-fund.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CfiCode"
+        identifierList:
+          description: >
+            Per-instrument completeness — every identifier known for this
+            security (ISIN, FIGI, SEDOL, CUSIP, RIC, WKN, VALOREN,
+            Bloomberg ticker, …). Different purpose from the helper
+            index: that's for cross-security lookup, this is for "show
+            me everything I know about THIS one".
+          type: array
+          items:
+            common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/FinancialInstrumentIdentification"
+
+        # ---------------------------------------------------------------------
+        # Display / descriptive fields
+        # ---------------------------------------------------------------------
+        longName:
+          description: Full fund name including share class.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/LongText"
+        shortName:
+          description: Short fund name for grids.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/ShortText"
+        umbrella:
+          description: Full umbrella entity snapshot (LEI, domicile, structure).
+          ref: UmbrellaSnapshot
+        subFund:
+          description: Sub-fund-level grouping inside the umbrella.
+          ref: SubFund
+        shareClass:
+          description: >
+            Share-class-level grouping. ISIN, currency and the hedging flag
+            live here — they discriminate share classes inside the sub-fund.
+            For cross-security identifier lookups, use the helper index
+            (`pms_golden_identifier`).
+          ref: ShareClass
+
+        # ---------------------------------------------------------------------
+        # Classification (hoisted)
+        # ---------------------------------------------------------------------
+        assetClass:
+          description: Resolved asset class label (e.g., "Fund / Equity ETF").
+          type: string
+          example: Fund / Equity ETF
+        assetClassId:
+          description: Reference to the canonical AssetClass record used for roll-ups.
+          type: string
+          example: AC-FUND-EQ-ETF
+        fundSubType:
+          description: Fund sub-type / wrapper.
+          type: string
+          enum:
+            - openEndedMutualFund
+            - closeEndedFund
+            - etf
+            - moneyMarketFund
+            - hedgeFund
+            - privateEquity
+            - realEstateFund
+            - structuredFund
+            - fundOfFunds
+            - other
+          example: etf
+        fundStrategy:
+          description: Investment strategy classification.
+          type: string
+          enum:
+            - passive_indexTracking
+            - active
+            - smartBeta
+            - longShort
+            - marketNeutral
+            - thematic
+            - other
+          example: passive_indexTracking
+        primaryAssetClassExposure:
+          description: Dominant underlying asset class exposure.
+          type: string
+          enum:
+            - equity
+            - fixedIncome
+            - mixed_balanced
+            - moneyMarket
+            - alternative
+            - realEstate
+            - commodity
+            - other
+          example: equity
+        currencyOfDenomination:
+          description: ISO 4217 currency of the share class.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        domicile:
+          description: Country where the fund is legally registered and regulated.
+          type: string
+          example: Ireland
+        legalFramework:
+          description: Regulatory framework (UCITS, AIFMD, 40-Act, etc.).
+          type: string
+          example: UCITS
+        legalStructure:
+          description: Legal form (SICAV, ICAV, FCP, LP, etc.).
+          type: string
+          example: ICAV
+
+        # ---------------------------------------------------------------------
+        # Static fund attributes (from silver Fund)
+        # ---------------------------------------------------------------------
+        dividendPolicy:
+          description: Income handling (distributing vs accumulating).
+          type: string
+          enum:
+            - DISTRIBUTING
+            - ACCUMULATING
+          example: ACCUMULATING
+        isCurrencyHedged:
+          description: True if the share class employs FX hedging.
+          type: boolean
+        hedgingCurrency:
+          description: Target currency into which exposures are hedged.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        holdingsCount:
+          description: Total number of underlying holdings in the fund.
+          type: integer
+          example: 1500
+        replicationMethod:
+          description: How the fund replicates its strategy (ETF specific, optional).
+          type: string
+          enum:
+            - physicalFull
+            - physicalSampling
+            - syntheticSwap
+            - other
+          example: physicalFull
+        benchmarkName:
+          description: Name of the tracked benchmark (e.g., MSCI World Net TR).
+          type: string
+        benchmarkIdentifier:
+          description: Identifier of the tracked benchmark, if known.
+          type: string
+        fiscalYearEnd:
+          description: Fund fiscal year end as MM-DD.
+          type: string
+          example: "06-30"
+        rebalanceFrequency:
+          description: Portfolio rebalance frequency (mainly for index-tracking funds).
+          type: string
+          enum:
+            - daily
+            - weekly
+            - biweekly
+            - monthly
+            - quarterly
+            - semiAnnual
+            - annual
+            - irregular
+          example: quarterly
+        riskRating:
+          description: Regulatory KIID / PRIIPs KID risk ratings.
+          ref: RiskRating
+
+        # ---------------------------------------------------------------------
+        # Fees — flattened + structured snapshot
+        # ---------------------------------------------------------------------
+        totalExpenseRatio:
+          description: TER (annual %, decimal) hoisted from fees.ongoing for screens.
+          type: number
+          example: 0.002
+        transactionCostsPRIIPs:
+          description: PRIIPs ex-post transaction-cost ratio (decimal, annualised).
+          type: number
+          example: 0.0001
+        swingPricingApplied:
+          description: True if swing pricing is applied to NAV calculation.
+          type: boolean
+        fees:
+          description: Full fee structure snapshot.
+          common_ontology: "../../securities/fund/Fund.yml#/ontology/entities/FundFeeStructure"
+
+        # ---------------------------------------------------------------------
+        # Dealing terms (subscription / redemption mechanics)
+        # ---------------------------------------------------------------------
+        dealing:
+          description: Subscription / redemption mechanics for the share class.
+          ref: DealingTerms
+
+        # ---------------------------------------------------------------------
+        # Service providers
+        # ---------------------------------------------------------------------
+        serviceProviders:
+          description: Depositary, administrator, transfer agent, auditor, promoter.
+          ref: ServiceProviders
+
+        # ---------------------------------------------------------------------
+        # Asset allocation snapshot + holdings-level metrics
+        # ---------------------------------------------------------------------
+        assetAllocation:
+          description: Allocation buckets and look-through top holdings.
+          common_ontology: "../../securities/fund/Fund.yml#/ontology/entities/AssetAllocation"
+        holdingsAsOf:
+          description: As-of date of the holdings / allocation snapshot.
+          type: string
+          format: date
+        portfolioTurnoverPctAnnual:
+          description: Annualised portfolio turnover ratio (decimal).
+          type: number
+          example: 0.034
+        currencyAllocation:
+          description: Allocation of fund holdings by underlying currency.
+          type: array
+          items:
+            type: object
+            required:
+              - currency
+              - percentage
+            properties:
+              currency:
+                description: ISO 4217 currency code (or "Other").
+                type: string
+              percentage:
+                description: Weight as a decimal (e.g., 0.65 for 65%).
+                type: number
+
+        # ---------------------------------------------------------------------
+        # Performance metrics (richer than the marketData headline returns)
+        # ---------------------------------------------------------------------
+        performance:
+          description: Standard performance and risk-adjusted metrics for the share class.
+          ref: PerformanceSnapshot
+
+        # ---------------------------------------------------------------------
+        # Jurisdiction tax statuses
+        # ---------------------------------------------------------------------
+        taxStatuses:
+          description: Jurisdiction-specific tax status overlays.
+          ref: TaxStatuses
+
+        # ---------------------------------------------------------------------
+        # Fund-company snapshot.
+        # `managementCompany` is the operator of the UCITS (e.g. BlackRock
+        # Asset Management Ireland Ltd). The *legal* issuer of the share
+        # class is the umbrella (see `umbrella` above).
+        # ---------------------------------------------------------------------
+        managementCompany:
+          description: Management company / operator snapshot.
+          ref: OrganisationSnapshot
+        investmentManager:
+          description: >
+            Delegated portfolio manager, if different from the management
+            company (UCITS ManCos commonly delegate to a separately licensed
+            advisor, e.g. BlackRock Advisors UK Ltd).
+          ref: OrganisationSnapshot
+        promoter:
+          description: >
+            Group / parent that promotes (sponsors) the fund. Corporate
+            hierarchy, not a service-administration role.
+          ref: OrganisationSnapshot
+
+        # ---------------------------------------------------------------------
+        # Listings (ETFs only)
+        # ---------------------------------------------------------------------
+        primaryListing:
+          description: Primary venue listing for the ETF.
+          ref: ListingSnapshot
+        secondaryListings:
+          description: Cross-listings for the ETF.
+          type: array
+          items:
+            ref: ListingSnapshot
+
+        # ---------------------------------------------------------------------
+        # NAV / price snapshot
+        # ---------------------------------------------------------------------
+        marketData:
+          description: Latest NAV / market price snapshot.
+          ref: FundMarketDataSnapshotEmbedded
+
+        # ---------------------------------------------------------------------
+        # ESG profile
+        # ---------------------------------------------------------------------
+        instrumentEsgProfile:
+          description: ESG profile of the fund.
+          common_ontology: "../../rating/esg/ESGRating.yml#/ontology/entities/ESGInstrumentProfile"
+
+        # ---------------------------------------------------------------------
+        # Lifecycle
+        # ---------------------------------------------------------------------
+        inceptionDate:
+          description: Inception date of the share class.
+          type: string
+          format: date
+        terminationDate:
+          description: Termination date, if applicable.
+          type: string
+          format: date
+        lifecycleStatus:
+          description: Lifecycle status of the fund.
+          type: string
+          enum:
+            - active
+            - softClosed
+            - hardClosed
+            - liquidated
+            - merged
+            - suspended
+            - inactive
+          example: active
+
+        # ---------------------------------------------------------------------
+        # Regulatory / compliance flags
+        # ---------------------------------------------------------------------
+        compliance:
+          description: Pre-resolved compliance flags used in PMS screens.
+          ref: ComplianceFlags
+
+        # ---------------------------------------------------------------------
+        # Record meta
+        # ---------------------------------------------------------------------
+        recordMeta:
+          description: Provenance and freshness metadata for the golden record.
+          ref: GoldenRecordMeta
+
+    # =========================================================================
+    # Embedded snapshots
+    # =========================================================================
+
+    OrganisationSnapshot:
+      description: >
+        Polymorphic organisation snapshot — used for `managementCompany`,
+        `investmentManager` and `promoter`. `organisationType` discriminates.
+      kind: value_object
+      type: object
+      required:
+        - organisationId
+        - legalName
+      properties:
+        organisationId:
+          description: Internal stable organisation id.
+          type: string
+        legalName:
+          description: Official registered name of the organisation.
+          type: string
+          example: BlackRock Asset Management Ireland Ltd
+        lei:
+          description: ISO 17442 Legal Entity Identifier.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+        organisationType:
+          description: Organisation classification.
+          type: string
+          enum:
+            - corporate
+            - government
+            - supranational
+            - spv
+            - bank
+            - insurance_company
+            - fund_company
+            - investment_manager
+            - promoter
+        domicileCountry:
+          description: Country of domicile of the organisation.
+          type: Country
+        headquartersCountry:
+          description: Country where the organisation is headquartered.
+          type: Country
+        ultimateParentLei:
+          description: LEI of the ultimate parent group.
+          type: string
+        esgProfile:
+          description: ESG profile of the organisation.
+          common_ontology: "../../rating/esg/ESGRating.yml#/ontology/entities/ESGProfile"
+
+    ListingSnapshot:
+      description: Denormalized venue listing for the fund (ETF cross-listing).
+      kind: value_object
+      type: object
+      required:
+        - mic
+        - listingCurrency
+      properties:
+        listingId:
+          description: Internal listing identifier.
+          type: string
+        mic:
+          description: ISO 10383 MIC of the venue.
+          type: string
+        venueName:
+          description: Human-readable venue name.
+          type: string
+        venueCountry:
+          description: Country of the trading venue.
+          type: Country
+        ticker:
+          description: Venue-specific trading symbol.
+          type: string
+        listingCurrency:
+          description: ISO 4217 currency of trades on this listing.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        marketSegment:
+          description: Venue market segment.
+          type: string
+        firstTradingDate:
+          description: Date of first trading on this venue.
+          type: string
+          format: date
+        status:
+          description: Status of the listing.
+          type: string
+          enum:
+            - active
+            - suspended
+            - delisted
+        isPrimary:
+          description: True if this is the primary listing.
+          type: boolean
+
+    FundMarketDataSnapshotEmbedded:
+      description: Latest NAV / price snapshot for the fund.
+      kind: value_object
+      type: object
+      properties:
+        sourceListingId:
+          description: Listing the snapshot was sourced from (ETF) or null.
+          type: string
+        sourceMic:
+          description: MIC of the source listing.
+          type: string
+        asOf:
+          description: Timestamp of the snapshot.
+          type: string
+          format: date-time
+        nav:
+          description: Net Asset Value per share.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        navCurrency:
+          description: Currency of the NAV.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        navType:
+          description: NAV calculation type.
+          type: string
+          enum:
+            - official_eod
+            - indicative_intraday
+            - estimated
+          example: official_eod
+        sharesInIssue:
+          description: Number of shares in issue at the NAV cut-off.
+          type: number
+          example: 993870000
+        indicativeNav:
+          description: Intraday indicative NAV (iNAV) for ETFs.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        marketPrice:
+          description: Last traded market price (ETF), if different from NAV.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        premiumDiscount:
+          description: ETF market price premium / discount to NAV (decimal).
+          type: number
+        aum:
+          description: Assets under management of the fund (or share class).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        open:
+          description: Opening price of the trading session.
+          type: number
+        high:
+          description: Intraday or session high price.
+          type: number
+        low:
+          description: Intraday or session low price.
+          type: number
+        close:
+          description: Closing price of the trading session.
+          type: number
+        volume:
+          description: Traded volume for the period of the snapshot.
+          type: number
+        vwap:
+          description: Volume-weighted average price for the period.
+          type: number
+        ytdReturn:
+          description: Year-to-date total return (decimal).
+          type: number
+        oneYearReturn:
+          description: Trailing one-year total return (decimal).
+          type: number
+        threeYearReturn:
+          description: Trailing three-year annualised return (decimal).
+          type: number
+        fiveYearReturn:
+          description: Trailing five-year annualised return (decimal).
+          type: number
+        volatility1y:
+          description: Trailing one-year realised volatility (decimal).
+          type: number
+
+    ComplianceFlags:
+      description: Pre-resolved regulatory / compliance flags for the fund.
+      kind: value_object
+      type: object
+      properties:
+        isUcitsEligible:
+          description: True if eligible for UCITS portfolios.
+          type: boolean
+        isPrIIPs:
+          description: True if a PRIIPs KID applies.
+          type: boolean
+        isPriipsComplex:
+          description: True if the fund is classified as complex under PRIIPs.
+          type: boolean
+        isAif:
+          description: True if the fund is an AIF under AIFMD.
+          type: boolean
+        eltifEligible:
+          description: True if the fund is eligible as an ELTIF.
+          type: boolean
+        kidLanguages:
+          description: ISO 639-1 language codes in which a KID/KIID is available.
+          type: array
+          items:
+            type: string
+        isSanctionsListed:
+          description: True if the issuer or instrument appears on a tracked sanctions list.
+          type: boolean
+        sanctionsLists:
+          description: Sanctions lists where the instrument or issuer is currently listed.
+          type: array
+          items:
+            type: string
+        sfdrClassification:
+          description: EU SFDR article classification.
+          type: string
+          enum:
+            - article6
+            - article8
+            - article9
+            - notApplicable
+        mifid2TargetMarket:
+          description: MiFID II target-market category.
+          type: string
+          enum:
+            - retail
+            - professional
+            - eligibleCounterparty
+        finsaCategory:
+          description: Swiss FinSA client-category classification.
+          type: string
+          enum:
+            - retail
+            - professional
+            - institutional
+            - notApplicable
+        registeredForSale:
+          description: Countries where the fund is registered for sale (ISO 3166-1 alpha-2).
+          type: array
+          items:
+            type: Country
+
+    GoldenRecordMeta:
+      description: Provenance, freshness and lineage metadata for the golden record.
+      kind: value_object
+      type: object
+      required:
+        - schemaVersion
+        - goldenAsOf
+        - sourceOfTruth
+      properties:
+        schemaVersion:
+          description: Version of the FundGolden schema this document conforms to.
+          type: string
+          example: 0.1.0
+        goldenAsOf:
+          description: Timestamp at which this golden record was assembled.
+          type: string
+          format: date-time
+        ingestionRunId:
+          description: Run id of the enrichment pipeline.
+          type: string
+        sourceOfTruth:
+          description: Map of field-group to source system.
+          type: array
+          items:
+            ref: SourceAttribution
+        sourceFingerprints:
+          description: Content hashes of contributing silver documents.
+          type: array
+          items:
+            ref: SourceFingerprint
+        qualityScore:
+          description: Aggregate data-quality score (0.0 - 1.0).
+          type: number
+        isActive:
+          description: True if this is the currently active golden record.
+          type: boolean
+
+    SourceAttribution:
+      description: Records which upstream system contributed a particular field group.
+      kind: value_object
+      type: object
+      required:
+        - fieldGroup
+        - source
+      properties:
+        fieldGroup:
+          description: Field group inside the golden record.
+          type: string
+        source:
+          description: Upstream system or vendor.
+          type: string
+        sourceTimestamp:
+          description: Timestamp at the source when the data was produced.
+          type: string
+          format: date-time
+
+    SourceFingerprint:
+      description: Content hash of an upstream silver document.
+      kind: value_object
+      type: object
+      required:
+        - sourceEntity
+        - fingerprint
+      properties:
+        sourceEntity:
+          description: Silver entity reference.
+          type: string
+        fingerprint:
+          description: Stable hash (e.g., SHA-256) at assembly time.
+          type: string
+
+    # =========================================================================
+    # v0.2.0 — extended value-objects
+    # =========================================================================
+
+    UmbrellaSnapshot:
+      description: Snapshot of the umbrella entity that hosts the sub-fund.
+      kind: value_object
+      type: object
+      required:
+        - legalName
+      properties:
+        umbrellaId:
+          description: Internal stable umbrella id.
+          type: string
+        legalName:
+          description: Legal name of the umbrella entity.
+          type: string
+          example: iShares III plc
+        lei:
+          description: ISO 17442 LEI of the umbrella entity.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+        domicileCountry:
+          description: Country of domicile of the umbrella.
+          type: Country
+        legalStructure:
+          description: Legal form of the umbrella (plc, SICAV, FCP, ICAV, ...).
+          type: string
+
+    RiskRating:
+      description: Regulatory KIID / PRIIPs KID risk ratings.
+      kind: value_object
+      type: object
+      properties:
+        srri:
+          description: UCITS KIID Synthetic Risk and Reward Indicator (1-7, legacy).
+          type: integer
+          minimum: 1
+          maximum: 7
+        sri:
+          description: PRIIPs KID Summary Risk Indicator (1-7).
+          type: integer
+          minimum: 1
+          maximum: 7
+
+    DealingTerms:
+      description: Subscription / redemption mechanics for the share class.
+      kind: value_object
+      type: object
+      properties:
+        dealingFrequency:
+          description: How often the fund accepts subscriptions / redemptions.
+          type: string
+          enum:
+            - daily
+            - weekly
+            - biweekly
+            - monthly
+            - quarterly
+            - semiAnnual
+            - annual
+            - irregular
+          example: daily
+        settlementCycle:
+          description: Trade-to-settlement cycle (e.g., T+2).
+          type: string
+          example: T+2
+        cutoffTimeLocal:
+          description: Daily dealing cut-off time in the fund's local timezone (HH:MM).
+          type: string
+          example: "15:00"
+        cutoffTimezone:
+          description: IANA timezone of the dealing cut-off.
+          type: string
+          example: Europe/Dublin
+        minimumInitialInvestment:
+          description: Minimum initial investment in the share class currency.
+          type: number
+        minimumSubsequentInvestment:
+          description: Minimum subsequent investment in the share class currency.
+          type: number
+
+    PartyReference:
+      description: Lightweight reference to a service provider / counterparty.
+      kind: value_object
+      type: object
+      required:
+        - legalName
+      properties:
+        legalName:
+          description: Registered legal name of the party.
+          type: string
+        lei:
+          description: ISO 17442 LEI of the party, if known.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+
+    ServiceProviders:
+      description: Standard fund service-provider snapshot.
+      kind: value_object
+      type: object
+      properties:
+        depositary:
+          description: Depositary / custodian for the fund's assets.
+          ref: PartyReference
+        administrator:
+          description: Fund administrator (NAV calculation, books and records).
+          ref: PartyReference
+        transferAgent:
+          description: Transfer agent (shareholder register and dealing).
+          ref: PartyReference
+        auditor:
+          description: External auditor of the fund's accounts.
+          ref: PartyReference
+
+    ReturnsBreakdown:
+      description: Total return measurements for standard horizons.
+      kind: value_object
+      type: object
+      properties:
+        oneMonth:
+          description: Trailing 1-month total return (decimal).
+          type: number
+        threeMonth:
+          description: Trailing 3-month total return (decimal).
+          type: number
+        ytd:
+          description: Year-to-date total return (decimal).
+          type: number
+        oneYear:
+          description: Trailing 1-year total return (decimal).
+          type: number
+        threeYearAnn:
+          description: Trailing 3-year annualised total return (decimal).
+          type: number
+        fiveYearAnn:
+          description: Trailing 5-year annualised total return (decimal).
+          type: number
+        tenYearAnn:
+          description: Trailing 10-year annualised total return (decimal).
+          type: number
+        sinceInceptionAnn:
+          description: Since-inception annualised total return (decimal).
+          type: number
+
+    PerformanceSnapshot:
+      description: Standard performance and risk-adjusted metrics for the share class.
+      kind: value_object
+      type: object
+      properties:
+        asOf:
+          description: As-of date of the performance snapshot.
+          type: string
+          format: date
+        returns:
+          description: Total returns for the share class.
+          ref: ReturnsBreakdown
+        benchmarkReturns:
+          description: Total returns for the tracked benchmark.
+          ref: ReturnsBreakdown
+        trackingError1y:
+          description: Trailing 1-year tracking error to benchmark (decimal).
+          type: number
+        informationRatio1y:
+          description: Trailing 1-year information ratio.
+          type: number
+        sharpeRatio1y:
+          description: Trailing 1-year Sharpe ratio.
+          type: number
+        sortinoRatio1y:
+          description: Trailing 1-year Sortino ratio.
+          type: number
+        maxDrawdown3y:
+          description: Maximum drawdown over the trailing 3 years (decimal, negative).
+          type: number
+        volatility1y:
+          description: Trailing 1-year realised volatility (decimal).
+          type: number
+        volatility3y:
+          description: Trailing 3-year realised volatility (decimal).
+          type: number
+
+    TaxStatuses:
+      description: Jurisdiction-specific tax status overlays.
+      kind: value_object
+      type: object
+      properties:
+        germanInvestmentTaxAct:
+          description: German Investmentsteuergesetz (InvStG) classification.
+          ref: GermanInvTaxAct
+        ukReportingFundStatus:
+          description: UK HMRC Reporting Fund status.
+          ref: UkReportingFundStatus
+        frenchPeaEligible:
+          description: True if eligible for a French PEA.
+          type: boolean
+        swissDa1Eligible:
+          description: True if eligible for Swiss DA-1 (withholding tax reclaim).
+          type: boolean
+        usPfic:
+          description: True if treated as a PFIC for US tax purposes.
+          type: boolean
+
+    GermanInvTaxAct:
+      description: German InvStG fund-category and partial-exemption (Teilfreistellung).
+      kind: value_object
+      type: object
+      properties:
+        fundCategory:
+          description: InvStG fund category.
+          type: string
+          enum:
+            - aktienfonds
+            - mischfonds
+            - immobilienfonds
+            - sonstige
+        teilfreistellungPct:
+          description: Partial exemption rate (decimal) applied to taxable income.
+          type: number
+
+    UkReportingFundStatus:
+      description: UK HMRC Reporting Fund regime status.
+      kind: value_object
+      type: object
+      properties:
+        isReportingFund:
+          description: True if the share class has UK Reporting Fund status.
+          type: boolean
+        effectiveDate:
+          description: Date the Reporting Fund status became effective.
+          type: string
+          format: date
+
+    # =========================================================================
+    # v0.3.0 — sub-fund and share-class grouping
+    # =========================================================================
+
+    SubFund:
+      description: Sub-fund-level metadata inside the umbrella.
+      kind: value_object
+      type: object
+      properties:
+        name:
+          description: Name of the sub-fund.
+          type: string
+          example: iShares Core MSCI World UCITS ETF
+        inceptionDate:
+          description: Inception date of the sub-fund.
+          type: string
+          format: date
+
+    ShareClass:
+      description: >
+        Share-class-level metadata. The share class is the entity actually
+        identified by the document's top-level `isin`; the fields below
+        provide explicit semantics rather than relying on flat scalars at
+        the top level.
+      kind: value_object
+      type: object
+      required:
+        - isin
+      properties:
+        name:
+          description: Display name of the share class (e.g., "USD Acc").
+          type: string
+          example: USD Acc
+        type:
+          description: Income / distribution / hedging variant of the share class.
+          type: string
+          enum:
+            - accumulating
+            - distributing
+            - hedged
+            - unhedged
+            - institutional
+            - retail
+            - founder
+            - other
+          example: accumulating
+        isin:
+          description: ISO 6166 ISIN of this share class (same as top-level `isin`).
+          type: string
+          pattern: '^[A-Z]{2}[A-Z0-9]{9}[0-9]$'
+        currency:
+          description: Currency of the share class.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        hedged:
+          description: True if this share class hedges currency exposure.
+          type: boolean
+        inceptionDate:
+          description: Inception date of the share class.
+          type: string
+          format: date

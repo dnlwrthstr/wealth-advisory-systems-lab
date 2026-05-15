@@ -1,0 +1,68 @@
+ontology:
+  name: Future
+  version: 1.0.0
+  description: >
+    Ontology representation of the Future financial instrument schema.
+    Future inherits from FinancialInstrument and defines additional
+    properties such as expiry date, contract size, exercise price, and
+    the required underlying financial instrument.
+  is a: FinancialInstrument
+  common_ontology: "../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    Future:
+      description: Future contract based on an underlying financial instrument.
+      is_a: FinancialInstrument
+      common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Future"
+
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        expiryDate:
+          description: Expiry date of the future contract.
+          required: false
+          type: string
+          format: date
+
+        expiryCode:
+          description: Contract expiry code representing the delivery month and year.
+          required: false
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/ExpiryCode"
+
+        contractSize:
+          description: Contract size specifying standardized units.
+          required: false
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/ContractSize"
+
+        tickSize:
+          description: Minimum price fluctuation allowed for the future contract.
+          required: false
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/TickSize"
+
+        initialMargin:
+          description: Initial margin required to open the future raw_data.
+          required: false
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        maintenanceMargin:
+          description: Minimum margin required to keep the future raw_data open.
+          required: false
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        underlyingFinancialInstrument:
+          description: Underlying financial instrument the future derives from.
+          required: true
+          common_ontology: "../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+        tickerSymbol:
+          description: Exchange-specific ticker symbol of the future.
+          required: false
+          type: string
+
+        exercisePrice:
+          description: Exercise (strike) price of the future.
+          required: false
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"

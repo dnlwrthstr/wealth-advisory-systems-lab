@@ -1,0 +1,90 @@
+ontology:
+  name: Mortgage
+  version: 1.0.0
+  description: >
+    Ontology representation of the Mortgage financial instrument schema.
+    Mortgage inherits from FinancialInstrument and introduces mortgage-
+    specific attributes such as notional amount, interest rate, maturity,
+    collateral, and repayment details.
+  is a: FinancialInstrument
+  common_ontology: "../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    Mortgage:
+      description: Mortgage financial instrument.
+      is_a: FinancialInstrument
+      common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Mortgage"
+
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        notionalAmount:
+          description: Face value or original principal amount of the mortgage.
+          required: true
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        creditRisk:
+          description: Credit risk profile of the mortgage instrument.
+          common_ontology: "../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditRisk"
+
+        interestRate:
+          description: Percentage rate charged on the mortgage (fixed or floating).
+          required: true
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRate"
+
+        maturityDate:
+          description: Final date when the total principal and interest must be settled.
+          required: true
+          type: string
+          format: date
+
+        currency:
+          description: ISO 4217 code for the mortgage payments.
+          required: true
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        creditSupport:
+          description: Collateral or security agreement linked to the property deed.
+          required: true
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CreditSupport"
+
+        underlyingAsset:
+          description: Legal description or identifier of the property acting as collateral.
+          type: string
+          required: true
+
+        paymentFrequency:
+          description: Schedule of mortgage payments.
+          type: string
+          enum:
+            - annual
+            - monthly
+            - quarterly
+            - semiAnnual
+            - weekly
+            - atMaturity
+            - other
+          required: true
+
+        settlementType:
+          description: Settlement method for mortgage payments.
+          type: string
+          enum:
+            - cash
+          required: true
+
+        initialMargin:
+          description: Down payment amount at mortgage inception.
+          required: true
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        amortizationType:
+          description: Method of principal reduction over time.
+          type: string
+          enum:
+            - linear
+            - bullet
+          required: true

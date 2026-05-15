@@ -1,0 +1,50 @@
+ontology:
+  name: API Common
+  version: 1.0.0
+  source: "open_wealth_specification/Custody Services API.yaml"
+  description: >
+    Common API schemas such as error types and responses.
+
+  entities:
+
+    CommonErrorType:
+      description: Error Types for CommonErrorResponse.
+      type: string
+      enum:
+        - /problems/INVALID_PAYLOAD
+        - /problems/MALFORMED_PAYLOAD
+        - /problems/INVALID_TOKEN
+        - /problems/EXPIRED_TOKEN
+        - /problems/INSUFFICIENT_PRIVILEGES
+        - /problems/NO_ACCESS_TO_RESOURCE
+        - /problems/RESOURCE_DOES_NOT_EXIST
+        - /problems/RESOURCE_NOT_READY
+        - /problems/RESOURCE_TOO_LARGE
+        - /problems/WRONG_METHOD
+        - /problems/OPERATION_NOT_ALLOWED
+        - /problems/TECHNICAL_ERROR
+        - /problems/NOT_IMPLEMENTED
+        - /problems/SERVICE_UNAVAILABLE
+      example: /problems/TECHNICAL_ERROR
+
+    CommonErrorResponse:
+      description: Common error response.
+      properties:
+        type:
+          description: Type of the error.
+          ref: CommonErrorType
+
+        title:
+          description: Title of the error response.
+          type: string
+          example: This is the general problem description
+
+        detail:
+          description: Detailed description of the error response.
+          type: string
+          example: Detailed problem description with respect to the current request
+
+        instance:
+          description: Entity instance that threw the error.
+          type: string
+          example: path/to/corresponding/resource

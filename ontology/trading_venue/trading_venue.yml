@@ -1,0 +1,61 @@
+ontology:
+  name: Trading Venue
+  namespace: bank_data.securities_domain
+  version: "1.0"
+  description: >
+    The Market Identifier Code (MIC) is a standardized code used to uniquely identify 
+    trading venues and market segments worldwide. MICs are defined by ISO 10383 
+    and maintained by the ISO.
+
+  entities:
+    TradingVenue:
+      description: >
+        Represents a trading venue or market segment where financial instruments are traded.
+        Identified by a Market Identifier Code (MIC).
+      properties:
+        mic:
+          type: string
+          description: >
+            Market Identifier Code (MIC) as defined by ISO 10383.
+            Example: XSWX (SIX Swiss Exchange), XLON (London Stock Exchange).
+          pattern: "^[A-Z0-9]{4}$"
+        name:
+          type: string
+          description: Full name of the trading venue.
+        country:
+          description: Country where the trading venue is located.
+          type: Country
+        venueType:
+          type: string
+          description: >
+            Regulatory classification or market structure of the venue.
+            Examples: regulated_market, multilateral_trading_facility (MTF), 
+            organised_trading_facility (OTF), systematic_internaliser, exchange.
+        operatingMic:
+          type: string
+          description: >
+            The MIC of the operating market if this entity represents a market segment.
+          pattern: "^[A-Z0-9]{4}$"
+
+      examples:
+        - mic: XSWX
+          name: SIX Swiss Exchange
+          country: CH
+          venueType: regulated_market
+        - mic: XLON
+          name: London Stock Exchange
+          country: GB
+          venueType: regulated_market
+
+    TradingVenueStandardInfo:
+      description: Information about the ISO 10383 standard.
+      properties:
+        name:
+          type: string
+          description: Market Identifier Codes (MIC).
+        isoStandard:
+          type: string
+          description: ISO 10383.
+        authority:
+          type: string
+          description: International Organization for Standardization (ISO).

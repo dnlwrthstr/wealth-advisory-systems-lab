@@ -1,0 +1,73 @@
+ontology:
+  name: Bond
+  version: 1.0.0
+  description: >
+    Ontology representation of the Bond financial instrument schema.
+    Bond specializes the generic FinancialInstrument schema and 
+    introduces bond-specific attributes such as interest rate, maturity,
+    issuance, denomination, conversion and underlying instruments.
+  is a: FinancialInstrument
+  common_ontology: "../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    Bond:
+      description: Bond financial instrument.
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+      properties:
+        issuer:
+          description: >
+            The legal entity that is contractually responsible for the rights or
+            obligations embedded in this instrument.
+          type: array
+          items:
+            common_ontology: "../issuer/Issuer.yml#/ontology/entities/Issuer"
+          minItems: 1
+          maxItems: 1
+        industrySector:
+          description: Industry/sector classification of the bond issuer.
+          common_ontology: "../industry_sector/IndustrySector.yml#/ontology/entities/IndustrySector"
+        instrumentEsgProfile:
+          description: ESG profile of the bond, allowing instrument-specific overlays.
+          common_ontology: "../rating/esg/ESGRating.yml#/ontology/entities/ESGInstrumentProfile"
+        creditRisk:
+          description: Credit risk profile of the bond instrument.
+          common_ontology: "../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditRisk"
+        interestRate:
+          description: Interest rate definition.
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRate"
+
+        maturityDate:
+          description: Bond maturity date.
+          type: string
+          format: date
+
+        issueDate:
+          description: Issue date of the bond.
+          type: string
+          format: date
+
+        conversionPrice:
+          description: Conversion price if bond is convertible.
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+
+        currencyOfDenomination:
+          description: Currency in which the bond is denominated.
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        minimumDenomination:
+          description: Minimum denomination allowed for trading.
+          type: number
+          example: 10000
+
+        minimumIncrement:
+          description: Minimum tradable increment.
+          type: number
+          example: 1000
+
+        underlyingFinancialInstrument:
+          description: Underlying financial instrument for structured / convertible bonds.
+          common_ontology: "../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"

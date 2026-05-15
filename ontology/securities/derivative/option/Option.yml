@@ -1,0 +1,59 @@
+ontology:
+  name: Option
+  version: 1.0.0
+  description: >
+    Ontology representation of the Option financial instrument schema.
+    Option inherits from FinancialInstrument and introduces option-specific attributes
+    such as expiry date, exercise price, contract size, option type, and option style.
+  is a: FinancialInstrument
+  common_ontology: "../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    Option:
+      description: Generic option financial instrument.
+      is_a: FinancialInstrument
+      common_ontology: ../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Option
+      composition:
+        all_of:
+        - FinancialInstrument
+      properties:
+        expiryDate:
+          description: Expiry date of the option.
+          required: false
+          type: string
+          format: date
+        exercisePrice:
+          description: Exercise (strike) price of the option.
+          required: false
+          common_ontology: ../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price
+        contractSize:
+          description: Contract size specifying standardized units.
+          required: false
+          common_ontology: ../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/ContractSize
+        optionType:
+          description: Type of option (call/put).
+          required: false
+          common_ontology: ../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/OptionType
+        optionStyle:
+          description: Exercise style of the option (European/American/etc.).
+          required: false
+          common_ontology: ../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/OptionStyle
+        underlyingFinancialInstrument:
+          description: The underlying financial instrument on which the option is
+            written.
+          required: true
+          common_ontology: ../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument
+
+    CallOption:
+      description: A call option gives the holder the right to buy the underlying.
+      is_a: Option
+      composition:
+        all_of:
+        - Option
+
+    PutOption:
+      description: A put option gives the holder the right to sell the underlying.
+      is_a: Option
+      composition:
+        all_of:
+        - Option

@@ -1,0 +1,79 @@
+ontology:
+  name: Currency Reference Data
+  version: 1.0.0
+  description: >
+    Reference dataset structure for ISO 4217 currency codes. This file defines
+    the canonical record shape and includes a starter set of common entries.
+
+  entities:
+    CurrencyReferenceEntry:
+      description: Canonical reference-data entry for a currency.
+      kind: reference_data
+      type: object
+      required:
+        - code
+        - numericCode
+        - name
+      properties:
+        code:
+          type: string
+          description: ISO 4217 alphabetic currency code.
+          pattern: '^[A-Z]{3}$'
+        numericCode:
+          type: string
+          description: ISO 4217 numeric currency code.
+          pattern: '^[0-9]{3}$'
+        name:
+          type: string
+          description: Official currency name.
+        minorUnits:
+          type: integer
+          description: Number of decimal places used for the currency.
+        symbol:
+          type: string
+          description: Common display symbol.
+        issuingCountry:
+          type: Country
+          description: ISO 3166-1 alpha-2 country code of the issuing authority.
+        issuingAuthority:
+          type: string
+          description: Monetary authority responsible for issuing the currency.
+
+reference_data:
+  standard: ISO 4217
+  currencies:
+    - code: CHF
+      numericCode: "756"
+      name: Swiss Franc
+      minorUnits: 2
+      symbol: CHF
+      issuingCountry: CH
+      issuingAuthority: Swiss National Bank
+    - code: EUR
+      numericCode: "978"
+      name: Euro
+      minorUnits: 2
+      symbol: €
+      issuingCountry: EU
+      issuingAuthority: European Central Bank
+    - code: USD
+      numericCode: "840"
+      name: US Dollar
+      minorUnits: 2
+      symbol: $
+      issuingCountry: US
+      issuingAuthority: Federal Reserve
+    - code: GBP
+      numericCode: "826"
+      name: Pound Sterling
+      minorUnits: 2
+      symbol: £
+      issuingCountry: GB
+      issuingAuthority: Bank of England
+    - code: JPY
+      numericCode: "392"
+      name: Yen
+      minorUnits: 0
+      symbol: ¥
+      issuingCountry: JP
+      issuingAuthority: Bank of Japan

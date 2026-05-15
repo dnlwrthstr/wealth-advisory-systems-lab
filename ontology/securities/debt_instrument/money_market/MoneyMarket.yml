@@ -1,0 +1,53 @@
+ontology:
+  name: MoneyMarket
+  version: 1.0.0
+  description: >
+    Ontology representation of the MoneyMarket financial instrument schema.
+    MoneyMarket inherits from FinancialInstrument and introduces money-
+    market-specific attributes such as discount rate, face value, issue date,
+    maturity date, and day count basis.
+  is a: FinancialInstrument
+  common_ontology: "../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    MoneyMarket:
+      description: Money market instrument (e.g., treasury bill, commercial paper).
+      is_a: FinancialInstrument
+      common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/MoneyMarket"
+
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        creditRisk:
+          description: Credit risk profile of the money market instrument.
+          common_ontology: "../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditRisk"
+        discountRate:
+          description: The rate used to determine the purchase price of money market instruments.
+          required: true
+          type: number
+          format: decimal
+
+        faceValue:
+          description: The amount paid to the holder at maturity.
+          required: true
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        issueDate:
+          description: The date the instrument was created and sold.
+          required: true
+          type: string
+          format: date
+
+        maturityDate:
+          description: The date the principal and interest are settled.
+          required: true
+          type: string
+          format: date
+
+        dayCountBasis:
+          description: Standard calculation method for interest accrual (e.g., ACT/360).
+          required: true
+          common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/DayCountBasis"

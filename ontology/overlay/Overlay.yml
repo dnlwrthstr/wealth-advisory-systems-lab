@@ -1,0 +1,118 @@
+ontology:
+  name: Financial Overlays
+  version: 1.0.0
+  description: >
+    Ontology representation of Financial Overlays. An overlay is a strategy
+    where a new layer of risk or asset exposure is applied on top of an
+    existing portfolio using derivatives, without disturbing the underlying assets.
+
+  entities:
+
+    OverlayProgram:
+      description: >
+        The strategic layer applied to a portfolio. It represents the collective 
+        synthetic positions and rules of an overlay strategy.
+      properties:
+        programId:
+          type: string
+          description: Unique identifier for the overlay program.
+        notionalExposure:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+          description: The total market value controlled by the overlay derivatives.
+        marketValue:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+          description: The current liquidation value of the overlay positions (often near zero at inception).
+        variationMargin:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+          description: The daily cash flow moving in/out due to price changes.
+        targetPortfolio:
+          ref: BasePortfolio
+          description: The underlying "physical" assets that this overlay is covering or enhancing.
+        instruments:
+          type: array
+          items:
+            common_ontology: "../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+          description: The derivative tools (Futures, Forwards, Options, Swaps) used to execute the overlay.
+        constraints:
+          type: array
+          items:
+            ref: PolicyConstraint
+          description: Risk mandates and limits governing the program.
+
+    BasePortfolio:
+      description: The underlying physical assets (Equities, Bonds, etc.) targeted by an overlay.
+      properties:
+        portfolioId:
+          type: string
+          description: Unique identifier for the base portfolio.
+        marketValue:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+          description: Total market value of the physical holdings.
+        baseCurrency:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+          description: The primary currency of the portfolio.
+
+    PolicyConstraint:
+      description: Regulatory or internal rules governing the overlay strategy.
+      properties:
+        constraintType:
+          type: string
+          enum: [hedgeRatio, trackingErrorLimit, marginThreshold]
+          description: The category of the constraint.
+        limitValue:
+          type: number
+          description: The numeric threshold for the limit.
+        description:
+          type: string
+          description: Natural language description of the rule.
+
+    CurrencyOverlay:
+      description: Strategy used to offset currency risk or bet on exchange rates.
+      is_a: OverlayProgram
+      properties:
+        hedgingCurrency:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+          description: The target currency into which exposures are being hedged.
+        hedgeRatio:
+          type: number
+          description: The percentage of exposure that is hedged (e.g., 1.0 for 100%).
+
+    RebalancingOverlay:
+      description: Strategy using futures to nudge portfolio exposure back to target allocations.
+      is_a: OverlayProgram
+
+    RiskOverlay:
+      description: Strategy (like Put options) acting as an insurance policy against market crashes.
+      is_a: OverlayProgram
+
+    TacticalAssetAllocation:
+      description: Short-term strategic shifts in exposure (e.g., adding gold for a limited period).
+      is_a: OverlayProgram
+
+    InterestRateOverlay:
+      description: Strategy using swaps or caps to protect against interest rate movements.
+      is_a: OverlayProgram
+
+    MarketNeutralOverlay:
+      description: Strategy aimed at eliminating market direction risk.
+      is_a: OverlayProgram
+
+    VolatilityOverlay:
+      description: Strategy using options to hedge against sudden volatility drops or spikes.
+      is_a: OverlayProgram
+
+    SectorRotationOverlay:
+      description: Strategy to dynamically rotate portfolio weights across sectors.
+      is_a: OverlayProgram
+
+    CommodityOverlay:
+      description: Strategy to gain exposure to commodities without physical delivery.
+      is_a: OverlayProgram
+
+    CreditOverlay:
+      description: Strategy (like CDS) to protect against default risk in high-yield bonds.
+      is_a: OverlayProgram
+
+    EventDrivenOverlay:
+      description: Strategy to capitalize on price movements from major corporate events.
+      is_a: OverlayProgram

@@ -1,0 +1,102 @@
+ontology:
+  name: User
+  version: 1.0.0
+  description: >
+    Ontology for bank staff users, organizational hierarchy, and portfolio
+    assignments used to model address book functionality and access control.
+
+  entities:
+
+    User:
+      description: Staff user entry in the bank address book.
+      properties:
+        userId:
+          type: string
+          description: Unique identifier of the user.
+        fullName:
+          type: string
+          description: Full name of the user.
+        email:
+          type: string
+          description: Email address of the user.
+        phone:
+          type: string
+          description: Phone number for the user.
+        jobTitle:
+          type: string
+          description: Job title or raw_data held by the user.
+        isActive:
+          type: boolean
+          description: Indicates whether the user is currently active.
+        organizationUnit:
+          ref: OrganizationUnit
+          description: Organizational unit the user belongs to.
+        substituteUserId:
+          type: string
+          description: Identifier of a substitute user for temporary handover.
+        assignments:
+          type: array
+          description: Portfolio or client assignments that define functional roles.
+          items:
+            ref: Assignment
+
+    OrganizationUnit:
+      description: Organizational unit in the bank hierarchy.
+      properties:
+        unitId:
+          type: string
+          description: Unique identifier of the organizational unit.
+        name:
+          type: string
+          description: Name of the organizational unit.
+        unitType:
+          type: string
+          description: Unit type such as branch, team, division, or region.
+        parentUnit:
+          ref: OrganizationUnit
+          description: Parent organizational unit in the hierarchy.
+
+    Role:
+      description: Functional role that defines a permission set.
+      properties:
+        roleId:
+          type: string
+          description: Unique identifier of the role.
+        roleName:
+          type: string
+          description: Human-readable name of the role.
+        permissions:
+          type: array
+          description: List of permissions granted by the role.
+          items:
+            type: string
+        permissionMask:
+          type: string
+          description: Optional encoded mask representing permissions.
+
+    Assignment:
+      description: Assignment linking a user to a portfolio with a role and validity period.
+      properties:
+        assignmentId:
+          type: string
+          description: Unique identifier of the assignment.
+        user:
+          ref: User
+          description: User assigned to the portfolio.
+        portfolio:
+          description: Portfolio that the assignment applies to.
+          common_ontology: "../portfolio_domain/portfolio.yml#/ontology/entities/PortfolioInformation"
+        role:
+          ref: Role
+          description: Role assigned for this portfolio.
+        validFrom:
+          description: Start date of the assignment validity.
+          type: string
+          format: date
+        validTo:
+          description: End date of the assignment validity.
+          type: string
+          format: date
+        isPrimaryAdvisor:
+          type: boolean
+          description: Indicates whether the user is the primary advisor.

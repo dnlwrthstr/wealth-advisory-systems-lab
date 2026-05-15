@@ -1,0 +1,120 @@
+ontology:
+  name: Credit
+  version: 1.0.0
+  description: >
+    Ontology representation of the Credit financial instrument schema.
+    Credit inherits from FinancialInstrument and introduces specific underlying instruments.
+  is a: FinancialInstrument
+  common_ontology: "../FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    Credit:
+      description: Credit financial instrument.
+      is_a: FinancialInstrument
+      common_ontology: ../FinancialInstrumentBase.yml#/ontology/entities/Credit
+      composition:
+        all_of:
+        - FinancialInstrument
+      properties:
+        issuer:
+          description: >
+            The legal entity that is contractually responsible for the rights or
+            obligations embedded in this instrument.
+          type: array
+          items:
+            common_ontology: "../issuer/Issuer.yml#/ontology/entities/Issuer"
+          minItems: 1
+          maxItems: 1
+        creditRisk:
+          description: Credit risk profile of the credit instrument.
+          common_ontology: "../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditRisk"
+        principalAmount:
+          description: Principal amount of the credit instrument.
+          required: true
+          common_ontology: ../FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount
+        currentBalance:
+          description: Current outstanding balance, including any capitalized interest.
+          required: false
+          common_ontology: ../FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount
+        interestRate:
+          description: Interest rate applied to the credit instrument.
+          required: false
+          common_ontology: ../FinancialInstrumentBase.yml#/ontology/entities/InterestRate
+        creditType:
+          description: Category of credit (e.g., lombard loan, mortgage, fixed-term loan, overdraft, guarantee).
+          type: string
+          enum:
+            - lombardLoan
+            - mortgage
+            - fixedTerm
+            - overdraft
+            - guarantee
+          required: false
+        startDate:
+          description: Date the loan was disbursed to the borrower.
+          required: false
+          type: string
+          format: date
+        maturityDate:
+          description: Date the final payment is due and the contract ends.
+          required: false
+          type: string
+          format: date
+        repaymentType:
+          description: Repayment structure for principal and interest.
+          type: string
+          enum:
+            - bullet
+            - amortizing
+            - interestOnly
+          required: false
+        repaymentSchedule:
+          description: Schedule or rule defining repayment timing and installments.
+          type: string
+          required: false
+        amortizationSchedule:
+          description: Details of the amortization plan or reference to an external schedule.
+          type: string
+          required: false
+        collateralIds:
+          description: Identifiers of assets backing the loan (e.g., portfolio or property identifiers).
+          type: array
+          required: false
+          items:
+            type: string
+        currentLtv:
+          description: Current loan-to-value ratio of the loan balance to collateral value.
+          type: number
+          example: 0.45
+          required: false
+        marginCallThreshold:
+          description: LTV percentage that triggers a margin call for additional collateral.
+          type: number
+          example: 0.7
+          required: false
+        liquidationLevel:
+          description: LTV percentage where collateral is liquidated to repay the loan.
+          type: number
+          example: 0.85
+          required: false
+        accruedInterest:
+          description: Interest accrued but not yet paid by the borrower.
+          required: false
+          common_ontology: ../FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount
+        capitalizedInterestFlag:
+          description: Indicates whether unpaid interest is capitalized into the principal.
+          type: boolean
+          required: false
+        isOverdraft:
+          description: Indicates whether the raw_data represents an overdraft or negative cash balance.
+          type: boolean
+          required: false
+        limit:
+          description: Maximum credit limit available.
+          type: number
+          example: 100000
+          required: false
+        underlyingFinancialInstrument:
+          description: Underlying financial instrument for structured credits.
+          required: false
+          common_ontology: ../FinancialInstrument.yml#/ontology/entities/FinancialInstrument

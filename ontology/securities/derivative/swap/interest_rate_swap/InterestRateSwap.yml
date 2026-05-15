@@ -1,0 +1,86 @@
+ontology:
+  name: InterestRateSwap
+  version: 1.0.0
+  description: >
+    Ontology representation of the InterestRateSwap financial instrument schema.
+    InterestRateSwap inherits from FinancialInstrument and introduces
+    swap-specific attributes including notional amount, fixed and floating
+    rate terms, payment schedule, and settlement details.
+  is a: FinancialInstrument
+  common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    InterestRateSwap:
+      description: Interest rate swap contract.
+      is_a: FinancialInstrument
+      common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRateSwap"
+
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        notionalAmount:
+          description: Notional amount on which swap payments are based.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        fixedRate:
+          description: Fixed percentage rate paid on the fixed leg.
+          required: true
+          type: number
+          format: decimal
+
+        floatingIndex:
+          description: Reference rate index for the floating leg (e.g., LIBOR, SOFR).
+          required: true
+          type: string
+
+        spread:
+          description: Spread added to the floating index for the floating leg.
+          required: true
+          type: number
+          format: decimal
+
+        paymentFrequency:
+          description: Frequency of interest payments.
+          required: true
+          type: string
+          enum:
+            - annual
+            - monthly
+            - quarterly
+            - semiAnnual
+            - weekly
+            - atMaturity
+            - other
+
+        effectiveDate:
+          description: Date interest starts accruing.
+          required: true
+          type: string
+          format: date
+
+        maturityDate:
+          description: Final date when the swap obligations end.
+          required: true
+          type: string
+          format: date
+
+        settlementType:
+          description: Settlement method for the swap cash flows.
+          type: string
+          enum:
+            - cash
+          required: true
+
+        dayCountConvention:
+          description: Day count convention for interest calculation.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/DayCountBasis"
+
+        currency:
+          description: ISO 4217 code for swap cash flows.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"

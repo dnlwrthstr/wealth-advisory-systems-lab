@@ -1,0 +1,153 @@
+ontology:
+  name: Cash
+  version: 1.0.0
+  description: >
+    Ontology representation of the Cash financial instrument schema.
+    Cash inherits all characteristics from FinancialInstrument
+    and does not define additional attributes.
+  is a: FinancialInstrument
+  common_ontology: "../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    Cash:
+      description: Cash financial instrument.
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+      properties:
+        baseCurrency:
+          description: Base currency of the portfolio used for valuation.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        localCurrency:
+          description: Currency of the cash instrument itself.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        fxRateToBase:
+          description: FX rate applied to convert local currency values into the base currency.
+          type: number
+          example: 0.8821
+        balance:
+          description: Balance details for the cash raw_data.
+          ref: CashBalance
+        valuation:
+          description: Valuation attributes for the cash instrument.
+          ref: CashValuation
+        yieldDetails:
+          description: Interest and yield attributes for the cash raw_data.
+          ref: CashYieldDetails
+        assetClassCategory:
+          description: Asset class categorization for the cash raw_data.
+          type: string
+          enum:
+            - cash
+            - cashEquivalent
+            - marginAccount
+          example: cash
+        isCollateral:
+          description: Indicates whether the cash raw_data is used as collateral.
+          type: boolean
+          example: false
+        isSweepable:
+          description: Indicates whether excess cash is automatically swept into a higher-yield vehicle.
+          type: boolean
+          example: false
+        isOverdraft:
+          description: Indicates whether the cash raw_data represents a negative balance.
+          type: boolean
+          example: false
+        overdraftAllowed:
+          description: Indicates whether overdraft is permitted for the cash raw_data.
+          type: boolean
+          example: false
+        overdraftLimit:
+          description: Maximum overdraft limit available for the cash raw_data.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        settlementDetails:
+          description: Settlement-related attributes for the cash instrument.
+          ref: CashSettlementDetails
+
+    CashBalance:
+      description: Balance components for a cash raw_data.
+      kind: value_object
+      type: object
+      properties:
+        bookBalance:
+          description: Total amount of cash in the account.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        availableBalance:
+          description: Amount of cash that is immediately available to spend or withdraw.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        blockedAmount:
+          description: Portion of the balance that is blocked or reserved.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+    CashValuation:
+      description: Valuation attributes for cash instruments.
+      kind: value_object
+      type: object
+      properties:
+        quantity:
+          description: Cash quantity held in the local currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Quantity"
+        unitPrice:
+          description: Unit price of the cash instrument in the local currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        marketValueBase:
+          description: Market value converted into the base currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        valueDate:
+          description: Date used for interest calculation and valuation.
+          type: string
+          format: date
+        transactionDate:
+          description: Date the transaction was initiated.
+          type: string
+          format: date
+
+    CashYieldDetails:
+      description: Yield and interest metadata for a cash instrument.
+      kind: value_object
+      type: object
+      properties:
+        creditInterestRate:
+          description: Interest rate applied to positive cash balances.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRate"
+        debitInterestRate:
+          description: Interest rate applied to negative cash balances (overdraft).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRate"
+        accruedInterest:
+          description: Interest accrued but not yet capitalized.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        lastInterestCapitalizationDate:
+          description: Date when interest was last capitalized.
+          type: string
+          format: date
+
+    CashSettlementDetails:
+      description: Settlement and account metadata for a cash instrument.
+      kind: value_object
+      type: object
+      properties:
+        settlementCycle:
+          description: Settlement cycle for cash movements (e.g., T+0, T+1).
+          type: string
+          example: T+0
+        custodian:
+          description: Custodian or servicing entity for the cash account.
+          type: string
+          example: Global Custody Services
+        accountIban:
+          description: IBAN of the cash account if applicable.
+          type: string
+          maxLength: 34
+          example: CH123456789
+        accountNumber:
+          description: Proprietary account number for the cash raw_data.
+          type: string
+          maxLength: 70
+          example: 123-1234-234
+        nostroVostroIndicator:
+          description: Indicator whether the cash is held as nostro or vostro.
+          type: string
+          example: nostro

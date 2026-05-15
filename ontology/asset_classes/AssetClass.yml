@@ -1,0 +1,132 @@
+ontology:
+  name: AssetClass
+  version: 1.0.0
+  description: >
+    Ontology representation of asset class definitions used for classification,
+    valuation, risk analytics, and compliance aggregation.
+  root_entity: AssetClass
+
+  entities:
+
+    AssetClass:
+      description: Asset class definition used for portfolio classification and reporting.
+      properties:
+        assetClassId:
+          type: string
+          description: Unique identifier for the asset class record.
+        displayName:
+          type: string
+          description: Human-readable name shown in reports.
+        parentClassId:
+          type: string
+          description: Identifier of the parent asset class used for roll-ups.
+        liquidityDays:
+          type: integer
+          description: Standard settlement or liquidity horizon in days.
+        valuationFrequency:
+          type: string
+          enum: [daily, monthly, quarterly, adHoc]
+          description: Frequency at which the asset class is valued.
+        baseCurrency:
+          description: Base currency used for risk and performance calculations.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        isRiskFree:
+          type: boolean
+          description: Indicates whether the asset class is treated as risk-free for ratios.
+        expectedReturn:
+          type: number
+          description: Expected annual return assumption for the asset class.
+        standardDeviation:
+          type: number
+          description: Expected volatility assumption for the asset class.
+        primaryReturnDriver:
+          type: string
+          description: Primary return driver for the asset class (e.g., growth, income).
+        incomeLogic:
+          type: string
+          description: Income recognition behavior for the asset class.
+        correlationMatrix:
+          type: array
+          description: Correlation entries against other asset classes.
+          items:
+            ref: CorrelationEntry
+        mappingRules:
+          type: array
+          description: Rule set used to classify instruments into this asset class.
+          items:
+            ref: AssetClassMappingRule
+        valuationLogic:
+          type: string
+          description: Valuation approach or pricer used for this asset class.
+        riskWeight:
+          type: number
+          description: Risk weight applied in compliance or capital calculations.
+        taxStatus:
+          type: string
+          description: Tax treatment category for the asset class.
+        primaryIncomeTax:
+          type: string
+          description: Primary income tax characterization applied to the asset class.
+        capitalGainsTax:
+          type: string
+          description: Capital gains tax characterization applied to the asset class.
+        allowShorting:
+          type: boolean
+          description: Indicates whether short positions are allowed for the asset class.
+        defaultBenchmark:
+          type: string
+          description: Default benchmark identifier used for performance attribution.
+        hybridAttributes:
+          ref: HybridAttributes
+          description: Optional hybrid-specific attributes (e.g., convertibles).
+
+    AssetClassMappingRule:
+      description: Rule used to classify instruments into an asset class.
+      kind: value_object
+      type: object
+      properties:
+        cfiPrefix:
+          type: string
+          description: CFI prefix used to map instruments into this asset class.
+        countryCode:
+          description: ISO country code used for regional mapping rules.
+          type: Country
+        maturityDaysMax:
+          type: integer
+          description: Maximum maturity in days for the rule to apply.
+        requiredInstrumentType:
+          type: string
+          description: Instrument type filter for the classification rule.
+        assetClassLabel:
+          type: string
+          description: Asset class label assigned when the rule matches.
+
+    CorrelationEntry:
+      description: Correlation between this asset class and another asset class.
+      kind: value_object
+      type: object
+      properties:
+        relatedAssetClassId:
+          type: string
+          description: Identifier of the related asset class.
+        correlation:
+          type: number
+          description: Correlation coefficient with the related asset class.
+
+    HybridAttributes:
+      description: Attributes specific to hybrid instruments like convertibles.
+      kind: value_object
+      type: object
+      properties:
+        conversionRatio:
+          type: number
+          description: Number of shares received per bond upon conversion.
+        strikePrice:
+          description: Price at which conversion becomes optimal.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        delta:
+          type: number
+          description: Sensitivity of the hybrid value to the underlying equity price.
+        bondFloor:
+          description: Theoretical bond value without the conversion option.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"

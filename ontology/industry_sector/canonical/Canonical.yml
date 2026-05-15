@@ -1,0 +1,165 @@
+ontology:
+  name: "ClassificationOntology"
+  description: >
+    Canonical ontology for representing classification systems,
+    hierarchical classification nodes, and time-versioned
+    classification assignments to entities.
+  version: "1.0.0"
+  entities:
+    ClassificationSystem:
+      description: >
+        Defines a classification standard or taxonomy.
+      properties:
+        systemId:
+          type: string
+          required: true
+          description: Unique identifier of the classification system
+        name:
+          type: string
+          required: true
+          description: Human-readable name
+        provider:
+          type: string
+          required: true
+          description: Owning organization or data vendor
+        classificationType:
+          type: string
+          enum:
+            - IndustryClassification
+            - SectorClassification
+            - ThematicClassification
+            - CustomClassification
+        jurisdictionScope:
+          type: string
+          description: Primary geographic or regulatory scope (e.g. CH, EU, Global)
+        proprietary:
+          type: boolean
+          description: Indicates whether the system is commercially licensed
+        version:
+          type: string
+          description: Vendor or internal version identifier
+
+    ClassificationHierarchy:
+      description: >
+        Defines the ordered hierarchy levels for a classification system.
+      properties:
+        systemId:
+          type: string
+          required: true
+        levels:
+          type: list
+          items:
+            level:
+              type: integer
+              required: true
+            name:
+              type: string
+              required: true
+            description:
+              type: string
+
+    ClassificationNode:
+      description: >
+        Represents a single node in a classification hierarchy.
+      properties:
+        nodeId:
+          type: string
+          required: true
+          description: Globally unique node identifier
+        systemId:
+          type: string
+          required: true
+        level:
+          type: integer
+          required: true
+          description: Hierarchy depth (1 = top)
+        levelName:
+          type: string
+          required: true
+          description: Name of the hierarchy level
+        code:
+          type: string
+          required: true
+          description: Vendor or internal classification code
+        name:
+          type: string
+          required: true
+          description: Display name of the classification
+        parentNodeId:
+          type: string
+          nullable: true
+          description: Parent node reference (null for root nodes)
+        validFrom:
+          type: date
+          description: Node validity start date
+        validTo:
+          type: date
+          nullable: true
+          description: Node validity end date
+
+    ClassificationAssignment:
+      description: >
+        Assigns a classified entity to a terminal classification node.
+      properties:
+        assignmentId:
+          type: string
+          required: true
+        systemId:
+          type: string
+          required: true
+        appliesTo:
+          entityType:
+            type: string
+            enum:
+              - Issuer
+              - Instrument
+              - Listing
+              - Portfolio
+            required: true
+          entityId:
+            type: string
+            required: true
+        classificationNodeId:
+          type: string
+          required: true
+          description: Must reference a terminal ClassificationNode
+        effectivePeriod:
+          validFrom:
+            type: date
+            required: true
+          validTo:
+            type: date
+            nullable: true
+        additionalAttributes:
+          primary:
+            type: boolean
+            description: Indicates primary classification within a system
+          confidence:
+            type: string
+            enum:
+              - high
+              - medium
+              - low
+          source:
+            type: string
+            description: Data source or feed name
+
+# ----------------------------------------------------------
+# 5. Normative Constraints
+# ----------------------------------------------------------
+constraints:
+  - Each ClassificationAssignment MUST reference exactly one ClassificationSystem
+  - Each ClassificationAssignment MUST reference exactly one terminal ClassificationNode
+  - Higher-level classifications MUST be derived via hierarchy traversal
+  - ClassificationAssignments MUST be time-versioned
+  - Regional or geographic information MUST NOT be embedded in classifications
+  - Multiple parallel ClassificationAssignments per entity are allowed
+
+# ----------------------------------------------------------
+# 6. Intended Usage
+# ----------------------------------------------------------
+usage:
+  examples:
+    - Issuer classified via Telekurs, GICS, and ICB in parallel
+    - Instrument inheriting issuer classification with overrides
+    - Historical reclassification tracking for regulatory reporting

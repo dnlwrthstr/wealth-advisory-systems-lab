@@ -1,41 +1,22 @@
-"""Golden record schemas for the instrument universe.
+"""Hand-rolled in-memory / parquet schemas for the instrument universe.
 
 Three layers:
   InstrumentSeed  — identifiers extracted once from source data (CSV)
   EquityMaster    — instrument master fetched from internet (slow-changing)
   BondMaster      — bond master fetched from internet (slow-changing)
   MarketSnapshot  — time-stamped market data, refreshed independently
+
+These dataclasses are the working-memory shape used by the parquet store
+(`ParquetUniverseStore`) and the ingestion scripts. The ontology-driven
+pydantic models in `universe.models` (auto-generated from `ontology/`) are
+the canonical wire/OpenSearch shape — the two coexist until the pipeline
+adopts the gold layer end-to-end.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
-
-# OpenWealth FinancialInstrumentType values that map to investable securities
-OPENWEALTH_TYPES = {
-    "equity", "simpleBond", "floater", "convertibleBond",
-    "fund", "moneyMarket", "commodity", "certificate",
-    "highlyStructuredProduct", "future", "option", "other",
-}
-
-# FINFOX class → OpenWealth FinancialInstrumentType
-FINFOX_TO_OW = {
-    "equity":                  "equity",
-    "simpleBond":              "simpleBond",
-    "floater":                 "floater",
-    "convertibleBond":         "convertibleBond",
-    "fund":                    "fund",
-    "moneyMarket":             "moneyMarket",
-    "commodity":               "commodity",
-    "certificate":             "certificate",
-    "highlyStructuredProduct": "highlyStructuredProduct",
-    "callOption":              "option",
-    "putOption":               "option",
-    "future":                  "future",
-    "other":                   "other",
-    # "currency" and "CHF" are excluded — no valid ISIN
-}
 
 
 @dataclass

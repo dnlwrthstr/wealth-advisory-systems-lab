@@ -1,0 +1,59 @@
+ontology:
+  name: Account
+  version: 1.0.0
+  source: "open_wealth_specification/Custody Services API.yaml"
+  description: >
+    Account entity and related definitions.
+
+  entities:
+
+    Account:
+      description: Account entity.
+      properties:
+        id:
+          description: Unique and unambiguous identification for the account. The IBAN should NOT be the account identifier.
+          type: string
+          maxLength: 128
+          example: 8765432-19
+
+        type:
+          description: Indicates the type of the account.
+          type: string
+          enum:
+            - cashAccount
+            - safekeepingAccount
+            - other
+          example: cashAccount
+
+        name:
+          description: Name of the account. It provides an additional means of identification, and is designated by the account servicer in agreement with the account owner.
+          type: string
+          maxLength: 70
+          example: Household account
+
+        referenceCurrency:
+          description: Reference currency for the account.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        iban:
+          description: Contains the accounts International Banking Account Number (IBAN) for an account if available.
+          type: string
+          maxLength: 34
+          example: CH123456789
+
+        number:
+          description: Contains the accounts custody proprietary account number for an account if available.
+          type: string
+          maxLength: 70
+          example: 123-1234-234
+
+        designation:
+          description: Supplementary information on the account. Designated by the account servicer.
+          type: string
+          maxLength: 70
+          example: Current Account CHF
+
+        portfolioInformation:
+          description: Information about the portfolio the account belongs to.
+          ref: PortfolioInformation
+          common_ontology: "./portfolio.yml#/ontology/entities/PortfolioInformation"

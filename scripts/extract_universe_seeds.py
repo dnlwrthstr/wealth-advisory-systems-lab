@@ -22,7 +22,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pandas as pd
 
-from universe.schemas import FINFOX_TO_OW, InstrumentSeed
+from universe.mappings import FINFOX_TO_OW
+from universe.schemas import InstrumentSeed
 from universe.store import ParquetUniverseStore
 
 log = logging.getLogger("extract_seeds")

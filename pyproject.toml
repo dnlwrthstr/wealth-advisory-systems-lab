@@ -18,8 +18,13 @@ dependencies = [
   "pyarrow>=15.0.0",
   "pydantic>=2.7.0",
   "pytest>=8.0.0",
+  "PyYAML>=6.0",
   "uvicorn[standard]>=0.30.0",
 ]
+
+[project.scripts]
+ontology_2_pydantic = "ontology_tools.ontology_2_pydantic.convert_to_pydantic:main"
+golden_record_2_opensearch = "ontology_tools.golden_record_2_opensearch.convert_to_opensearch:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

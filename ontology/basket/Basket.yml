@@ -1,0 +1,89 @@
+ontology:
+  name: Basket Definition
+  version: 1.0.0
+  description: >
+    Ontology representation of a Basket Definition and its components.
+    A basket groups multiple underlying assets into a single logical entity
+    for performance calculation and risk management.
+
+  entities:
+
+    BasketDefinition:
+      description: >
+        The header structure defining a collection of assets.
+      properties:
+        basketId:
+          type: string
+          format: uuid
+          description: Unique identifier for the basket definition.
+        basketType:
+          type: string
+          enum: [worstOf, bestOf, weightedAverage, equalWeighted]
+          description: The mathematical logic used to calculate the basket's performance.
+        currency:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+          description: The base currency of the basket.
+        rebalancingType:
+          type: string
+          enum: [static, dynamic]
+          description: Indicates if components are fixed or updated periodically.
+        constituentCount:
+          type: integer
+          description: Total number of assets currently in the basket.
+        constituents:
+          type: array
+          items:
+            ref: BasketConstituent
+          description: List of individual assets within the basket.
+        correlationMatrix:
+          type: array
+          items:
+            ref: CorrelationEntry
+          description: Matrix defining the statistical relationships between basket members.
+
+    BasketConstituent:
+      description: >
+        An individual asset within a basket, including its reference fixing and weight.
+      kind: value_object
+      properties:
+        underlyingInstrument:
+          common_ontology: "../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+          description: The financial instrument or index that this constituent represents.
+        initialFixing:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+          description: The reference price of the asset at the start of the contract.
+        weight:
+          type: number
+          format: decimal
+          description: The percentage weight of this asset in the basket (e.g., 0.33 for 33%).
+        barrierLevel:
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+          description: The price threshold for this component, often used in structured products.
+        currentPerformance:
+          type: number
+          format: decimal
+          description: The relative performance calculated as (Current Price / Initial Fixing).
+        isQuanto:
+          type: boolean
+          description: Indicates if the constituent is currency-shielded (Quanto).
+
+    CorrelationEntry:
+      description: >
+        Represents the statistical correlation between two assets in the basket.
+      kind: value_object
+      properties:
+        assetA:
+          type: string
+          description: Identifier or ticker of the first asset.
+        assetB:
+          type: string
+          description: Identifier or ticker of the second asset.
+        correlationCoefficient:
+          type: number
+          format: decimal
+          minimum: -1.0
+          maximum: 1.0
+          description: The correlation coefficient between asset A and asset B.
+        riskImpactDescription:
+          type: string
+          description: Qualitative assessment of the correlation's impact on product risk.

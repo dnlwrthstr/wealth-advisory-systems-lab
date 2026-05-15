@@ -1,0 +1,75 @@
+ontology:
+  name: MultiBarrierReverseConvertible
+  version: 1.0.0
+  description: >
+    Ontology representation of the MultiBarrierReverseConvertible financial instrument schema.
+    MultiBarrierReverseConvertible inherits from FinancialInstrument and introduces basket-level
+    attributes for coupon, barrier mechanics, and worst-of settlement logic.
+  is a: FinancialInstrument
+  common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    MultiBarrierReverseConvertible:
+      description: Multi-asset barrier reverse convertible structured product.
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        basket:
+          description: Reference to the basket definition of underlying assets.
+          common_ontology: "../../../../basket/Basket.yml#/ontology/entities/BasketDefinition"
+          required: true
+
+        basketId:
+          description: Legacy basket identifier linking to external systems.
+          type: string
+          format: uuid
+
+        couponRate:
+          description: Guaranteed annual coupon rate paid regardless of barrier events.
+          required: true
+          type: number
+          format: decimal
+
+        issuer:
+          description: Entity responsible for the fixed coupon and principal return.
+          type: array
+          items:
+            common_ontology: "../issuer/Issuer.yml#/ontology/entities/Issuer"
+          minItems: 1
+          maxItems: 1
+
+        maturityDate:
+          description: Final settlement date of the product.
+          required: true
+          type: string
+          format: date
+
+        worstOfLogic:
+          description: Indicates whether worst-of logic applies to basket performance.
+          type: boolean
+          required: true
+
+        barrierLevel:
+          description: Barrier threshold expressed as a percentage of the initial fixing.
+          required: true
+          type: number
+          format: decimal
+
+        correlationFactor:
+          description: Statistical relationship between basket assets used for valuation.
+          required: true
+          type: number
+          format: decimal
+
+        strikePrice:
+          description: Reference strike price for each basket asset.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+
+        physicalDelivery:
+          description: Identifies which asset is delivered upon a physical settlement trigger.
+          type: string
+          required: true

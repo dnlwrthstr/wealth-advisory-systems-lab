@@ -1,0 +1,205 @@
+ontology:
+  name: CryptoAsset
+  version: 1.0.0
+  description: >
+    Ontology representation of the CryptoAsset financial instrument schema.
+    CryptoAsset extends FinancialInstrument with blockchain, custody, supply,
+    and security-token specific attributes.
+  is a: FinancialInstrument
+  common_ontology: "../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    CryptoAsset:
+      description: Crypto-based financial asset (token, coin, digital asset).
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+        - FinancialInstrument
+      properties:
+        issuer:
+          description: >
+            The legal entity that is contractually responsible for the rights or
+            obligations embedded in this instrument.
+          type: array
+          items:
+            common_ontology: "../../issuer/Issuer.yml#/ontology/entities/Issuer"
+          maxItems: 1
+        ticker:
+          description: Symbol/ticker of the crypto asset (e.g., BTC, ETH).
+          type: string
+          example: BTC
+
+        network:
+          description: Native blockchain network where the asset is issued.
+          type: string
+          example: ETHEREUM
+
+        contractAddress:
+          description: Smart contract address for tokenized assets on the network.
+          type: string
+          example: 0x71C7656EC7ab88b098defB751B7401B5f6d8976F
+
+        tokenStandard:
+          description: Token standard or protocol used by the asset (e.g., ERC-20, ERC-1404).
+          type: string
+          example: ERC-1404
+
+        decimals:
+          description: Decimal precision defined by the token contract.
+          type: integer
+          example: 18
+
+        walletAddress:
+          description: Wallet address holding the raw_data for custody or valuation.
+          type: string
+          example: bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
+
+        custodyType:
+          description: Custody model used to store the asset (e.g., hot wallet, cold storage).
+          type: string
+          example: COLD_STORAGE
+
+        isStakable:
+          description: Indicates whether the asset supports staking.
+          type: boolean
+          example: false
+
+        supplyMetrics:
+          description: Supply and market capitalization metrics for the asset.
+          ref: SupplyMetrics
+
+        assetClassification:
+          description: Classification of the asset (e.g., COIN, UTILITY_TOKEN, SECURITY_TOKEN).
+          type: string
+          example: SECURITY_TOKEN
+
+        underlyingAsset:
+          description: Details about the underlying asset represented by a security token.
+          ref: UnderlyingAsset
+
+        complianceRules:
+          description: Compliance and transfer restrictions for security tokens.
+          ref: ComplianceRules
+
+        economicRights:
+          description: Economic rights embedded in the token (entitlements, liquidation).
+          ref: EconomicRights
+
+        governance:
+          description: Governance and voting rights for the token.
+          ref: Governance
+
+    SupplyMetrics:
+      description: Supply and market capitalization data for a crypto asset.
+      kind: value_object
+      type: object
+      properties:
+        circulatingSupply:
+          description: Number of tokens currently in public circulation.
+          type: number
+          example: 19500000
+        totalSupply:
+          description: Total number of tokens minted to date.
+          type: number
+          example: 21000000
+        maxSupply:
+          description: Maximum number of tokens that can ever be created.
+          type: number
+          example: 21000000
+        marketCap:
+          description: Market capitalization (price times circulating supply).
+          type: number
+          example: 1330000000000
+
+    UnderlyingAsset:
+      description: Reference to the underlying asset represented by a security token.
+      kind: value_object
+      type: object
+      properties:
+        category:
+          description: Asset category (e.g., REAL_ESTATE, EQUITY, DEBT).
+          type: string
+          example: REAL_ESTATE
+        assetReference:
+          description: Reference identifier for the underlying asset.
+          type: string
+          example: PROP-ZURICH-01
+        valuationMethod:
+          description: Valuation method used for the underlying asset.
+          type: string
+          example: ANNUAL_APPRAISAL
+
+    ComplianceRules:
+      description: Regulatory identifiers and compliance rules for a security token.
+      kind: value_object
+      type: object
+      properties:
+        registrationStatus:
+          description: Registration status with a regulator.
+          type: string
+          example: REGISTERED
+        restrictedPersonList:
+          description: Description or reference to restricted persons list.
+          type: string
+          example: US_PERSONS_RESTRICTED
+        whitelistId:
+          description: Identifier for the KYC/AML whitelist registry.
+          type: string
+          example: WL-9901
+        kycRequired:
+          description: Indicates whether KYC is required for holding the token.
+          type: boolean
+          example: true
+        investorTypeAllowed:
+          description: Allowed investor types for holding the token.
+          type: array
+          items:
+            type: string
+          example: [ACCREDITED, INSTITUTIONAL]
+        prohibitedJurisdictions:
+          description: Jurisdictions where holding/transfers are prohibited.
+          type: array
+          items:
+            type: Country
+        transferRestrictedUntil:
+          description: Date until which transfers are restricted or locked.
+          type: string
+          format: date
+
+    EconomicRights:
+      description: Economic entitlements embedded in the token.
+      kind: value_object
+      type: object
+      properties:
+        entitlements:
+          description: Rights to dividends, interest payments, or liquidation proceeds.
+          type: array
+          items:
+            type: string
+          example: [DIVIDEND, INTEREST]
+        liquidationPreference:
+          description: Priority of token holders in liquidation scenarios.
+          type: string
+          example: SENIOR
+
+    Governance:
+      description: Governance and voting parameters for a security token.
+      kind: value_object
+      type: object
+      properties:
+        hasVotingRights:
+          description: Whether token holders have voting rights.
+          type: boolean
+          example: true
+        votingWeight:
+          description: Voting weight per token.
+          type: number
+          example: 1.0
+        proposalRights:
+          description: Rights to initiate governance proposals.
+          type: string
+          example: TOKEN_HOLDER_INITIATED
+        dividendPolicy:
+          description: Dividend or distribution policy for token holders.
+          type: string
+          example: QUARTERLY_CASH_DISTRIBUTION

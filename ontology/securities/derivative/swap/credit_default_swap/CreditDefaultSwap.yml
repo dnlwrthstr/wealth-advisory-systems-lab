@@ -1,0 +1,157 @@
+ontology:
+  name: CreditDefault
+  version: 1.0.0
+  description: >
+    Ontology representation of the CreditDefaultSwap financial instrument schema.
+    CreditDefaultSwap inherits from FinancialInstrument and introduces CDS-
+    specific attributes such as notional amount, maturity date, and underlying
+    financial instrument.
+  is a: FinancialInstrument
+  common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    CreditDefaultSwap:
+      description: Credit default swap financial instrument.
+      is_a: FinancialInstrument
+      common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CreditDefaultSwap"
+
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        notionalAmount:
+          description: Notional amount of the CDS contract.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        referenceEntityName:
+          description: Legal name of the reference entity whose credit risk is insured.
+          type: string
+          required: false
+        referenceEntityIdentifier:
+          description: Identifier of the reference entity (e.g., LEI or RED code).
+          type: string
+          required: false
+        referenceObligation:
+          description: Reference obligation identifier (e.g., ISIN of the benchmark bond).
+          type: string
+          required: false
+        seniority:
+          description: Seniority level of the reference obligation.
+          type: string
+          enum:
+            - senior
+            - subordinated
+            - juniorSubordinated
+          required: false
+        cdsSpreadBps:
+          description: CDS spread quoted in basis points per year.
+          type: number
+          example: 125.0
+          required: false
+        effectiveDate:
+          description: Date when protection starts.
+          required: false
+          type: string
+          format: date
+        
+        maturityDate:
+          description: Maturity date of the CDS.
+          required: false
+          type: string
+          format: date
+
+        paymentFrequency:
+          description: Frequency of premium payments.
+          type: string
+          enum:
+            - annual
+            - monthly
+            - quarterly
+            - semiAnnual
+            - weekly
+            - atMaturity
+            - other
+          required: false
+        settlementMethod:
+          description: Settlement method applied upon a credit event.
+          type: string
+          enum:
+            - cash
+            - physical
+          required: false
+        businessDayConvention:
+          description: Business day convention for adjusting payment dates.
+          type: string
+          enum:
+            - following
+            - modifiedFollowing
+            - preceding
+            - modifiedPreceding
+            - unadjusted
+          required: false
+        fixedCoupon:
+          description: Standardized fixed coupon rate for the CDS contract.
+          type: number
+          example: 0.01
+          required: false
+        upfrontPayment:
+          description: Upfront payment amount to equalize value at trade inception.
+          required: false
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        dayCountConvention:
+          description: Day count convention for premium accruals.
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/DayCountBasis"
+          required: false
+        restructuringType:
+          description: Restructuring type that qualifies as a credit event.
+          type: string
+          enum:
+            - noRestructuring
+            - oldRestructuring
+            - modifiedRestructuring
+            - modifiedModified
+          required: false
+        creditEventFailureToPay:
+          description: Indicates whether failure to pay triggers a credit event.
+          type: boolean
+          required: false
+        creditEventBankruptcy:
+          description: Indicates whether bankruptcy triggers a credit event.
+          type: boolean
+          required: false
+        creditEventAcceleration:
+          description: Indicates whether acceleration triggers a credit event.
+          type: boolean
+          required: false
+        marketSpreadBps:
+          description: Current market spread for the CDS in basis points.
+          type: number
+          example: 85.2
+          required: false
+        dv01:
+          description: Risky PV01 measuring value change per 1bp spread move.
+          type: number
+          example: 0.0001
+          required: false
+        recoveryRate:
+          description: Assumed recovery rate after default.
+          type: number
+          example: 0.4
+          required: false
+        impliedProbabilityOfDefault:
+          description: Implied probability of default derived from market spreads.
+          type: number
+          example: 0.02
+          required: false
+        accruedPremium:
+          description: Accrued premium amount since the last payment date.
+          required: false
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        underlyingFinancialInstrument:
+          description: Underlying financial instrument whose credit risk is transferred.
+          required: false
+          common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"

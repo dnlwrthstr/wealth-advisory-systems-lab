@@ -1,0 +1,1369 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    }
+  },
+  "mappings": {
+    "dynamic": false,
+    "_meta": {
+      "ontology": "BondGolden",
+      "ontology_version": "0.2.0",
+      "source_entity": "../../securities/debt_instrument/Bond/Bond.yml#/ontology/entities/Bond",
+      "source_file": "golden/bond/BondGolden.yml",
+      "tier": "golden"
+    },
+    "properties": {
+      "goldenId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "cfiCode": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "identifierList": {
+        "type": "nested",
+        "dynamic": false,
+        "properties": {
+          "identifier": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "type": {
+            "type": "keyword"
+          }
+        }
+      },
+      "longName": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "shortName": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "assetClass": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "assetClassId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "bondSubType": {
+        "type": "keyword"
+      },
+      "seniority": {
+        "type": "keyword"
+      },
+      "industrySector": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "gics": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "sectorCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "industryGroupCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "industryCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "subIndustryCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "icb": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "industryCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "supersectorCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "sectorCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "subsectorCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "telekurs": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "sectorCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "industryGroupCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "industryCode": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "canonical": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          }
+        }
+      },
+      "countryOfRisk": {
+        "type": "keyword"
+      },
+      "currencyOfDenomination": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "issueDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd"
+      },
+      "maturityDate": {
+        "type": "date",
+        "format": "yyyy-MM-dd"
+      },
+      "maturityBucket": {
+        "type": "keyword"
+      },
+      "interestRate": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "type": {
+            "type": "keyword"
+          },
+          "value": {
+            "type": "double"
+          },
+          "dayCountBasis": {
+            "type": "keyword"
+          },
+          "paymentDate": {
+            "type": "date",
+            "format": "yyyy-MM-dd"
+          },
+          "paymentFrequency": {
+            "type": "keyword"
+          },
+          "basis": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "spread": {
+            "type": "double"
+          }
+        }
+      },
+      "couponType": {
+        "type": "keyword"
+      },
+      "currentCouponRate": {
+        "type": "double"
+      },
+      "minimumDenomination": {
+        "type": "double"
+      },
+      "minimumIncrement": {
+        "type": "double"
+      },
+      "isCallable": {
+        "type": "boolean"
+      },
+      "isPuttable": {
+        "type": "boolean"
+      },
+      "isConvertible": {
+        "type": "boolean"
+      },
+      "conversionPrice": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "type": {
+            "type": "keyword"
+          },
+          "value": {
+            "type": "double"
+          },
+          "currency": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          }
+        }
+      },
+      "underlyingIsin": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "lifecycleStatus": {
+        "type": "keyword"
+      },
+      "issuer": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "issuerId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "legalName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "lei": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "issuerType": {
+            "type": "keyword"
+          },
+          "domicileCountry": {
+            "type": "keyword"
+          },
+          "headquartersCountry": {
+            "type": "keyword"
+          },
+          "ultimateParentLei": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "guarantorLei": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "creditProfile": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "issuerRatings": {
+                "type": "nested",
+                "dynamic": false,
+                "properties": {
+                  "agency": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "rating": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "ratingType": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "outlook": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "scale": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "dateAssigned": {
+                    "type": "date",
+                    "format": "yyyy-MM-dd"
+                  },
+                  "status": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "esgProfile": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "esgAssessments": {
+                "type": "nested",
+                "dynamic": false,
+                "properties": {
+                  "assessmentId": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "providerRef": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "providerId": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "legalName": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "methodologyVersion": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "ratingScale": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "website": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "assessmentDate": {
+                    "type": "date",
+                    "format": "yyyy-MM-dd"
+                  },
+                  "coverageScope": {
+                    "type": "keyword"
+                  },
+                  "methodologyVersion": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "pillars": {
+                    "type": "nested",
+                    "dynamic": false,
+                    "properties": {
+                      "pillar": {
+                        "type": "object",
+                        "dynamic": true
+                      },
+                      "scoreValue": {
+                        "type": "object",
+                        "dynamic": true
+                      },
+                      "scale": {
+                        "type": "object",
+                        "dynamic": true
+                      }
+                    }
+                  },
+                  "composite": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "scoreValue": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "scale": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "confidenceLevel": {
+                        "type": "double"
+                      }
+                    }
+                  },
+                  "controversies": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "level": {
+                        "type": "keyword"
+                      },
+                      "lastUpdated": {
+                        "type": "date",
+                        "format": "yyyy-MM-dd"
+                      }
+                    }
+                  },
+                  "source": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "sourceType": {
+                        "type": "keyword"
+                      },
+                      "disclosureYear": {
+                        "type": "long"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "primaryListing": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "listingId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "mic": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "venueName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "venueCountry": {
+            "type": "keyword"
+          },
+          "ticker": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "listingCurrency": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "marketSegment": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "firstTradingDate": {
+            "type": "date",
+            "format": "yyyy-MM-dd"
+          },
+          "status": {
+            "type": "keyword"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "secondaryListings": {
+        "type": "nested",
+        "dynamic": false,
+        "properties": {
+          "listingId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "mic": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "venueName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "venueCountry": {
+            "type": "keyword"
+          },
+          "ticker": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "listingCurrency": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "marketSegment": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "firstTradingDate": {
+            "type": "date",
+            "format": "yyyy-MM-dd"
+          },
+          "status": {
+            "type": "keyword"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "marketData": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "sourceListingId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "sourceMic": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "asOf": {
+            "type": "date"
+          },
+          "cleanPrice": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "type": {
+                "type": "keyword"
+              },
+              "value": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "dirtyPrice": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "type": {
+                "type": "keyword"
+              },
+              "value": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "accruedInterest": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "amount": {
+                "type": "double"
+              },
+              "currency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "yieldToMaturity": {
+            "type": "double"
+          },
+          "yieldToWorst": {
+            "type": "double"
+          },
+          "currentYield": {
+            "type": "double"
+          },
+          "modifiedDuration": {
+            "type": "double"
+          },
+          "macaulayDuration": {
+            "type": "double"
+          },
+          "convexity": {
+            "type": "double"
+          },
+          "spreadToBenchmark": {
+            "type": "double"
+          },
+          "zSpread": {
+            "type": "double"
+          },
+          "oasSpread": {
+            "type": "double"
+          }
+        }
+      },
+      "creditRisk": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "instrumentRatings": {
+            "type": "nested",
+            "dynamic": false,
+            "properties": {
+              "agency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "rating": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "ratingType": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "outlook": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "scale": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "dateAssigned": {
+                "type": "date",
+                "format": "yyyy-MM-dd"
+              },
+              "status": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "recoveryAssumptions": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "agency": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "recoveryRating": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "expectedRecoveryPercent": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "methodology": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "instrumentEsgProfile": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "inheritanceRule": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "defaultBehavior": {
+                "type": "keyword"
+              },
+              "overrideAllowed": {
+                "type": "boolean"
+              },
+              "overrideScope": {
+                "type": "keyword"
+              }
+            }
+          },
+          "inheritedAssessments": {
+            "type": "object",
+            "dynamic": false,
+            "properties": {
+              "fromIssuer": {
+                "type": "boolean"
+              },
+              "providerPriority": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "instrumentOverlays": {
+            "type": "nested",
+            "dynamic": false,
+            "properties": {
+              "overlayType": {
+                "type": "keyword"
+              },
+              "standardReference": {
+                "type": "object",
+                "dynamic": false,
+                "properties": {
+                  "framework": {
+                    "type": "keyword"
+                  }
+                }
+              },
+              "useOfProceeds": {
+                "type": "object",
+                "dynamic": false,
+                "properties": {
+                  "eligibleCategories": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "exclusionCategories": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  }
+                }
+              },
+              "reportingCommitments": {
+                "type": "object",
+                "dynamic": false,
+                "properties": {
+                  "allocationReporting": {
+                    "type": "boolean"
+                  },
+                  "impactReporting": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "instrumentSpecificAssessment": {
+                "type": "object",
+                "dynamic": false,
+                "properties": {
+                  "assessmentId": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "providerRef": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "providerId": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "legalName": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "methodologyVersion": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "ratingScale": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "website": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "assessmentDate": {
+                    "type": "date",
+                    "format": "yyyy-MM-dd"
+                  },
+                  "coverageScope": {
+                    "type": "keyword"
+                  },
+                  "methodologyVersion": {
+                    "type": "text",
+                    "fields": {
+                      "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                      }
+                    }
+                  },
+                  "pillars": {
+                    "type": "nested",
+                    "dynamic": false,
+                    "properties": {
+                      "pillar": {
+                        "type": "object",
+                        "dynamic": true
+                      },
+                      "scoreValue": {
+                        "type": "object",
+                        "dynamic": true
+                      },
+                      "scale": {
+                        "type": "object",
+                        "dynamic": true
+                      }
+                    }
+                  },
+                  "composite": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "scoreValue": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "scale": {
+                        "type": "text",
+                        "fields": {
+                          "keyword": {
+                            "type": "keyword",
+                            "ignore_above": 256
+                          }
+                        }
+                      },
+                      "confidenceLevel": {
+                        "type": "double"
+                      }
+                    }
+                  },
+                  "controversies": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "level": {
+                        "type": "keyword"
+                      },
+                      "lastUpdated": {
+                        "type": "date",
+                        "format": "yyyy-MM-dd"
+                      }
+                    }
+                  },
+                  "source": {
+                    "type": "object",
+                    "dynamic": false,
+                    "properties": {
+                      "sourceType": {
+                        "type": "keyword"
+                      },
+                      "disclosureYear": {
+                        "type": "long"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "compliance": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "isUcitsEligible": {
+            "type": "boolean"
+          },
+          "isPrIIPs": {
+            "type": "boolean"
+          },
+          "isSanctionsListed": {
+            "type": "boolean"
+          },
+          "sanctionsLists": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "isHighYield": {
+            "type": "boolean"
+          },
+          "isGreenBond": {
+            "type": "boolean"
+          },
+          "isSocialBond": {
+            "type": "boolean"
+          },
+          "isSustainabilityLinked": {
+            "type": "boolean"
+          },
+          "mifid2TargetMarket": {
+            "type": "keyword"
+          }
+        }
+      },
+      "recordMeta": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "goldenAsOf": {
+            "type": "date"
+          },
+          "ingestionRunId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "sourceOfTruth": {
+            "type": "nested",
+            "dynamic": false,
+            "properties": {
+              "fieldGroup": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "source": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "sourceTimestamp": {
+                "type": "date"
+              }
+            }
+          },
+          "sourceFingerprints": {
+            "type": "nested",
+            "dynamic": false,
+            "properties": {
+              "sourceEntity": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "fingerprint": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "qualityScore": {
+            "type": "double"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    }
+  },
+  "mappings": {
+    "dynamic": false,
+    "_meta": {
+      "ontology": "Identifier",
+      "ontology_version": "0.2.0",
+      "source_entity": "derived from per-security golden records",
+      "source_file": "golden/identifier/Identifier.yml",
+      "tier": "golden"
+    },
+    "properties": {
+      "identifier": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "scheme": {
+        "type": "keyword"
+      },
+      "scope": {
+        "type": "keyword"
+      },
+      "documentId": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      }
+    }
+  }
+}

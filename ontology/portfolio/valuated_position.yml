@@ -1,0 +1,210 @@
+ontology:
+  name: Position
+  version: 1.0.0
+  source: "open_wealth_specification/Custody Services API.yaml"
+  description: >
+    Position entity and related definitions.
+
+  entities:
+
+    Position:
+      description: Position entity.
+      properties:
+        id:
+          description: Identification for the raw_data given by the bank.
+          type: string
+          maxLength: 128
+          example: 876-543219
+
+        financialInstrument:
+          description: Financial instrument held in this raw_data.
+          common_ontology: "../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+        account:
+          description: Account in which the raw_data is held.
+          common_ontology: "./account.yml#/ontology/entities/Account"
+
+        name:
+          description: Name of the raw_data.
+          type: string
+          maxLength: 80
+          example: Stark Industries Inc.
+
+        currency:
+          description: Currency of the raw_data.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        safekeepingPlace:
+          description: BIC of the place where the securities are safe-kept, physically or notionally.
+          type: string
+          pattern: '^[A-Z]{6,6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3,3}){0,1}$'
+          example: INSECHZZXXX
+
+        additionalCustodianInformation:
+          description: Used for special use cases where safekeepingPlace is not sufficient. BIC of the place where the securities are safe-kept, physically or notionally.
+          type: string
+          pattern: '^[A-Z]{6,6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3,3}){0,1}$'
+          example: INSECHZZXXX
+
+        additionalDetails:
+          description: Provides additional information on the raw_data.
+          type: string
+          maxLength: 70
+          example: Belongs to contract 129959959
+
+    Quantity:
+      description: Quantity entity.
+      properties:
+        type:
+          description: Specifies the type of the amount.
+          type: string
+          enum:
+            - unit
+            - faceAmount
+            - amortisedValue
+            - digitalTokenUnit
+          example: unit
+
+        value:
+          description: Signed decimal number.
+          type: number
+          example: 12000
+
+    Valuation:
+      description: Detailed information about the valuation of a raw_data.
+      properties:
+        valueInPositionCurrency:
+          description: Value of the raw_data in its original currency.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        valueInReferenceCurrency:
+          description: Value of the raw_data in the reference currency.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        valuationDate:
+          description: Date when the raw_data was valuated.
+          type: string
+          format: date
+
+    ValuationPrice:
+      description: Price entity with type, numeric value, and optional currency.
+      properties:
+        type:
+          description: Indicates whether the price is an actual currency amount per unit or a percentage.
+          type: string
+          enum:
+            - actual
+            - percentage
+          example: percentage
+
+        value:
+          description: Signed decimal price value.
+          type: number
+          example: 120
+
+        currency:
+          description: Currency of the price.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        valuationDate:
+          description: Date of the valuation price.
+          type: string
+          format: date
+
+        priceType:
+          description: Indicates which type of price is used.
+          type: string
+          enum:
+            - closingPrice
+            - meanPrice
+            - bidPrice
+            - askPrice
+            - other
+          example: closingPrice
+
+    ForeignExchangeRate:
+      description: Foreign exchange rate between two currencies.
+      properties:
+        unitCurrency:
+          description: Currency of the unit.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        quotedCurrency:
+          description: Currency in which the rate is quoted.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        rate:
+          description: FX rate.
+          type: number
+          example: 1.08
+
+    ValuationForeignExchangeRate:
+      description: Foreign exchange rate entity used for valuation.
+      properties:
+        unitCurrency:
+          description: Currency of the unit.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        quotedCurrency:
+          description: Currency in which the rate is quoted.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        rate:
+          description: FX rate.
+          type: number
+          example: 1.08
+
+        valuationDate:
+          description: Date of the valuation FX rate.
+          type: string
+          format: date
+
+    ValuatedPosition:
+      description: Valuated raw_data entity.
+      is_a: Position
+      properties:
+        endOfDayIndicator:
+          description: Indicates whether this is an end-of-day valuation.
+          type: boolean
+
+        positionDate:
+          description: Valuation date of the raw_data.
+          type: string
+          format: date
+
+        quantity:
+          description: Quantity of the financial instrument held.
+          ref: Quantity
+
+        valuation:
+          description: Market valuation of the raw_data.
+          ref: Valuation
+
+        price:
+          description: Market price used for valuation.
+          ref: ValuationPrice
+
+        foreignExchangeRate:
+          description: FX rate used to convert the valuation into the portfolio currency.
+          ref: ValuationForeignExchangeRate
+
+        costPrice:
+          description: Cost price of the raw_data.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+
+        costForeignExchangeRate:
+          description: FX rate used for cost conversion.
+          ref: ForeignExchangeRate
+
+        accruedInterest:
+          description: Accrued interest (for interest-bearing instruments).
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        numberOfDaysAccrued:
+          description: Number of days of accrued interest.
+          type: integer
+          example: 12
+
+        blockedQuantity:
+          description: Quantity that is blocked or unavailable.
+          ref: Quantity

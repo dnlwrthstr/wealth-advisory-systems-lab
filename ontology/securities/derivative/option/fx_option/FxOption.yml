@@ -1,0 +1,66 @@
+ontology:
+  name: FxOption
+  version: 1.0.0
+  description: >
+    Ontology representation of the FxOption financial instrument schema.
+    FxOption inherits from FinancialInstrument and introduces FX-option- specific
+    attributes including expiry date/time, underlying amount, counter amount, premium,
+    option type, and option style.
+  is a: FinancialInstrument
+  common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    FxOption:
+      description: Foreign exchange option contract.
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        optionType:
+          description: Type of option (call/put).
+          required: true
+          common_ontology: ../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/OptionType
+
+        optionStyle:
+          description: Exercise style of the option (European/American/etc.).
+          required: true
+          common_ontology: ../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/OptionStyle
+
+        currencyPair:
+          description: Currency pair for the FX option (base/quote).
+          required: true
+          common_ontology: ../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyPair
+
+        counterpartyLei:
+          description: Legal Entity Identifier (LEI) of the option writer/seller.
+          required: true
+          common_ontology: ../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier
+
+        strikePrice:
+          description: Strike price (exchange rate) at which the option can be exercised.
+          required: true
+          common_ontology: ../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price
+
+        notionalAmount:
+          description: Notional amount of the currency protected by the option.
+          required: true
+          common_ontology: ../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount
+
+        premium:
+          description: Premium paid to purchase the FX option.
+          required: true
+          common_ontology: ../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount
+
+        expiryDate:
+          description: Expiry date of the FX option.
+          required: true
+          type: string
+          format: date
+
+        settlementDate:
+          description: Settlement date for the FX option.
+          required: true
+          type: string
+          format: date

@@ -1,0 +1,86 @@
+ontology:
+  name: CFI Reference Data
+  version: 1.0.0
+  description: >
+    Reference dataset structure for ISO 10962 CFI codes. This file defines the
+    canonical record shape and includes a starter set of common entries.
+
+  entities:
+    CFIReferenceEntry:
+      description: Canonical reference-data entry for a CFI code.
+      kind: reference_data
+      type: object
+      required:
+        - code
+        - category
+        - group
+      properties:
+        code:
+          type: string
+          description: Full six-character CFI code.
+          pattern: '^[A-Z]{6}$'
+        category:
+          type: string
+          description: First character representing the high-level category.
+        group:
+          type: string
+          description: Second character representing the group.
+        cfiType:
+          type: string
+          description: Third character representing the instrument type.
+        form:
+          type: string
+          description: Fourth character representing legal or structural form.
+        underlying:
+          type: string
+          description: Fifth character representing underlying or payoff characteristic.
+        additionalAttributes:
+          type: string
+          description: Sixth character representing additional attributes.
+        label:
+          type: string
+          description: Human-readable label for the code.
+
+reference_data:
+  standard: ISO 10962
+  cfi_codes:
+    - code: ESVUFR
+      category: E
+      group: S
+      cfiType: V
+      form: U
+      underlying: F
+      additionalAttributes: R
+      label: Equity common share with voting rights
+    - code: ESVUFB
+      category: E
+      group: S
+      cfiType: V
+      form: U
+      underlying: F
+      additionalAttributes: B
+      label: Equity common share bearer form
+    - code: DBFNXX
+      category: D
+      group: B
+      cfiType: F
+      form: N
+      underlying: X
+      additionalAttributes: X
+      label: Fixed-rate bond
+    - code: OCFXXX
+      category: O
+      group: C
+      cfiType: F
+      form: X
+      underlying: X
+      additionalAttributes: X
+      label: Call option
+    - code: OPFXXX
+      category: O
+      group: P
+      cfiType: F
+      form: X
+      underlying: X
+      additionalAttributes: X
+      label: Put option

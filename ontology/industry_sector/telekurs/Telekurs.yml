@@ -1,0 +1,81 @@
+ontology:
+  name: Telekurs
+  namespace: bank_data.securities_domain
+  version: "1.0"
+  description: >
+    Telekurs Classification is a proprietary industry and sector classification 
+    system maintained by SIX Financial Information. It follows a hierarchical 
+    sector model used widely in the Swiss financial market.
+
+  entities:
+    TelekursClassification:
+      description: >
+        Classification of an issuer or instrument according to the Telekurs hierarchy.
+      properties:
+        sectorCode:
+          type: string
+          description: Code representing the Telekurs Sector (Level 1).
+        industryGroupCode:
+          type: string
+          description: Code representing the Telekurs Industry Group (Level 2).
+        industryCode:
+          type: string
+          description: Code representing the Telekurs Industry (Level 3).
+
+    TelekursReferenceData:
+      description: Structure for Telekurs reference data including the hierarchy.
+      properties:
+        standard:
+          ref: TelekursStandardInfo
+        hierarchy:
+          type: array
+          items:
+            ref: TelekursSector
+
+    TelekursStandardInfo:
+      description: General information about the Telekurs standard.
+      properties:
+        name:
+          type: string
+        abbreviation:
+          type: string
+        owners:
+          type: array
+          items:
+            type: string
+        standardType:
+          type: string
+        isoStandard:
+          type: boolean
+
+    TelekursSector:
+      description: Telekurs Sector (Level 1).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        industryGroups:
+          type: array
+          items:
+            ref: TelekursIndustryGroup
+
+    TelekursIndustryGroup:
+      description: Telekurs Industry Group (Level 2).
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        industries:
+          type: array
+          items:
+            ref: TelekursIndustry
+
+    TelekursIndustry:
+      description: Telekurs Industry (Level 3).
+      properties:
+        code:
+          type: string
+        name:
+          type: string

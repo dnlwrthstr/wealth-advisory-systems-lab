@@ -1,0 +1,69 @@
+ontology:
+  name: FxSwap
+  version: 1.0.0
+  description: >
+    Ontology representation of the FxSwap financial instrument schema.
+    FxSwap inherits from FinancialInstrument and introduces FX-swap-
+    specific attributes for near/far legs and corresponding maturity dates.
+  is a: FinancialInstrument
+  common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    FxSwap:
+      description: Foreign exchange swap contract.
+      is_a: FinancialInstrument
+
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        nearAmount:
+          description: Amount of the first currency exchanged in the near leg.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        nearCurrency:
+          description: ISO 4217 code for the base currency in the near leg.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        forwardRate:
+          description: Agreed-upon exchange rate for the far leg.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/ForwardRate"
+
+        valueDate:
+          description: Date of the final payment/exchange (maturity).
+          required: true
+          type: string
+          format: date
+
+        creditSupport:
+          description: Credit support or collateral agreement governing the FX swap.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CreditSupport"
+
+        currencyPair:
+          description: Reference currency pair for the FX swap (base/quote).
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyPair"
+
+        maturityDate:
+          description: Final date for the far-leg delivery.
+          required: true
+          type: string
+          format: date
+
+        settlementType:
+          description: Settlement method for the FX swap (cash or physical exchange).
+          type: string
+          enum:
+            - cash
+            - physical
+          required: true
+
+        currency:
+          description: ISO 4217 code for the contract pricing currency.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"

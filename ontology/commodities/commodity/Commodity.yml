@@ -1,0 +1,125 @@
+ontology:
+  name: Commodity
+  version: 1.0.0
+  description: >
+    Ontology representation of the Commodity financial instrument schema.
+    Commodity inherits all characteristics from FinancialInstrument
+    and defines commodity-specific attributes for custody, valuation,
+    and lifecycle metadata.
+  is a: FinancialInstrument
+  common_ontology: "../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    Commodity:
+      description: Commodity financial instrument.
+      is_a: FinancialInstrument
+      common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Commodity"
+      composition:
+        all_of:
+          - FinancialInstrument
+      properties:
+        unitOfMeasure:
+          description: Unit of measure used to quote the commodity (e.g., OZT, BBL, MT).
+          type: string
+          example: OZT
+        contractSize:
+          description: Contract size or multiplier for derivative exposure.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/ContractSize"
+        quoteCurrency:
+          description: Currency in which the commodity is quoted (usually USD).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        priceFactor:
+          description: Factor applied to unit price for valuation (typically 1.0).
+          type: number
+          example: 1.0
+        purity:
+          description: Purity or grade of the commodity (e.g., 0.9999 for gold).
+          type: string
+          example: "0.9999"
+        custodyModel:
+          description: Custody or ownership model for the commodity raw_data.
+          type: string
+          enum:
+            - allocated
+            - unallocated
+            - paper
+            - synthetic
+          example: allocated
+        isAllocated:
+          description: Indicates whether the commodity is held in allocated custody.
+          type: boolean
+          example: true
+        safeCustody:
+          description: Indicates whether the commodity is held in safe custody.
+          type: boolean
+          example: true
+        storageLocation:
+          description: Storage or vault location identifier for physical holdings.
+          type: string
+          example: ZURICH-VAULT-04
+        valuation:
+          description: Valuation attributes for the commodity instrument.
+          ref: CommodityValuation
+        costs:
+          description: Storage and insurance cost attributes for the commodity.
+          ref: CommodityCosts
+        lifecycle:
+          description: Lifecycle metadata for commodity contracts.
+          ref: CommodityLifecycle
+
+    CommodityValuation:
+      description: Valuation attributes for a commodity instrument.
+      kind: value_object
+      type: object
+      properties:
+        quantity:
+          description: Quantity of the commodity held.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Quantity"
+        unitPrice:
+          description: Unit price of the commodity.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        priceCurrency:
+          description: Currency used for commodity pricing.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        marketValueBase:
+          description: Market value converted to the base currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+    CommodityCosts:
+      description: Cost of carry, storage, and insurance attributes for a commodity.
+      kind: value_object
+      type: object
+      properties:
+        annualStorageFeePct:
+          description: Annual storage fee expressed as a percentage.
+          type: number
+          example: 0.0025
+        accruedStorageFees:
+          description: Accrued storage fees not yet settled.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        storageRate:
+          description: Storage rate or flat fee applied to the physical holding.
+          type: number
+          example: 0.001
+        insuranceFee:
+          description: Insurance fee for protecting the physical asset.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        lastPhysicalInspectionDate:
+          description: Date of the last physical inspection or audit.
+          type: string
+          format: date
+
+    CommodityLifecycle:
+      description: Lifecycle metadata for commodity contracts.
+      kind: value_object
+      type: object
+      properties:
+        expiryDate:
+          description: Expiry date of the commodity contract.
+          type: string
+          format: date
+        rollSchedule:
+          description: Roll schedule or rules for contract rollover.
+          type: string
+          example: monthly front-to-next-month roll

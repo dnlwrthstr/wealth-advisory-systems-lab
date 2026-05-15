@@ -1,0 +1,22 @@
+ontology:
+  name: Portfolio
+  version: 1.0.0
+  source: "open_wealth_specification/Custody Services API.yaml"
+  description: >
+    Information about the portfolio.
+
+  entities:
+
+    PortfolioInformation:
+      description: Information about the portfolio.
+      properties:
+        identification:
+          description: Unique and unambiguous identification for the portfolio between the portfolio owner and the portfolio servicer.
+          type: string
+          minLength: 1
+          maxLength: 128
+          example: 87654-3219
+
+        referenceCurrency:
+          description: Reference currency for the portfolio.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"

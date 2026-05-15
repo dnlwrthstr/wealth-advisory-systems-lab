@@ -1,0 +1,69 @@
+ontology:
+  name: CFI (Classification of Financial Instruments)
+  namespace: bank_data.securities_domain.classification.instrument_type
+  version: "1.0"
+  description: >
+    The CFI (Classification of Financial Instruments) is an international standard
+    (ISO 10962) that provides a structured, six-character alphanumeric code to
+    classify financial instruments in a consistent and unambiguous way across
+    markets, asset classes, and systems.
+
+  entities:
+    CFI:
+      description: >
+        Represents a Classification of Financial Instruments (CFI) code as defined by ISO 10962.
+        A CFI code consists of six characters, each conveying specific structural information.
+      properties:
+        code:
+          type: string
+          description: >
+            The full six-character CFI code.
+            Example: ESVUFR (Equity, Share, Voting, Unrestricted, Free, Registered).
+          pattern: "^[A-Z]{6}$"
+        category:
+          type: string
+          description: >
+            The first character of the CFI code, representing the high-level instrument category.
+            Examples: E (Equity), D (Debt), C (Entitlements/Funds), O (Options), F (Futures), S (Swaps).
+        group:
+          type: string
+          description: >
+            The second character of the CFI code, representing the instrument group within the category.
+        cfiType:
+          type: string
+          description: >
+            The third character of the CFI code, representing the specific instrument type.
+        form:
+          type: string
+          description: >
+            The fourth character of the CFI code, representing the form or structure of the instrument.
+        underlying:
+          type: string
+          description: >
+            The fifth character of the CFI code, representing the underlying or payoff characteristic.
+        additionalAttributes:
+          type: string
+          description: >
+            The sixth character of the CFI code, representing additional attributes.
+
+      examples:
+        - code: ESVUFR
+          category: E
+          group: S
+          cfiType: V
+          form: U
+          underlying: F
+          additionalAttributes: R
+
+    CfiStandardInfo:
+      description: Information about the ISO 10962 standard.
+      properties:
+        name:
+          type: string
+          description: Classification of Financial Instruments (CFI).
+        isoStandard:
+          type: string
+          description: ISO 10962.
+        authority:
+          type: string
+          description: International Organization for Standardization (ISO).

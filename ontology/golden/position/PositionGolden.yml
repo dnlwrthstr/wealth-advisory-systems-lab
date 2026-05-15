@@ -1,0 +1,432 @@
+ontology:
+  name: PositionGolden
+  version: 0.1.0
+  description: >
+    Tier-3 (golden) read-model for a Portfolio Position, denormalized for
+    OpenSearch and aligned with the Open Wealth Standard surface area
+    expected by the PMS UI and reporting layer.
+
+    A PositionGolden joins a position from `portfolio/valuated_position.yml`
+    with a compact instrument reference, an account/portfolio reference and
+    the latest valuation snapshot. It is the primary document for
+    "positions" screens, holdings reports and screen-based screens like
+    "all CHF positions with maturity < 1y".
+
+    Derived: silver `ValuatedPosition`, `Account`, `CustodyAccount`,
+    `Portfolio` and the relevant instrument golden record. This record
+    references — but does not duplicate — the full instrument golden
+    document; only the fields needed to render the position row are
+    embedded.
+  source_entity: "../../portfolio/valuated_position.yml#/ontology/entities/ValuatedPosition"
+
+  entities:
+
+    PositionGolden:
+      description: >
+        Golden (tier-3) record for a single position. One document per
+        position-date / account / instrument tuple, keyed by `goldenId`.
+
+        The grain is intentionally `(accountId, instrumentId, positionDate)`
+        so the index supports both "current positions" queries (filter by
+        latest `positionDate`) and "as-of" queries (filter by a historical
+        date).
+      kind: golden_record
+      type: object
+      required:
+        - goldenId
+        - positionId
+        - accountId
+        - portfolioId
+        - instrumentRef
+        - positionDate
+        - quantity
+        - valuation
+        - recordMeta
+      properties:
+
+        # ---------------------------------------------------------------------
+        # Record identity
+        # ---------------------------------------------------------------------
+        goldenId:
+          description: Stable internal primary key of the position golden record.
+          type: string
+          example: PG-acc_df82-EQG_AAPL-20260218
+
+        positionId:
+          description: Position id assigned by the source system (matches silver Position.id).
+          type: string
+          example: pos-987654321
+
+        # ---------------------------------------------------------------------
+        # Hierarchy — denormalized owners
+        # ---------------------------------------------------------------------
+        portfolioId:
+          description: Identifier of the containing portfolio.
+          type: string
+          example: pf_smith_family
+        portfolioName:
+          description: Human-readable portfolio name.
+          type: string
+        accountId:
+          description: Identifier of the holding account.
+          type: string
+          example: acc-df82-4110
+        accountName:
+          description: Display name of the account.
+          type: string
+        accountType:
+          description: Type of account (custody, cash, lombard, segregated, etc.).
+          type: string
+          enum:
+            - custody
+            - cash
+            - lombard
+            - margin
+            - segregated
+            - omnibus
+            - other
+          example: custody
+        custodianId:
+          description: Identifier of the custodian holding the position.
+          type: string
+        custodianBic:
+          description: BIC of the custodian / safekeeping place.
+          type: string
+          pattern: '^[A-Z]{6,6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3,3}){0,1}$'
+        customerId:
+          description: Identifier of the end customer holding the portfolio.
+          type: string
+        relationshipManagerId:
+          description: Identifier of the relationship manager (advisor).
+          type: string
+
+        # ---------------------------------------------------------------------
+        # Instrument reference (compact, plus enough fields to render)
+        # ---------------------------------------------------------------------
+        instrumentRef:
+          description: >
+            Compact reference to the instrument golden record, with the
+            handful of fields a PMS row needs without re-fetching the full
+            instrument document.
+          ref: InstrumentRef
+
+        # ---------------------------------------------------------------------
+        # Position dating
+        # ---------------------------------------------------------------------
+        positionDate:
+          description: Valuation / as-of date of this position record.
+          type: string
+          format: date
+        endOfDayIndicator:
+          description: True if this snapshot represents an end-of-day position.
+          type: boolean
+        tradeDate:
+          description: Trade date of the originating transaction (when first opened).
+          type: string
+          format: date
+        settlementDate:
+          description: Settlement date of the originating transaction.
+          type: string
+          format: date
+
+        # ---------------------------------------------------------------------
+        # Quantity (split per Open Wealth)
+        # ---------------------------------------------------------------------
+        quantity:
+          description: Total quantity held in the position.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Quantity"
+        blockedQuantity:
+          description: Quantity that is blocked (collateral, pledge, pending).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Quantity"
+        settledQuantity:
+          description: Quantity that has fully settled.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Quantity"
+        pendingQuantity:
+          description: Quantity from trades not yet settled.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Quantity"
+
+        # ---------------------------------------------------------------------
+        # Valuation snapshot
+        # ---------------------------------------------------------------------
+        valuation:
+          description: Market valuation snapshot for the position.
+          ref: ValuationSnapshot
+
+        # ---------------------------------------------------------------------
+        # Cost basis & performance
+        # ---------------------------------------------------------------------
+        costBasis:
+          description: Cost basis snapshot used by P&L and tax reporting.
+          ref: CostBasisSnapshot
+
+        # ---------------------------------------------------------------------
+        # Income / accruals (asset-specific)
+        # ---------------------------------------------------------------------
+        accruals:
+          description: Income accruals (interest, pending dividends).
+          ref: AccrualsSnapshot
+
+        # ---------------------------------------------------------------------
+        # Reporting helpers — hoisted for fast aggregation
+        # ---------------------------------------------------------------------
+        portfolioCurrency:
+          description: Reference currency of the parent portfolio.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        positionCurrency:
+          description: Currency in which the position is denominated.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        fxRateToPortfolio:
+          description: FX rate used to convert position currency into portfolio currency.
+          type: number
+          example: 1.08
+        portfolioWeight:
+          description: Position weight in the portfolio (decimal, e.g. 0.045 for 4.5%).
+          type: number
+
+        # ---------------------------------------------------------------------
+        # Status flags
+        # ---------------------------------------------------------------------
+        lifecycleStatus:
+          description: Status of the position.
+          type: string
+          enum:
+            - active
+            - pending
+            - closed
+            - frozen
+            - reversed
+          example: active
+        isShortPosition:
+          description: True if the position is short (negative quantity).
+          type: boolean
+        isHedge:
+          description: True if the position is tagged as a hedge.
+          type: boolean
+
+        # ---------------------------------------------------------------------
+        # Record meta
+        # ---------------------------------------------------------------------
+        recordMeta:
+          description: Provenance and freshness metadata for the position golden record.
+          ref: GoldenRecordMeta
+
+    # =========================================================================
+    # Embedded snapshots
+    # =========================================================================
+
+    InstrumentRef:
+      description: >
+        Compact instrument reference embedded in the position. Carries the
+        ids needed to look up the full instrument golden record plus enough
+        descriptive fields to render the position row without an extra
+        fetch.
+      kind: value_object
+      type: object
+      required:
+        - instrumentGoldenId
+        - instrumentType
+      properties:
+        instrumentGoldenId:
+          description: Foreign key to the instrument golden record (Equity/Bond/Fund/...).
+          type: string
+          example: EQG-AAPL-XNAS-001
+        instrumentType:
+          description: Discriminator pointing to the instrument golden family.
+          type: string
+          enum:
+            - equity
+            - bond
+            - fund
+            - structuredProduct
+            - derivative
+            - cash
+            - crypto
+            - commodity
+            - other
+          example: equity
+        isin:
+          description: ISO 6166 ISIN of the instrument.
+          type: string
+        figi:
+          description: OpenFIGI identifier of the instrument.
+          type: string
+        tickerSymbol:
+          description: Primary ticker symbol.
+          type: string
+        exchangeMic:
+          description: MIC of the primary listing.
+          type: string
+        cfiCode:
+          description: CFI code of the instrument.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CfiCode"
+        longName:
+          description: Full instrument name.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/LongText"
+        shortName:
+          description: Short instrument name.
+          common_ontology: "../../partner/PartnerBase.yml#/ontology/entities/ShortText"
+        assetClass:
+          description: Asset class label (mirrors instrument golden record).
+          type: string
+        assetClassId:
+          description: Asset class id (for roll-ups).
+          type: string
+        industrySector:
+          description: Industry / sector classification of the instrument or issuer.
+          common_ontology: "../../industry_sector/IndustrySector.yml#/ontology/entities/IndustrySector"
+        countryOfRisk:
+          description: Country of risk of the instrument.
+          type: Country
+        instrumentCurrency:
+          description: Currency in which the instrument is denominated.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+        issuerLei:
+          description: LEI of the issuer.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+        issuerName:
+          description: Legal name of the issuer.
+          type: string
+
+    ValuationSnapshot:
+      description: Market valuation of the position at `positionDate`.
+      kind: value_object
+      type: object
+      required:
+        - valuationDate
+      properties:
+        valuationDate:
+          description: Date of the valuation.
+          type: string
+          format: date
+        marketPrice:
+          description: Market price used for valuation.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        priceType:
+          description: Indicates which type of price is used.
+          type: string
+          enum:
+            - closingPrice
+            - meanPrice
+            - bidPrice
+            - askPrice
+            - other
+          example: closingPrice
+        valueInPositionCurrency:
+          description: Market value of the position in its denomination currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        valueInReferenceCurrency:
+          description: Market value of the position in the portfolio reference currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+    CostBasisSnapshot:
+      description: Cost basis information for the position.
+      kind: value_object
+      type: object
+      properties:
+        averageCostPrice:
+          description: Weighted-average acquisition cost per unit.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Price"
+        totalAcquisitionCost:
+          description: Total acquisition cost in position currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        costForeignExchangeRate:
+          description: FX rate used for cost conversion.
+          type: number
+        unrealizedPL:
+          description: Unrealized P&L in position currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        unrealizedPLInReferenceCurrency:
+          description: Unrealized P&L in portfolio reference currency.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        unrealizedPLPercentage:
+          description: Unrealized P&L as a decimal of cost (e.g., 0.24 for 24%).
+          type: number
+        bookValue:
+          description: Accounting book value of the position.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+    AccrualsSnapshot:
+      description: Income accruals attached to the position.
+      kind: value_object
+      type: object
+      properties:
+        accruedInterest:
+          description: Accrued interest at the snapshot (bond-like instruments).
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+        numberOfDaysAccrued:
+          description: Number of days of accrued interest.
+          type: integer
+        pendingDividends:
+          description: Declared but not yet paid dividend amount.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+    GoldenRecordMeta:
+      description: Provenance, freshness and lineage metadata for the position golden record.
+      kind: value_object
+      type: object
+      required:
+        - schemaVersion
+        - goldenAsOf
+        - sourceOfTruth
+      properties:
+        schemaVersion:
+          description: Version of the PositionGolden schema.
+          type: string
+          example: 0.1.0
+        goldenAsOf:
+          description: Timestamp at which this golden record was assembled.
+          type: string
+          format: date-time
+        ingestionRunId:
+          description: Run id of the enrichment pipeline.
+          type: string
+        sourceOfTruth:
+          description: Map of field-group to source system.
+          type: array
+          items:
+            ref: SourceAttribution
+        sourceFingerprints:
+          description: Content hashes of contributing silver documents.
+          type: array
+          items:
+            ref: SourceFingerprint
+        qualityScore:
+          description: Aggregate data-quality score (0.0 - 1.0).
+          type: number
+        isActive:
+          description: True if this is the currently active position record for the (account, instrument, positionDate) key.
+          type: boolean
+
+    SourceAttribution:
+      description: Records which upstream system contributed a particular field group.
+      kind: value_object
+      type: object
+      required:
+        - fieldGroup
+        - source
+      properties:
+        fieldGroup:
+          description: Field group inside the golden record.
+          type: string
+        source:
+          description: Upstream system or vendor.
+          type: string
+        sourceTimestamp:
+          description: Timestamp at the source when the data was produced.
+          type: string
+          format: date-time
+
+    SourceFingerprint:
+      description: Content hash of an upstream silver document.
+      kind: value_object
+      type: object
+      required:
+        - sourceEntity
+        - fingerprint
+      properties:
+        sourceEntity:
+          description: Silver entity reference.
+          type: string
+        fingerprint:
+          description: Stable hash (e.g., SHA-256) at assembly time.
+          type: string

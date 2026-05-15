@@ -1,0 +1,27 @@
+ontology:
+  name: Customer
+  version: 1.0.0
+  source: "open_wealth_specification/Custody Services API.yaml"
+  description: >
+    Overview of the customer with the respective accounts.
+
+  entities:
+
+    Customer:
+      description: Overview of the customer with the respective accounts.
+      properties:
+        id:
+          description: Unique and unambiguous identification (i.e. UUID) used by the bank for the customer.
+          type: string
+          maxLength: 128
+          example: MTIzNDUtNg
+
+        number:
+          description: Contains the customers custody proprietary customer number if available.
+          type: string
+          maxLength: 70
+          example: 12345-6
+
+        referenceCurrency:
+          description: Reference currency for the customer.
+          common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"

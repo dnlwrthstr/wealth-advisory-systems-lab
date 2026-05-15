@@ -1,0 +1,41 @@
+ontology:
+  name: Industry / Sector Classification
+  version: "1.0.0"
+  description: >
+    Canonical wrapper for holding one or more industry/sector classification assignments
+    (e.g., GICS, ICB, Telekurs, or bank-specific taxonomies) using the canonical
+    ClassificationAssignment model.
+
+  entities:
+    IndustrySector:
+      description: >
+        Container for one or more time-versioned industry/sector classification assignments.
+
+        Normative rules:
+        - Only DIRECT assignments are stored here (no inherited/materialized assignments).
+        - Issuer and Instrument assignments are independent and may differ.
+        - Override convention for consumers: when computing an instrument’s effective
+          classification, prefer Instrument assignments; if none exist, fall back to Issuer
+          assignments (do not duplicate Issuer assignments onto the Instrument).
+      properties:
+        gics:
+          description: Optional GICS classification for the issuer or instrument.
+          common_ontology: "./gics/GICS.yml#/ontology/entities/GicsClassification"
+        icb:
+          description: Optional ICB classification for the issuer or instrument.
+          common_ontology: "./icb/ICB.yml#/ontology/entities/IcbClassification"
+        telekurs:
+          description: Optional Telekurs classification for the issuer or instrument.
+          common_ontology: "./telekurs/Telekurs.yml#/ontology/entities/TelekursClassification"
+        canonical:
+          type: array
+          minItems: 0
+          description: >
+            Optional canonical classification assignments (typically to Issuer or Instrument).
+            Each assignment points to a system and terminal node and can be time-versioned.
+
+            Normative rule:
+            - Each item MUST target the owning entity instance via applies_to
+              (direct assignment only).
+          items:
+            $ref: "./canonical/Canonical.yml#/ontology/entities/ClassificationAssignment"

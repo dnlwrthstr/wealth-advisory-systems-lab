@@ -1,0 +1,272 @@
+ontology:
+  name: Fund
+  version: 1.0.0
+  description: >
+    Ontology representation of the Fund financial instrument schema. Fund
+    inherits all characteristics from FinancialInstrument and does not define additional
+    attributes.
+  is a: FinancialInstrument
+  common_ontology: "../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+    Fund:
+      description: Investment fund (mutual fund, ETF, etc.).
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+      properties:
+        issuer:
+          description: >
+            The legal entity that is contractually responsible for the rights or
+            obligations embedded in this instrument.
+          type: array
+          items:
+            common_ontology: "../issuer/Issuer.yml#/ontology/entities/Issuer"
+          minItems: 1
+          maxItems: 1
+        instrumentEsgProfile:
+          description: ESG profile of the fund, allowing instrument-specific overlays.
+          common_ontology: "../rating/esg/ESGRating.yml#/ontology/entities/ESGInstrumentProfile"
+        holdingsCount:
+          type: integer
+          description: Total number of individual securities held within the fund's portfolio.
+          example: 1500
+
+        isCurrencyHedged:
+          type: boolean
+          description: Indicates whether the fund (or specific share class) employs a currency hedging strategy to reduce FX risk.
+          example: true
+
+        hedgingCurrency:
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+          description: The target currency into which the fund's underlying exposures are hedged.
+
+        assetAllocation:
+          ref: AssetAllocation
+          description: Breakdown of the fund's holdings by allocation buckets (e.g., asset class, region, industry_sector) including look-through top holdings.
+
+        dividendPolicy:
+          description: >
+            Specifies how the fund handles income (dividends, interest).
+            DISTRIBUTING: pays out income to investors.
+            ACCUMULATING: reinvests income back into the fund.
+          type: string
+          enum:
+            - DISTRIBUTING
+            - ACCUMULATING
+          example: ACCUMULATING
+
+        fees:
+          ref: FundFeeStructure
+          description: Detailed fee structure of the investment fund, including ongoing, transactional, and incentive-based costs.
+
+        legalFramework:
+          type: string
+          description: >
+            The regulatory framework governing the fund (e.g., UCITS, AIFMD, 40-Act).
+            UCITS is a common European standard for retail funds.
+          example: UCITS
+
+        legalStructure:
+          type: string
+          description: >
+            The specific legal form of the fund entity (e.g., SICAV, ICAV, FCP, LP).
+            This defines whether the fund is a company or a contractual arrangement.
+          example: ICAV
+
+        umbrellaName:
+          type: string
+          description: >
+            The name of the legal umbrella entity that contains one or more sub-funds.
+            Common in European structures where multiple funds share a single prospectus.
+          example: "iShares VII plc"
+
+        domicile:
+          type: string
+          description: The country where the fund is legally registered and regulated.
+          example: Ireland
+
+    FundFeeStructure:
+      description: Structure representing various types of fees associated with an investment fund.
+      kind: value_object
+      type: object
+      properties:
+        ongoing:
+          ref: OngoingFees
+          description: Fees deducted from the fund's assets and reflected in the NAV.
+        transactional:
+          ref: TransactionalFees
+          description: Fees occurring at the point of entry or exit.
+        incentive:
+          ref: IncentiveFees
+          description: Fees based on performance benchmarks, common in hedge funds.
+        taxWrapperCosts:
+          ref: TaxWrapperCosts
+          description: Internal tax-related costs within the fund structure.
+
+    OngoingFees:
+      description: Fees deducted from the fund's assets and reflected in the NAV.
+      kind: value_object
+      type: object
+      properties:
+        totalExpenseRatio:
+          type: number
+          description: >
+            The Total Expense Ratio (TER) represents the annual percentage fee
+            charged to cover management and operating costs.
+          example: 0.002
+        managementFee:
+          type: number
+          description: The specific annual fee paid to the portfolio manager.
+          example: 0.0015
+        adminFee:
+          type: number
+          description: Operational costs such as legal and audit fees.
+          example: 0.0005
+        isCapped:
+          type: boolean
+          description: Indicates whether the fees are capped at a certain percentage.
+          example: true
+
+    TransactionalFees:
+      description: Fees occurring when moving money in or out of the fund.
+      kind: value_object
+      type: object
+      properties:
+        entryLoad:
+          type: number
+          description: Fee paid when joining the fund.
+          example: 0.0
+        exitLoad:
+          type: number
+          description: Fee paid when leaving the fund.
+          example: 0.0
+        buySellSpreadEst:
+          type: number
+          description: Estimated spread between buy and sell prices.
+          example: 0.0008
+
+    IncentiveFees:
+      description: Performance-based fees for the fund manager.
+      kind: value_object
+      type: object
+      properties:
+        performanceFee:
+          type: number
+          description: Percentage of profits taken by the manager for exceeding targets.
+          example: 0.0
+        hurdleRate:
+          type: number
+          description: Target return rate that must be exceeded before performance fees apply.
+          example: 0.05
+        highWaterMark:
+          type: boolean
+          description: Ensures fees are only paid on new profits, not on recovery from past losses.
+          example: false
+
+    TaxWrapperCosts:
+      description: Internal tax-related costs within the fund structure.
+      kind: value_object
+      type: object
+      properties:
+        stampDuty:
+          type: number
+          description: Tax on the purchase of the fund or its underlying assets.
+          example: 0.0
+        withholdingTaxInternal:
+          type: string
+          description: Internal withholding tax (e.g., on dividends).
+          example: "15% on US dividends"
+
+    AssetAllocation:
+      description: >
+        Asset allocation of a fund, expressed as percentage weights across different dimensions.
+        Percentages should typically sum to 1.0 within each dimension.
+      kind: value_object
+      type: object
+      properties:
+        byAssetClass:
+          type: array
+          description: Allocation by asset class (the "what").
+          items:
+            type: object
+            required:
+              - type
+              - percentage
+            properties:
+              type:
+                type: string
+                description: Asset class bucket (e.g., EQUITY, FIXED_INCOME, CASH, REAL_ESTATE, COMMODITIES, OTHER).
+              percentage:
+                type: number
+                description: Weight of this bucket as a decimal (e.g., 0.65 for 65%).
+                example: 0.65
+
+        byRegion:
+          type: array
+          description: Allocation by region (the "where").
+          items:
+            type: object
+            required:
+              - region
+              - percentage
+            properties:
+              region:
+                type: string
+                description: Region bucket (e.g., NORTH_AMERICA, EUROPE, ASIA_PACIFIC, EMERGING_MARKETS).
+              percentage:
+                type: number
+                description: Weight of this bucket as a decimal (e.g., 0.30 for 30%).
+                example: 0.30
+
+        bySector:
+          type: array
+          description: Allocation by industry_sector (the "industry"), mainly for equity exposure.
+          items:
+            type: object
+            required:
+              - industrySector
+              - percentage
+            properties:
+              sector:
+                type: string
+                description: Sector bucket (e.g., INFORMATION_TECHNOLOGY, FINANCIALS, HEALTHCARE, OTHER).
+              percentage:
+                type: number
+                description: Weight of this bucket as a decimal (e.g., 0.22 for 22%).
+                example: 0.22
+
+        topHoldings:
+          type: array
+          description: >
+            Look-through data: top underlying holdings of the fund (e.g., top 10/20),
+            each with an identifier, name and portfolio weight.
+          items:
+            ref: TopHolding
+
+    TopHolding:
+      description: A single underlying holding within a fund's look-through top holdings list.
+      kind: value_object
+      type: object
+      required:
+        - identifier
+        - name
+        - weight
+      properties:
+        identifier:
+          type: string
+          description: Security identifier of the underlying holding (e.g., ISIN or ticker).
+          example: AAPL
+        name:
+          type: string
+          description: Human-readable name of the underlying holding.
+          example: Apple Inc.
+        weight:
+          type: number
+          description: Weight of this holding as a decimal (e.g., 0.071 for 7.1%).
+          example: 0.071
+        assetClass:
+          type: string
+          description: Asset class of the holding (e.g., EQUITY, FIXED_INCOME, DERIVATIVE, CASH).
+          example: EQUITY

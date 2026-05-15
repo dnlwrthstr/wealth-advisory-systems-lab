@@ -1,0 +1,86 @@
+ontology:
+  name: Identifier
+  version: 0.2.0
+  description: >
+    Cross-security identifier helper. One document per
+    (security, identifier) pair, flat and minimal — just enough to
+    resolve a user-supplied string to a per-security golden document.
+
+    Lookup flow:
+      1. `GET /pms_golden_identifier/_search` for the user-supplied string
+         (single `term: identifier`).
+      2. Get back `{scheme, scope, documentId}`.
+      3. Targeted `GET /pms_golden_<scope>/_doc/<documentId>` for the
+         full record. Rendering fields (legalName, currency, etc.)
+         come from the per-security doc — not duplicated here.
+
+    Tier-3 (golden) — derived. Rebuilt by `identifier_index_from_golden`
+    from the per-security NDJSON files.
+
+    v0.2.0: drop the inline rendering fields and provenance block from
+    the document body; keep the shape strictly four fields per
+    `(identifier, scheme, scope, documentId)`. The OpenSearch `_id` is
+    derived at write time as `{scheme}:{identifier}:{documentId}`.
+  source_entity: "derived from per-security golden records"
+
+  entities:
+
+    Identifier:
+      description: >
+        One (security, identifier) entry. The combination of
+        `(scheme, identifier, documentId)` is the natural unique key
+        (also used as the OpenSearch `_id`).
+      kind: golden_record
+      type: object
+      required:
+        - identifier
+        - scheme
+        - scope
+        - documentId
+      properties:
+        identifier:
+          description: >
+            The identifier value as users would search for it (no
+            normalisation beyond the source format).
+          type: string
+          example: "IE00B4L5Y983"
+        scheme:
+          description: >
+            Identifier scheme. This enum is intentionally limited to
+            *identifiers*. Classification codes (CFI / ISO 10962, GICS,
+            ICB, NACE) are NOT identifiers and do not appear here.
+          type: string
+          enum:
+            - isin
+            - figi
+            - sedol
+            - cusip
+            - ric
+            - bloombergTicker
+            - bloombergComposite
+            - wkn
+            - valoren
+            - tickerSymbol
+            - mic
+            - lei
+            - otherProprietaryIdentification
+          example: isin
+
+        scope:
+          description: >
+            Which per-security golden index holds the canonical record.
+            Maps directly to the OpenSearch index name as
+            `pms_golden_<scope>`.
+          type: string
+          enum:
+            - equity
+            - bond
+            - fund
+            - position
+          example: fund
+        documentId:
+          description: >
+            `goldenId` of the per-security golden record this identifier
+            belongs to.
+          type: string
+          example: FG-IE00B4L5Y983-001

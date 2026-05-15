@@ -1,0 +1,16 @@
+ontology:
+  name: IndexSchema
+  version: 1.0.0
+  description: >
+    Ontology representation of Index reference data.
+    Indexes are statistical constructs used as benchmarks and
+    are not financial instruments.
+  common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Index"
+
+  entities:
+
+    Index:
+      description: Reference index (benchmark, market index).
+      common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Index"
+
+      properties:

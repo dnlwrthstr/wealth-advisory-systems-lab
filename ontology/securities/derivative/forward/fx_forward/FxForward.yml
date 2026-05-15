@@ -1,0 +1,81 @@
+ontology:
+  name: FxForward
+  version: 1.0.0
+  description: >
+    Ontology representation of the FxForward financial instrument schema.
+    FxForward inherits from FinancialInstrument and defines FX-specific
+    attributes such as amount paid, amount received, and maturity date.
+  is a: FinancialInstrument
+  common_ontology: "../../../../instrument_base/FinancialInstrument.yml#/ontology/entities/FinancialInstrument"
+
+  entities:
+
+    FxForward:
+      description: Foreign exchange forward contract.
+      is_a: FinancialInstrument
+      composition:
+        all_of:
+          - FinancialInstrument
+
+      properties:
+        currencyPair:
+          description: Currency pair for the FX forward (base/quote).
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyPair"
+
+        counterpartyLei:
+          description: Legal Entity Identifier (LEI) of the counterparty.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+
+        counterpartyName:
+          description: Legal name of the counterparty.
+          type: string
+          required: false
+
+        amountPaid:
+          description: Currency amount paid in the FX forward.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        amountReceived:
+          description: Currency amount received in the FX forward.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        nearAmount:
+          description: Amount of the base currency exchanged at the forward rate.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"
+
+        nearCurrency:
+          description: ISO 4217 code of the base currency.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"
+
+        forwardRate:
+          description: Agreed forward exchange rate.
+          required: true
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/ForwardRate"
+
+        valueDate:
+          description: Value (settlement) date of the FX forward.
+          required: true
+          type: string
+          format: date
+
+        maturityDate:
+          description: Maturity (settlement) date of the FX forward.
+          required: true
+          type: string
+          format: date
+
+        creditSupport:
+          description: Credit support or collateral agreement (e.g., CSA).
+          required: false
+          common_ontology: "../../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CreditSupport"
+
+        isDeliverable:
+          description: Indicates whether the FX forward is physically deliverable.
+          type: boolean
+          required: false

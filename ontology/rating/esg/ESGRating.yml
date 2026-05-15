@@ -1,0 +1,217 @@
+ontology:
+  name: ESG Rating
+  version: 1.0.0
+  description: >
+    Ontology for Environmental, Social, and Governance (ESG) ratings.
+    Supports multi-provider assessments, issuer-level inheritance,
+    and instrument-specific overlays (e.g., green bonds).
+
+  entities:
+
+    ESGProvider:
+      description: Information about the entity providing ESG assessments.
+      properties:
+        providerId:
+          type: string
+          description: Unique identifier for the provider (e.g., MSCI, Sustainalytics).
+        legalName:
+          type: string
+          description: Legal name of the provider.
+        methodologyVersion:
+          type: string
+          description: Version of the methodology used for the rating.
+        ratingScale:
+          type: string
+          description: Description of the rating scale used (e.g., AAA-CCC, 0-100).
+        website:
+          type: string
+          format: uri
+          description: Official website of the provider.
+
+    ESGPillarScore:
+      description: Score for an individual ESG pillar (Environmental, Social, or Governance).
+      properties:
+        pillar:
+          type: string
+          enum: [E, S, G]
+          description: The ESG pillar being scored.
+        scoreValue:
+          type: string
+          description: The score value assigned to this pillar.
+        scale:
+          type: string
+          description: The scale used for this pillar score.
+
+    ESGCompositeScore:
+      description: The overall composite ESG score.
+      properties:
+        scoreValue:
+          type: string
+          description: The composite score value.
+        scale:
+          type: string
+          description: The scale used for the composite score.
+        confidenceLevel:
+          type: number
+          description: Optional confidence level of the score.
+
+    ESGAssessment:
+      description: A specific ESG assessment by a provider at a point in time.
+      properties:
+        assessmentId:
+          type: string
+          description: Unique identifier for the assessment.
+        providerRef:
+          ref: ESGProvider
+          description: Reference to the ESG provider.
+        assessmentDate:
+          type: string
+          format: date
+          description: The date when the assessment was performed.
+        coverageScope:
+          type: string
+          enum: [issuer, instrument]
+          description: Whether the assessment covers the issuer or a specific instrument.
+        methodologyVersion:
+          type: string
+          description: Version of the methodology used.
+        pillars:
+          type: array
+          items:
+            ref: ESGPillarScore
+          description: Pillar-level scores.
+        composite:
+          ref: ESGCompositeScore
+          description: Overall composite score.
+        controversies:
+          ref: ESGControversies
+          description: Information about ESG controversies.
+        source:
+          ref: ESGSource
+          description: Information about the data source.
+
+    ESGControversies:
+      description: Information about ESG controversies.
+      properties:
+        level:
+          type: string
+          enum: [none, low, medium, high, severe]
+          description: The severity level of controversies.
+        lastUpdated:
+          type: string
+          format: date
+          description: The date when the controversy information was last updated.
+
+    ESGSource:
+      description: Information about the data source for the assessment.
+      properties:
+        sourceType:
+          type: string
+          enum: [reported, estimated, mixed]
+          description: The type of data source.
+        disclosureYear:
+          type: integer
+          description: The year of the underlying disclosures.
+
+    ESGProfile:
+      description: ESG profile containing multiple assessments.
+      properties:
+        esgAssessments:
+          type: array
+          items:
+            ref: ESGAssessment
+          description: List of ESG assessments.
+
+    ESGInheritanceRule:
+      description: Rules for inheriting ESG properties from an issuer.
+      properties:
+        defaultBehavior:
+          type: string
+          enum: [inherit_from_issuer, no_inheritance]
+          description: The default inheritance behavior.
+        overrideAllowed:
+          type: boolean
+          description: Whether the inherited values can be overridden.
+        overrideScope:
+          type: string
+          enum: [additive_only, full_override]
+          description: The scope of the allowed override.
+
+    ESGInstrumentOverlay:
+      description: Instrument-specific ESG metadata that overlays issuer ESG.
+      properties:
+        overlayType:
+          type: string
+          enum: [green_bond, social_bond, sustainability_bond, esg_fund, impact_product]
+          description: The type of ESG overlay.
+        standardReference:
+          ref: ESGStandardReference
+          description: Reference to industry standards or frameworks.
+        useOfProceeds:
+          ref: ESGUseOfProceeds
+          description: Information on the use of proceeds.
+        reportingCommitments:
+          ref: ESGReportingCommitments
+          description: Commitments to reporting.
+        instrumentSpecificAssessment:
+          ref: ESGAssessment
+          description: Assessment specific to this instrument.
+
+    ESGStandardReference:
+      description: Reference to ESG standards or frameworks.
+      properties:
+        framework:
+          type: string
+          enum: [ICMA_GreenBondPrinciples, ICMA_SocialBondPrinciples, EU_GreenBondStandard]
+          description: The framework or standard being followed.
+
+    ESGUseOfProceeds:
+      description: Details on the use of proceeds for an instrument.
+      properties:
+        eligibleCategories:
+          type: array
+          items:
+            type: string
+          description: Categories of projects eligible for funding.
+        exclusionCategories:
+          type: array
+          items:
+            type: string
+          description: Categories of projects excluded from funding.
+
+    ESGReportingCommitments:
+      description: Reporting commitments for an ESG instrument.
+      properties:
+        allocationReporting:
+          type: boolean
+          description: Commitment to report on the allocation of funds.
+        impactReporting:
+          type: boolean
+          description: Commitment to report on the impact of the projects.
+
+    ESGInstrumentProfile:
+      description: ESG profile for a financial instrument.
+      properties:
+        inheritanceRule:
+          ref: ESGInheritanceRule
+          description: Rules for ESG inheritance from the issuer.
+        inheritedAssessments:
+          ref: ESGInheritedAssessments
+          description: Configuration for inherited assessments.
+        instrumentOverlays:
+          type: array
+          items:
+            ref: ESGInstrumentOverlay
+          description: List of instrument-specific ESG overlays.
+
+    ESGInheritedAssessments:
+      description: Configuration for inherited ESG assessments.
+      properties:
+        fromIssuer:
+          type: boolean
+          description: Whether to inherit from the issuer.
+        providerPriority:
+          type: array
+          items:
+            type: string
+          description: Priority list of providers for inherited assessments.

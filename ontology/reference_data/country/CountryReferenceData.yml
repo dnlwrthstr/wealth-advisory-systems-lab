@@ -1,0 +1,114 @@
+ontology:
+  name: Country Reference Data
+  version: 1.0.0
+  description: >
+    Reference dataset structure for ISO 3166-1 country codes. This file defines
+    the canonical record shape and includes a starter set of common entries.
+
+  entities:
+    CountryReferenceEntry:
+      description: Canonical reference-data entry for a country or territory.
+      kind: reference_data
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: Country
+          description: ISO 3166-1 alpha-2 country code.
+        name:
+          type: string
+          description: English short name of the country or territory.
+        alpha3Code:
+          type: string
+          description: ISO 3166-1 alpha-3 country code.
+          pattern: '^[A-Z]{3}$'
+        numericCode:
+          type: string
+          description: ISO 3166-1 numeric country code.
+          pattern: '^[0-9]{3}$'
+
+reference_data:
+  standard: ISO 3166-1 alpha-2
+  countries:
+    - code: CH
+      name: Switzerland
+      alpha3Code: CHE
+      numericCode: "756"
+    - code: US
+      name: United States of America
+      alpha3Code: USA
+      numericCode: "840"
+    - code: DE
+      name: Germany
+      alpha3Code: DEU
+      numericCode: "276"
+    - code: GB
+      name: United Kingdom of Great Britain and Northern Ireland
+      alpha3Code: GBR
+      numericCode: "826"
+    - code: FR
+      name: France
+      alpha3Code: FRA
+      numericCode: "250"
+    - code: IT
+      name: Italy
+      alpha3Code: ITA
+      numericCode: "380"
+    - code: ES
+      name: Spain
+      alpha3Code: ESP
+      numericCode: "724"
+    - code: NL
+      name: Netherlands
+      alpha3Code: NLD
+      numericCode: "528"
+    - code: AT
+      name: Austria
+      alpha3Code: AUT
+      numericCode: "040"
+    - code: BE
+      name: Belgium
+      alpha3Code: BEL
+      numericCode: "056"
+    - code: LI
+      name: Liechtenstein
+      alpha3Code: LIE
+      numericCode: "438"
+    - code: LU
+      name: Luxembourg
+      alpha3Code: LUX
+      numericCode: "442"
+    - code: CA
+      name: Canada
+      alpha3Code: CAN
+      numericCode: "124"
+    - code: AU
+      name: Australia
+      alpha3Code: AUS
+      numericCode: "036"
+    - code: SG
+      name: Singapore
+      alpha3Code: SGP
+      numericCode: "702"
+    - code: HK
+      name: Hong Kong
+      alpha3Code: HKG
+      numericCode: "344"
+    - code: JP
+      name: Japan
+      alpha3Code: JPN
+      numericCode: "392"
+    - code: CN
+      name: China
+      alpha3Code: CHN
+      numericCode: "156"
+    - code: AE
+      name: United Arab Emirates
+      alpha3Code: ARE
+      numericCode: "784"
+    - code: KY
+      name: Cayman Islands
+      alpha3Code: CYM
+      numericCode: "136"
