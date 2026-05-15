@@ -1,26 +1,27 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+# Idempotent: existing indices are skipped, missing ones are created.
+set -eu
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OPENSEARCH_URL="${OPENSEARCH_URL:-http://localhost:9200}"
 
-echo "Creating index pms_golden_bond"
-curl -sS -X PUT "$OPENSEARCH_URL/pms_golden_bond" -H "Content-Type: application/json" --data-binary "@$SCRIPT_DIR/pms_golden_bond.index.json"
-echo
+create_if_missing() {
+    name="$1"
+    mapping="$2"
+    status=$(curl -sS -I -o /dev/null -w "%{http_code}" "$OPENSEARCH_URL/$name")
+    if [ "$status" = "200" ]; then
+        echo "Index $name already exists, skipping"
+    else
+        echo "Creating index $name"
+        curl -sS -X PUT "$OPENSEARCH_URL/$name" \
+             -H "Content-Type: application/json" \
+             --data-binary "@$SCRIPT_DIR/$mapping"
+        echo
+    fi
+}
 
-echo "Creating index pms_golden_equity"
-curl -sS -X PUT "$OPENSEARCH_URL/pms_golden_equity" -H "Content-Type: application/json" --data-binary "@$SCRIPT_DIR/pms_golden_equity.index.json"
-echo
-
-echo "Creating index pms_golden_fund"
-curl -sS -X PUT "$OPENSEARCH_URL/pms_golden_fund" -H "Content-Type: application/json" --data-binary "@$SCRIPT_DIR/pms_golden_fund.index.json"
-echo
-
-echo "Creating index pms_golden_identifier"
-curl -sS -X PUT "$OPENSEARCH_URL/pms_golden_identifier" -H "Content-Type: application/json" --data-binary "@$SCRIPT_DIR/pms_golden_identifier.index.json"
-echo
-
-echo "Creating index pms_golden_position"
-curl -sS -X PUT "$OPENSEARCH_URL/pms_golden_position" -H "Content-Type: application/json" --data-binary "@$SCRIPT_DIR/pms_golden_position.index.json"
-echo
-
+create_if_missing "pms_golden_bond" "pms_golden_bond.index.json"
+create_if_missing "pms_golden_equity" "pms_golden_equity.index.json"
+create_if_missing "pms_golden_fund" "pms_golden_fund.index.json"
+create_if_missing "pms_golden_identifier" "pms_golden_identifier.index.json"
+create_if_missing "pms_golden_position" "pms_golden_position.index.json"

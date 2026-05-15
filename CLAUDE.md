@@ -80,7 +80,9 @@ npm run dev   # http://localhost:5173
 docker compose up --build
 ```
 
-Services: frontend `localhost:3000`, custodian-api `localhost:8001`, profile-api `localhost:8002`, PostgreSQL `localhost:5433`.
+Services: frontend `localhost:3000`, custodian-api `localhost:8001`, profile-api `localhost:8002`, instrument-api `localhost:8003`, order-api `localhost:8004`, PostgreSQL `localhost:5433`, OpenSearch `localhost:9200`, OpenSearch Dashboards `localhost:5601`.
+
+OpenSearch runs with the security plugin disabled (dev mode, no auth, plain HTTP). The `opensearch-init` one-shot service creates the five `pms_golden_*` indices from `data/opensearch/golden/` on first `up`; it is idempotent — `docker compose run --rm opensearch-init` re-applies safely (existing indices are skipped). Regenerate mappings after ontology edits with `PYTHONPATH=src python -m ontology_tools.golden_record_2_opensearch.convert_to_opensearch -i ontology -o data/opensearch/golden`.
 
 API docs: `http://localhost:8001/docs` and `http://localhost:8002/docs`.
 

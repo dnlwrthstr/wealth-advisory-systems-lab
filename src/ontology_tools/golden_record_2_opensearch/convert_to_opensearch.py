@@ -352,11 +352,27 @@ def write_index_definitions(
 ) -> Tuple[int, List[str]]:
     output_dir.mkdir(parents=True, exist_ok=True)
     script_lines = [
-        "#!/usr/bin/env bash",
-        "set -euo pipefail",
+        "#!/bin/sh",
+        "# Idempotent: existing indices are skipped, missing ones are created.",
+        "set -eu",
         "",
-        'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
+        'SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"',
         'OPENSEARCH_URL="${OPENSEARCH_URL:-http://localhost:9200}"',
+        "",
+        "create_if_missing() {",
+        "    name=\"$1\"",
+        "    mapping=\"$2\"",
+        '    status=$(curl -sS -I -o /dev/null -w "%{http_code}" "$OPENSEARCH_URL/$name")',
+        '    if [ "$status" = "200" ]; then',
+        '        echo "Index $name already exists, skipping"',
+        "    else",
+        '        echo "Creating index $name"',
+        '        curl -sS -X PUT "$OPENSEARCH_URL/$name" \\',
+        '             -H "Content-Type: application/json" \\',
+        '             --data-binary "@$SCRIPT_DIR/$mapping"',
+        '        echo',
+        "    fi",
+        "}",
         "",
     ]
     index_names: List[str] = []
@@ -371,17 +387,13 @@ def write_index_definitions(
             encoding="utf-8",
         )
 
-        script_lines.append(f'echo "Creating index {index_name}"')
         script_lines.append(
-            f'curl -sS -X PUT "$OPENSEARCH_URL/{index_name}" '
-            f'-H "Content-Type: application/json" '
-            f'--data-binary "@$SCRIPT_DIR/{mapping_path.name}"'
+            f'create_if_missing "{index_name}" "{mapping_path.name}"'
         )
-        script_lines.append("echo")
-        script_lines.append("")
 
     script_path = output_dir / "create_indices.sh"
     script_path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+    script_path.chmod(0o755)
     return len(records), index_names
 
 

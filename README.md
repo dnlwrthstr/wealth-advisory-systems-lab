@@ -73,6 +73,20 @@ Then open:
 - Frontend: <http://localhost:3000>
 - Backend API docs: <http://localhost:8000/docs>
 - PostgreSQL: `localhost:5433`, database `wealth_advisory`, user `wealth_advisory`, password `wealth_advisory`
+- OpenSearch (golden record store): <http://localhost:9200> — security disabled, no auth
+- OpenSearch Dashboards: <http://localhost:5601>
+
+The `opensearch-init` service runs once on first `up` to create the five
+golden indices (`pms_golden_bond`, `pms_golden_equity`, `pms_golden_fund`,
+`pms_golden_identifier`, `pms_golden_position`) from
+`data/opensearch/golden/`. The script is idempotent — re-runs skip
+existing indices. To regenerate mappings after changing the ontology:
+
+```bash
+PYTHONPATH=src python -m ontology_tools.golden_record_2_opensearch.convert_to_opensearch \
+  -i ontology -o data/opensearch/golden
+docker compose run --rm opensearch-init
+```
 
 If the browser still shows an older frontend after changes, rebuild and recreate the frontend container:
 
