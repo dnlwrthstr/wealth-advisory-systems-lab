@@ -39,7 +39,6 @@ from universe.models import (
 )
 
 from ._firds import iter_issuer_records
-from ._serializer import flatten_value_objects
 
 log = logging.getLogger("fund_firds")
 
@@ -192,7 +191,7 @@ def firds_to_golden(
         asset_class_label += " ETF"
         asset_class_id += "-ETF"
 
-    currency = Currency(code=currency_code)
+    currency = Currency(currency_code)
     country = Country(issuer["country"]) if issuer.get("country") else None
 
     primary_listing = ListingSnapshot(
@@ -270,8 +269,7 @@ def write_ndjson(docs: List[FundGolden], path: Path) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
         for doc in docs:
-            payload = flatten_value_objects(doc.model_dump(mode="json", exclude_none=True))
-            fh.write(json.dumps(payload, ensure_ascii=False))
+            fh.write(doc.model_dump_json(exclude_none=True))
             fh.write("\n")
     return len(docs)
 

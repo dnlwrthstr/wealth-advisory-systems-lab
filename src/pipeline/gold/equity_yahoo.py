@@ -235,7 +235,7 @@ def yahoo_info_to_golden(
     currency_code = _safe(info, "currency") or _safe(info, "financialCurrency")
     if not currency_code:
         raise ValueError(f"{ticker_symbol}: no currency from yfinance")
-    currency = Currency(code=currency_code)
+    currency = Currency(currency_code)
 
     mic = _exchange_to_mic(_safe(info, "exchange"))
     if not mic:
@@ -417,15 +417,10 @@ def fetch_one(ticker_symbol: str, run_id: str, now: datetime) -> Optional[Equity
 
 
 def write_ndjson(docs: List[EquityGolden], path: Path) -> int:
-    import json
-
-    from ._serializer import flatten_value_objects
-
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
         for doc in docs:
-            payload = flatten_value_objects(doc.model_dump(mode="json", exclude_none=True))
-            fh.write(json.dumps(payload, ensure_ascii=False))
+            fh.write(doc.model_dump_json(exclude_none=True))
             fh.write("\n")
     return len(docs)
 

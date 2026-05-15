@@ -14,18 +14,11 @@ class FinancialInstrument(BaseModel):
     identificationList: Optional[List[FinancialInstrumentIdentification]] = Field(None, description="List of instrument identifications.")
     cfiCode: Optional[CfiCode] = Field(None, description="CFI classification code of the instrument.")
 
-class Currency(BaseModel):
+class Currency(RootModel):
     """
-    Canonical currency reference definition according to ISO 4217.
-
+    ISO 4217 alphabetic currency code.
     """
-    code: Optional[str] = Field(None, description="Three-letter ISO 4217 alphabetic currency code. Example: EUR, USD, CHF. ")
-    numericCode: Optional[str] = Field(None, description="Three-digit ISO 4217 numeric currency code. Example: 978 (EUR), 840 (USD), 756 (CHF). ")
-    name: Optional[str] = Field(None, description="Official currency name as defined by ISO 4217. Example: Euro, US Dollar, Swiss Franc. ")
-    minorUnits: Optional[int] = Field(None, description="Number of decimal places used for the currency. Example: 2 for EUR/USD, 0 for JPY. ")
-    symbol: Optional[str] = Field(None, description="Common currency symbol used for display purposes. Example: €, $, CHF. ")
-    issuingCountry: Optional[Country] = Field(None, description="ISO 3166-1 alpha-2 country code of the issuing authority. Example: EU (pseudo), US, CH. ")
-    issuingAuthority: Optional[str] = Field(None, description="Central bank or monetary authority responsible for issuing the currency. Example: ECB, Federal Reserve, Swiss National Bank. ")
+    root: str
 
 class LegalEntityIdentifier(RootModel):
     """
@@ -1313,13 +1306,6 @@ class CfiStandardInfo(BaseModel):
     name: Optional[str] = Field(None, description="Classification of Financial Instruments (CFI).")
     isoStandard: Optional[str] = Field(None, description="ISO 10962.")
     authority: Optional[str] = Field(None, description="International Organization for Standardization (ISO).")
-
-class CurrencyStandardInfo(BaseModel):
-    """
-    Information about the ISO 4217 standard.
-    """
-    name: Optional[str] = Field(None, description="Name of the standard (ISO 4217).")
-    authority: Optional[str] = Field(None, description="International Organization for Standardization.")
 
 class CurrencyReferenceEntry(BaseModel):
     """

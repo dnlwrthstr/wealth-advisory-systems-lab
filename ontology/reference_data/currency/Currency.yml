@@ -1,64 +1,29 @@
 ontology:
   name: Currency
   namespace: bank_data.securities_domain
-  version: "1.0"
+  version: "2.0"
   description: >
-    Currency represents a legal tender used as a unit of account for pricing,
-    settlement, valuation, accounting, and reporting.
-    Currencies are identified exclusively using ISO 4217 and are not
-    financial instruments.
+    `Currency` is a value object: the three-letter ISO 4217 alphabetic
+    currency code (USD, EUR, CHF, …). Wherever a currency appears in the
+    instrument or position ontologies (`currencyOfDenomination`,
+    `listingCurrency`, `Price.currency`, `CurrencyAmount.currency`, …)
+    it is this code string — not a nested object.
+
+    The descriptive metadata that ISO 4217 attaches to each code
+    (numeric code, name, minor units, display symbol, issuing country,
+    monetary authority) lives in the *reference dataset* entity
+    `CurrencyReferenceEntry` defined in `CurrencyReferenceData.yml`.
+    Golden records hold the code; lookups go through the reference data.
+
+    This separation mirrors how `LegalEntityIdentifier` (also a code
+    string) and `CfiCode` are modelled, and matches the bundled example
+    payloads which carry `"currencyOfDenomination": "USD"` rather than a
+    nested object.
 
   entities:
     Currency:
-      description: >
-        Canonical currency reference definition according to ISO 4217.
-      properties:
-        code:
-          type: string
-          description: >
-            Three-letter ISO 4217 alphabetic currency code.
-            Example: EUR, USD, CHF.
-          pattern: "^[A-Z]{3}$"
-        numericCode:
-          type: string
-          description: >
-            Three-digit ISO 4217 numeric currency code.
-            Example: 978 (EUR), 840 (USD), 756 (CHF).
-          pattern: "^[0-9]{3}$"
-        name:
-          type: string
-          description: >
-            Official currency name as defined by ISO 4217.
-            Example: Euro, US Dollar, Swiss Franc.
-        minorUnits:
-          type: integer
-          description: >
-            Number of decimal places used for the currency.
-            Example: 2 for EUR/USD, 0 for JPY.
-          minimum: 0
-          maximum: 6
-        symbol:
-          type: string
-          description: >
-            Common currency symbol used for display purposes.
-            Example: €, $, CHF.
-        issuingCountry:
-          type: Country
-          description: >
-            ISO 3166-1 alpha-2 country code of the issuing authority.
-            Example: EU (pseudo), US, CH.
-        issuingAuthority:
-          type: string
-          description: >
-            Central bank or monetary authority responsible for issuing the currency.
-            Example: ECB, Federal Reserve, Swiss National Bank.
-
-    CurrencyStandardInfo:
-      description: Information about the ISO 4217 standard.
-      properties:
-        name:
-          type: string
-          description: Name of the standard (ISO 4217).
-        authority:
-          type: string
-          description: International Organization for Standardization.
+      description: ISO 4217 alphabetic currency code.
+      kind: value_object
+      type: string
+      pattern: "^[A-Z]{3}$"
+      example: USD
