@@ -88,23 +88,33 @@ PYTHONPATH=src python -m ontology_tools.golden_record_2_opensearch.convert_to_op
 docker compose run --rm opensearch-init
 ```
 
-### Populating the equity index
+### Populating the golden indices
 
-The gold-tier pipeline fetches real equities from Yahoo Finance and bulk-loads
-them into `pms_golden_equity` (the same index the frontend instrument search
-reads from when `OPENSEARCH_URL` is set on `instrument-api`):
+The gold-tier pipeline fetches from public sources and bulk-loads into
+the `pms_golden_*` indices. When `OPENSEARCH_URL` is set on
+`instrument-api`, the frontend instrument search queries all three
+families (`pms_golden_equity`, `pms_golden_bond`, `pms_golden_fund`).
 
 ```bash
-# 1. Fetch (writes data/opensearch/golden/equity/equities.ndjson)
+# Equities (Yahoo Finance) — supported universes: smi, sp500, nasdaq100, dax40, ftse100
 PYTHONPATH=src python -m pipeline.gold.equity_yahoo --universe smi
-
-# 2. Load
 PYTHONPATH=src python -m pipeline.gold.load \
   -i data/opensearch/golden/equity/equities.ndjson -x pms_golden_equity
+
+# Bonds (ESMA FIRDS) — bundled curated issuer LEIs
+PYTHONPATH=src python -m pipeline.gold.bond_firds --limit-per-issuer 10
+PYTHONPATH=src python -m pipeline.gold.load \
+  -i data/opensearch/golden/bond/bonds.ndjson -x pms_golden_bond
+
+# UCITS funds (ESMA FIRDS) — bundled curated umbrella LEIs
+PYTHONPATH=src python -m pipeline.gold.fund_firds --limit-per-issuer 10
+PYTHONPATH=src python -m pipeline.gold.load \
+  -i data/opensearch/golden/fund/funds.ndjson -x pms_golden_fund
 ```
 
-Supported universes: `smi`, `sp500`, `nasdaq100`, `dax40`, `ftse100`. Add
-`--limit N` for smoke testing.
+Add `--limit-per-issuer N` to bond/fund fetchers for smoke testing. FIRDS
+hosts the data on best-effort infra; transient 5xx errors are retried with
+exponential backoff in the bundled Solr client.
 
 If the browser still shows an older frontend after changes, rebuild and recreate the frontend container:
 

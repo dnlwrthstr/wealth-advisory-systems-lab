@@ -1,0 +1,80 @@
+# Curated UCITS umbrella LEIs for FundGolden sample-data generation.
+#
+# A UCITS fund umbrella is the legal entity that contains one or more
+# sub-funds; FIRDS reports the umbrella's LEI as the instrument's `lei`.
+# The management company is a separate legal entity (BlackRock Asset
+# Management Ireland Ltd, Amundi Asset Management, etc.) and is captured
+# in the `managementCompany` field below so the FundGolden record can
+# express both the umbrella and the manager.
+#
+# Verified by querying a known ETF ISIN from each family against ESMA FIRDS.
+
+issuers:
+
+  # --- iShares (BlackRock) UCITS umbrellas ----------------------------------
+  - lei: "549300QS4Q1IT6XCA514"
+    umbrellaName: "iShares III plc"
+    managementCompany: "BlackRock Asset Management Ireland Limited"
+    country: "IE"
+    legalFramework: "UCITS"
+    legalStructure: "Plc"
+
+  - lei: "5493006ESS9BM09FB892"
+    umbrellaName: "iShares VII plc"
+    managementCompany: "BlackRock Asset Management Ireland Limited"
+    country: "IE"
+    legalFramework: "UCITS"
+    legalStructure: "Plc"
+
+  - lei: "549300IJBBIPXKWNXJ28"
+    umbrellaName: "iShares (Bond Funds) plc"
+    managementCompany: "BlackRock Asset Management Ireland Limited"
+    country: "IE"
+    legalFramework: "UCITS"
+    legalStructure: "Plc"
+
+  # --- Xtrackers (DWS) ------------------------------------------------------
+  - lei: "549300ZPCMJ0UKSMRS71"
+    umbrellaName: "Xtrackers"
+    managementCompany: "DWS Investment S.A."
+    country: "IE"
+    legalFramework: "UCITS"
+    legalStructure: "Plc"
+
+  # --- Vanguard -------------------------------------------------------------
+  - lei: "EEXSPYGY7X8YAH8ZJF49"
+    umbrellaName: "Vanguard Funds plc"
+    managementCompany: "Vanguard Group (Ireland) Limited"
+    country: "IE"
+    legalFramework: "UCITS"
+    legalStructure: "Plc"
+
+  - lei: "B8GS85IADJB33D8WL305"
+    umbrellaName: "Vanguard Investment Series plc"
+    managementCompany: "Vanguard Group (Ireland) Limited"
+    country: "IE"
+    legalFramework: "UCITS"
+    legalStructure: "Plc"
+
+  # --- Amundi (incl. former Lyxor) ------------------------------------------
+  - lei: "5493003BFED2MWDBYH64"
+    umbrellaName: "Amundi Index Solutions"
+    managementCompany: "Amundi Luxembourg S.A."
+    country: "LU"
+    legalFramework: "UCITS"
+    legalStructure: "SICAV"
+
+  - lei: "549300QB128BFB840071"
+    umbrellaName: "Amundi MSCI World UCITS ETF"
+    managementCompany: "Amundi Asset Management"
+    country: "LU"
+    legalFramework: "UCITS"
+    legalStructure: "SICAV"
+
+  # --- UBS Asset Management -------------------------------------------------
+  - lei: "549300HX54UVCB4TEH06"
+    umbrellaName: "UBS (Lux) Fund Solutions"
+    managementCompany: "UBS Fund Management (Luxembourg) S.A."
+    country: "LU"
+    legalFramework: "UCITS"
+    legalStructure: "SICAV"

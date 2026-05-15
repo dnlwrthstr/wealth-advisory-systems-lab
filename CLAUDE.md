@@ -84,7 +84,17 @@ Services: frontend `localhost:3000`, custodian-api `localhost:8001`, profile-api
 
 OpenSearch runs with the security plugin disabled (dev mode, no auth, plain HTTP). The `opensearch-init` one-shot service creates the five `pms_golden_*` indices from `data/opensearch/golden/` on first `up`; it is idempotent — `docker compose run --rm opensearch-init` re-applies safely (existing indices are skipped). Regenerate mappings after ontology edits with `PYTHONPATH=src python -m ontology_tools.golden_record_2_opensearch.convert_to_opensearch -i ontology -o data/opensearch/golden`.
 
-`instrument-api` reads from OpenSearch (`pms_golden_equity`) when `OPENSEARCH_URL` is set; without it the service falls back to the static `INSTRUMENTS` fixture in `src/instruments/data.py` so unit tests still work. Populate the index with `PYTHONPATH=src python -m pipeline.gold.equity_yahoo --universe smi` followed by `python -m pipeline.gold.load -i data/opensearch/golden/equity/equities.ndjson -x pms_golden_equity`. The `pipeline.gold.equity_yahoo` builder constructs validated `EquityGolden` pydantic instances, then post-processes the dump to flatten `Currency` (object) → ISO code string before writing NDJSON — the ontology defines `Currency` as a value object but the OpenSearch mapping (and the bundled `fund_golden_example.ndjson`) store the bare ISO 4217 code. The same flattening applies to `Country` and `CfiCode` via their `RootModel[str]` definitions in `src/universe/models.py`.
+`instrument-api` reads from OpenSearch (across `pms_golden_equity`, `pms_golden_bond`, and `pms_golden_fund`) when `OPENSEARCH_URL` is set; without it the service falls back to the static `INSTRUMENTS` fixture in `src/instruments/data.py` so unit tests still work.
+
+Gold-tier ingestion is split across three fetchers under `src/pipeline/gold/`:
+
+- `equity_yahoo` — loads Wikipedia-sourced universes (SMI / S&P 500 / Nasdaq 100 / DAX / FTSE 100), fetches yfinance per ticker, builds `EquityGolden`.
+- `bond_firds` — bundled issuer-LEI YAML at `src/pipeline/gold/data/bond_issuers.yml`, queries ESMA FIRDS Solr, filters to CFI category D, builds `BondGolden`. Coupon rate from FIRDS is a percentage (1.5); the ontology expects a decimal fraction (0.015), so the fetcher divides by 100. The OpenSearchInstrumentStore then multiplies by 100 again when projecting onto the frontend's `coupon_pct` field.
+- `fund_firds` — bundled umbrella-LEI YAML at `src/pipeline/gold/data/fund_umbrellas.yml`, queries FIRDS, filters to CFI category C, builds `FundGolden`. CFI position 2 drives `fundSubType`, position 4 drives `dividendPolicy`, position 5 drives `primaryAssetClassExposure`.
+
+All three reuse `src/pipeline/gold/_serializer.py:flatten_value_objects` which collapses `Currency` (a 7-field value object in the ontology) to its ISO 4217 code string at serialisation time — the OpenSearch index mappings store the bare code, and so do the bundled example payloads. `Country` and `CfiCode` are `RootModel[str]` already, so pydantic serialises them as scalars natively.
+
+`OpenSearchInstrumentStore.search` accepts `type=equity|simpleBond|fund` and translates each to an `assetClass.keyword` prefix filter (`Equity` / `Fixed Income` / `Fund`). The frontend's existing `Instrument` dataclass is the API contract; bond-specific fields (`coupon_pct`, `maturity_date`) populate from BondGolden, others stay null.
 
 API docs: `http://localhost:8001/docs` and `http://localhost:8002/docs`.
 

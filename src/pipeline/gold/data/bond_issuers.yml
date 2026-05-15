@@ -1,0 +1,84 @@
+# Curated issuer list for BondGolden sample-data generation.
+#
+# Each entry provides an LEI plus enough metadata that the FIRDS records
+# we pull back can be mapped to a sensible BondGolden.issuer block without
+# a separate GLEIF call. Add your own entries as needed.
+#
+# Sources / verification:
+#   - GLEIF (https://api.gleif.org/) for LEI validation
+#   - ESMA FIRDS (https://registers.esma.europa.eu/) for bond coverage
+
+issuers:
+
+  # --- Sovereigns -----------------------------------------------------------
+  - lei: "529900AQBND3S6YJLY83"
+    name: "Federal Republic of Germany"
+    issuerType: "government"
+    country: "DE"
+    assetClass: "Fixed Income / Government Bond"
+    assetClassId: "AC-FI-GOVT"
+
+  - lei: "815600DE60799F5A9309"
+    name: "Repubblica Italiana"
+    issuerType: "government"
+    country: "IT"
+    assetClass: "Fixed Income / Government Bond"
+    assetClassId: "AC-FI-GOVT"
+
+  - lei: "254900G14ALGVKORFN62"
+    name: "Kingdom of the Netherlands (DSTA)"
+    issuerType: "government"
+    country: "NL"
+    assetClass: "Fixed Income / Government Bond"
+    assetClassId: "AC-FI-GOVT"
+
+  # --- Supranationals -------------------------------------------------------
+  - lei: "5493006YXS1U5GIHE750"
+    name: "European Investment Bank"
+    issuerType: "supranational"
+    country: "LU"
+    assetClass: "Fixed Income / Supranational Bond"
+    assetClassId: "AC-FI-SUPRA"
+
+  # --- Corporates -----------------------------------------------------------
+  - lei: "HWUPKR0MPOU8FGXBT394"
+    name: "Apple Inc."
+    issuerType: "corporate"
+    country: "US"
+    assetClass: "Fixed Income / Corporate Bond"
+    assetClassId: "AC-FI-CORP-IG"
+
+  - lei: "529900S21EQ1BO4ESM68"
+    name: "TotalEnergies SE"
+    issuerType: "corporate"
+    country: "FR"
+    assetClass: "Fixed Income / Corporate Bond"
+    assetClassId: "AC-FI-CORP-IG"
+
+  - lei: "529900D6BF99LW9R2E68"
+    name: "SAP SE"
+    issuerType: "corporate"
+    country: "DE"
+    assetClass: "Fixed Income / Corporate Bond"
+    assetClassId: "AC-FI-CORP-IG"
+
+  - lei: "529900K9B0N5BT694847"
+    name: "Allianz SE"
+    issuerType: "insurance_company"
+    country: "DE"
+    assetClass: "Fixed Income / Corporate Bond"
+    assetClassId: "AC-FI-CORP-IG"
+
+  - lei: "549300U41AUUVOAAOB37"
+    name: "Roche Holding AG"
+    issuerType: "corporate"
+    country: "CH"
+    assetClass: "Fixed Income / Corporate Bond"
+    assetClassId: "AC-FI-CORP-IG"
+
+  - lei: "529900PW78JIYOUBSR24"
+    name: "Daimler Truck Holding AG"
+    issuerType: "corporate"
+    country: "DE"
+    assetClass: "Fixed Income / Corporate Bond"
+    assetClassId: "AC-FI-CORP-IG"

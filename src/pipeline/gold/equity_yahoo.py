@@ -416,33 +416,15 @@ def fetch_one(ticker_symbol: str, run_id: str, now: datetime) -> Optional[Equity
     return None
 
 
-_CURRENCY_KEYS = set(Currency.model_fields.keys())
-
-
-def _flatten_value_objects(node: Any) -> Any:
-    """Walk a dump-style dict tree and flatten Currency-shaped objects to
-    their `code` string. The ontology defines Currency as a value object,
-    but the golden index mapping (and the bundled example payloads) store
-    it as the bare ISO 4217 code. Country/CfiCode are already RootModel-
-    serialised to scalars by pydantic itself.
-    """
-    if isinstance(node, dict):
-        keys = set(node.keys())
-        if "code" in keys and keys.issubset(_CURRENCY_KEYS):
-            return node["code"]
-        return {k: _flatten_value_objects(v) for k, v in node.items()}
-    if isinstance(node, list):
-        return [_flatten_value_objects(item) for item in node]
-    return node
-
-
 def write_ndjson(docs: List[EquityGolden], path: Path) -> int:
     import json
+
+    from ._serializer import flatten_value_objects
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
         for doc in docs:
-            payload = _flatten_value_objects(doc.model_dump(mode="json", exclude_none=True))
+            payload = flatten_value_objects(doc.model_dump(mode="json", exclude_none=True))
             fh.write(json.dumps(payload, ensure_ascii=False))
             fh.write("\n")
     return len(docs)

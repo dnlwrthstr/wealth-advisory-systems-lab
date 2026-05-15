@@ -23,12 +23,24 @@ _ASSET_CLASS_TO_OW_TYPE: Dict[str, str] = {
     "Equity / Common Stock": "equity",
     "Equity / ADR": "equity",
     "Equity / REIT": "equity",
+    "Fixed Income / Government Bond": "simpleBond",
+    "Fixed Income / Corporate Bond": "simpleBond",
+    "Fixed Income / Supranational Bond": "simpleBond",
 }
 
 
 def _ow_type_from_doc(src: Dict[str, Any]) -> str:
     asset_class = src.get("assetClass") or ""
-    return _ASSET_CLASS_TO_OW_TYPE.get(asset_class, "equity")
+    if asset_class in _ASSET_CLASS_TO_OW_TYPE:
+        return _ASSET_CLASS_TO_OW_TYPE[asset_class]
+    # Fall back to family prefix for shapes not in the explicit table.
+    if asset_class.startswith("Fund"):
+        return "fund"
+    if asset_class.startswith("Fixed Income"):
+        return "simpleBond"
+    if asset_class.startswith("Equity"):
+        return "equity"
+    return "other"
 
 
 def _isin_from_identifier_list(src: Dict[str, Any]) -> str:
@@ -46,32 +58,59 @@ def _ticker_from_identifier_list(src: Dict[str, Any]) -> str:
 
 
 def _doc_to_instrument(src: Dict[str, Any]) -> Instrument:
-    """Project an EquityGolden source dict onto the flat Instrument shape."""
+    """Project a Equity/Bond/Fund golden source dict onto the flat Instrument shape."""
     primary = src.get("primaryListing") or {}
     market = src.get("marketData") or {}
     last_trade = market.get("lastTradePrice") or {}
     industry = src.get("industrySector") or {}
     issuer = src.get("issuer") or {}
+    umbrella = src.get("umbrella") or {}
+    management = src.get("managementCompany") or {}
 
     isin = _isin_from_identifier_list(src) or src.get("isin") or ""
     ticker = primary.get("ticker") or _ticker_from_identifier_list(src)
     short = src.get("shortName") or ticker or src.get("longName") or ""
+
+    ow_type = _ow_type_from_doc(src)
+
+    # Bond-only fields. FIRDS stores currentCouponRate as a decimal fraction
+    # (0.015 for 1.5%) — the frontend's coupon_pct uses percentage units, so
+    # project decimal → percentage on the way out.
+    coupon_decimal = src.get("currentCouponRate")
+    coupon_pct = (coupon_decimal * 100) if isinstance(coupon_decimal, (int, float)) else None
+    maturity_date = src.get("maturityDate")
+
+    # Fund-/equity-/bond-aware "description": prefer issuer legal name, then
+    # umbrella, then management company. Yields a meaningful label for each.
+    description = (
+        issuer.get("legalName")
+        or umbrella.get("legalName")
+        or management.get("legalName")
+        or ""
+    )
+
+    country = (
+        src.get("incorporationCountry")
+        or src.get("domicile")
+        or src.get("countryOfRisk")
+        or ""
+    ) or None
 
     return Instrument(
         id=src.get("goldenId") or isin or ticker,
         isin=isin,
         name=src.get("longName") or short,
         short_name=short,
-        type=_ow_type_from_doc(src),
+        type=ow_type,
         currency=src.get("currencyOfDenomination") or primary.get("listingCurrency") or "",
         price=float(last_trade.get("value") or 0.0),
         exchange=primary.get("mic"),
-        country=src.get("incorporationCountry"),
+        country=country,
         sector=industry.get("sectorLabel") or industry.get("canonicalLabel"),
-        coupon_pct=None,
-        maturity_date=None,
+        coupon_pct=coupon_pct,
+        maturity_date=maturity_date,
         yield_pct=None,
-        description=issuer.get("legalName") or "",
+        description=description,
     )
 
 
@@ -81,7 +120,7 @@ class OpenSearchInstrumentStore:
     def __init__(
         self,
         client: OpenSearch,
-        index: str = "pms_golden_equity",
+        index: str = "pms_golden_equity,pms_golden_bond,pms_golden_fund",
     ):
         self._client = client
         self._index = index
@@ -140,23 +179,18 @@ class OpenSearchInstrumentStore:
 
         q = (query or "").strip()
         if q:
-            must.append(
-                {
-                    "multi_match": {
-                        "query": q,
-                        "type": "best_fields",
-                        "fields": [
-                            "longName^3",
-                            "shortName^2",
-                            "industrySector.sectorLabel",
-                            "industrySector.canonicalLabel",
-                            "incorporationCountry",
-                        ],
-                        "operator": "and",
-                    }
-                }
-            )
-            # Also match identifier substrings (ISIN / ticker) via nested.
+            text_fields = [
+                "longName^3",
+                "shortName^2",
+                "issuer.legalName^2",
+                "umbrella.legalName^2",
+                "managementCompany.legalName",
+                "industrySector.sectorLabel",
+                "industrySector.canonicalLabel",
+                "incorporationCountry",
+                "countryOfRisk",
+                "domicile",
+            ]
             must.append(
                 {
                     "bool": {
@@ -164,22 +198,14 @@ class OpenSearchInstrumentStore:
                             {
                                 "multi_match": {
                                     "query": q,
-                                    "fields": [
-                                        "longName^3",
-                                        "shortName^2",
-                                        "industrySector.sectorLabel",
-                                        "industrySector.canonicalLabel",
-                                        "incorporationCountry",
-                                    ],
+                                    "fields": text_fields,
                                     "operator": "and",
                                 }
                             },
                             {
                                 "nested": {
                                     "path": "identifierList",
-                                    "query": {
-                                        "match": {"identifierList.identifier": q}
-                                    },
+                                    "query": {"match": {"identifierList.identifier": q}},
                                 }
                             },
                         ],
@@ -187,24 +213,20 @@ class OpenSearchInstrumentStore:
                     }
                 }
             )
-            # Drop the duplicate must[0] — its boolean wrapper above is the
-            # authoritative match clause. Keeps the query tree small.
-            must = must[1:]
 
         if currency:
             filters.append({"term": {"currencyOfDenomination.keyword": currency.upper()}})
 
         if type_filter:
             ow = type_filter.lower()
-            asset_classes = [
-                ac for ac, mapped in _ASSET_CLASS_TO_OW_TYPE.items() if mapped == ow
-            ]
-            if asset_classes:
-                filters.append(
-                    {"terms": {"assetClass.keyword": asset_classes}}
-                )
-            elif ow != "equity":
-                # No equity hits will satisfy a non-equity filter (yet).
+            prefix = {
+                "equity": "Equity",
+                "simplebond": "Fixed Income",
+                "fund": "Fund",
+            }.get(ow.lower())
+            if prefix:
+                filters.append({"prefix": {"assetClass.keyword": prefix}})
+            else:
                 return [], 0
 
         body: Dict[str, Any] = {
@@ -240,8 +262,16 @@ class OpenSearchInstrumentStore:
         except Exception:  # noqa: BLE001
             return ["equity"]
         buckets = resp.get("aggregations", {}).get("types", {}).get("buckets", [])
-        seen = sorted({_ASSET_CLASS_TO_OW_TYPE.get(b["key"], "equity") for b in buckets})
-        return seen or ["equity"]
+        seen = set()
+        for b in buckets:
+            ac = b["key"]
+            if ac.startswith("Equity"):
+                seen.add("equity")
+            elif ac.startswith("Fixed Income"):
+                seen.add("simpleBond")
+            elif ac.startswith("Fund"):
+                seen.add("fund")
+        return sorted(seen) or ["equity"]
 
 
 def opensearch_client_from_env() -> Optional[OpenSearch]:
