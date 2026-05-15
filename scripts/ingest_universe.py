@@ -1,14 +1,18 @@
 """
-Instrument universe ingestion script.
+Instrument universe ingestion — fetches master and market data from internet.
 
-Reads seeds from IN_INSTRUMENTS_COMPLETE.csv, enriches equities via yfinance,
-and writes golden records to data/universe/equity.parquet and simpleBond.parquet.
+Reads seeds.parquet (produced by extract_universe_seeds.py), then:
+  --step master  : fetch instrument master (issuer, sector, country, terms)
+  --step market  : fetch market snapshots (price, cap, PE, YTM)
+  --step all     : both in sequence (default)
+
+Without --live, synthetic data is generated for all instruments (instant, for dev).
+With --live, yfinance is called per instrument (slow, real data).
 
 Usage:
-    python scripts/ingest_universe.py [--csv PATH] [--limit N] [--out DIR]
-
-The --limit flag caps how many instruments of each class to attempt (useful for
-quick dev runs; omit for full ingestion which takes ~30 min for 2500 equities).
+    python scripts/ingest_universe.py --step all
+    python scripts/ingest_universe.py --step master --live --type equity
+    python scripts/ingest_universe.py --step market --live --limit 100
 """
 from __future__ import annotations
 
@@ -17,349 +21,379 @@ import logging
 import random
 import sys
 import time
-from datetime import datetime, date
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
-# Allow running from project root without activating venv explicitly
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import pandas as pd
 import yfinance as yf
 
-from universe.schemas import BondRecord, EquityRecord
+from universe.schemas import BondMaster, EquityMaster, InstrumentSeed, MarketSnapshot
 from universe.store import ParquetUniverseStore
 
 log = logging.getLogger("ingest")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-# ── Constants ──────────────────────────────────────────────────────────────────
+# ── Reference tables ───────────────────────────────────────────────────────────
 
-ISIN_COUNTRY = {
-    "AD": "AD", "AE": "AE", "AF": "AF", "AG": "AG", "AL": "AL", "AM": "AM",
-    "AO": "AO", "AR": "AR", "AT": "AT", "AU": "AU", "AZ": "AZ", "BA": "BA",
-    "BB": "BB", "BD": "BD", "BE": "BE", "BG": "BG", "BH": "BH", "BI": "BI",
-    "BJ": "BJ", "BN": "BN", "BO": "BO", "BR": "BR", "BS": "BS", "BT": "BT",
-    "BW": "BW", "BY": "BY", "BZ": "BZ", "CA": "CA", "CD": "CD", "CF": "CF",
-    "CG": "CG", "CH": "CH", "CI": "CI", "CL": "CL", "CM": "CM", "CN": "CN",
-    "CO": "CO", "CR": "CR", "CU": "CU", "CV": "CV", "CY": "CY", "CZ": "CZ",
-    "DE": "DE", "DJ": "DJ", "DK": "DK", "DM": "DM", "DO": "DO", "DZ": "DZ",
-    "EC": "EC", "EE": "EE", "EG": "EG", "ER": "ER", "ES": "ES", "ET": "ET",
-    "FI": "FI", "FJ": "FJ", "FM": "FM", "FR": "FR", "GA": "GA", "GB": "GB",
-    "GD": "GD", "GE": "GE", "GH": "GH", "GM": "GM", "GN": "GN", "GQ": "GQ",
-    "GR": "GR", "GT": "GT", "GW": "GW", "GY": "GY", "HK": "HK", "HN": "HN",
-    "HR": "HR", "HT": "HT", "HU": "HU", "ID": "ID", "IE": "IE", "IL": "IL",
-    "IN": "IN", "IQ": "IQ", "IR": "IR", "IS": "IS", "IT": "IT", "JM": "JM",
-    "JO": "JO", "JP": "JP", "KE": "KE", "KG": "KG", "KH": "KH", "KI": "KI",
-    "KM": "KM", "KN": "KN", "KP": "KP", "KR": "KR", "KW": "KW", "KZ": "KZ",
-    "LA": "LA", "LB": "LB", "LC": "LC", "LI": "LI", "LK": "LK", "LR": "LR",
-    "LS": "LS", "LT": "LT", "LU": "LU", "LV": "LV", "LY": "LY", "MA": "MA",
-    "MC": "MC", "MD": "MD", "ME": "ME", "MG": "MG", "MH": "MH", "MK": "MK",
-    "ML": "ML", "MM": "MM", "MN": "MN", "MR": "MR", "MT": "MT", "MU": "MU",
-    "MV": "MV", "MW": "MW", "MX": "MX", "MY": "MY", "MZ": "MZ", "NA": "NA",
-    "NE": "NE", "NG": "NG", "NI": "NI", "NL": "NL", "NO": "NO", "NP": "NP",
-    "NR": "NR", "NZ": "NZ", "OM": "OM", "PA": "PA", "PE": "PE", "PG": "PG",
-    "PH": "PH", "PK": "PK", "PL": "PL", "PT": "PT", "PW": "PW", "PY": "PY",
-    "QA": "QA", "RO": "RO", "RS": "RS", "RU": "RU", "RW": "RW", "SA": "SA",
-    "SB": "SB", "SC": "SC", "SD": "SD", "SE": "SE", "SG": "SG", "SI": "SI",
-    "SK": "SK", "SL": "SL", "SM": "SM", "SN": "SN", "SO": "SO", "SR": "SR",
-    "SS": "SS", "ST": "ST", "SV": "SV", "SY": "SY", "SZ": "SZ", "TD": "TD",
-    "TG": "TG", "TH": "TH", "TJ": "TJ", "TL": "TL", "TM": "TM", "TN": "TN",
-    "TO": "TO", "TR": "TR", "TT": "TT", "TV": "TV", "TW": "TW", "TZ": "TZ",
-    "UA": "UA", "UG": "UG", "US": "US", "UY": "UY", "UZ": "UZ", "VA": "VA",
-    "VC": "VC", "VE": "VE", "VN": "VN", "VU": "VU", "WS": "WS", "XS": "XS",
-    "YE": "YE", "ZA": "ZA", "ZM": "ZM", "ZW": "ZW",
+# ISIN country prefix → ISO 3166-1 alpha-2
+ISIN_COUNTRY: dict[str, str] = {
+    p: p for p in [
+        "AD","AE","AG","AL","AM","AO","AR","AT","AU","AZ","BA","BB","BD","BE",
+        "BG","BH","BI","BN","BO","BR","BS","BT","BW","BY","BZ","CA","CD","CF",
+        "CG","CH","CI","CL","CM","CN","CO","CR","CU","CV","CY","CZ","DE","DJ",
+        "DK","DM","DO","DZ","EC","EE","EG","ER","ES","ET","FI","FJ","FR","GA",
+        "GB","GD","GE","GH","GM","GN","GQ","GR","GT","GW","GY","HK","HN","HR",
+        "HT","HU","ID","IE","IL","IN","IQ","IR","IS","IT","JM","JO","JP","KE",
+        "KG","KH","KI","KM","KN","KP","KR","KW","KZ","LA","LB","LC","LI","LK",
+        "LR","LS","LT","LU","LV","LY","MA","MC","MD","ME","MG","MH","MK","ML",
+        "MM","MN","MR","MT","MU","MV","MW","MX","MY","MZ","NA","NE","NG","NI",
+        "NL","NO","NP","NR","NZ","OM","PA","PE","PG","PH","PK","PL","PT","PW",
+        "PY","QA","RO","RS","RU","RW","SA","SB","SC","SD","SE","SG","SI","SK",
+        "SL","SM","SN","SO","SR","SS","ST","SV","SY","SZ","TD","TG","TH","TJ",
+        "TL","TM","TN","TO","TR","TT","TV","TW","TZ","UA","UG","US","UY","UZ",
+        "VA","VC","VE","VN","VU","WS","XS","YE","ZA","ZM","ZW",
+    ]
 }
 
-# yfinance exchange suffix by ISIN country code
-EXCHANGE_SUFFIX = {
-    "CH": ".SW",  "DE": ".DE",  "FR": ".PA",  "GB": ".L",
-    "IT": ".MI",  "ES": ".MC",  "NL": ".AS",  "SE": ".ST",
-    "DK": ".CO",  "NO": ".OL",  "FI": ".HE",  "AT": ".VI",
-    "BE": ".BR",  "PT": ".LS",  "HK": ".HK",  "JP": ".T",
-    "AU": ".AX",  "NZ": ".NZ",  "KR": ".KS",  "IN": ".NS",
-    "SG": ".SI",  "CN": ".SS",  "CA": ".TO",  "MX": ".MX",
-    "BR": ".SA",  "ZA": ".JO",
+# ISIN country prefix → Yahoo Finance exchange suffix
+EXCHANGE_SUFFIX: dict[str, str] = {
+    "CH": ".SW", "DE": ".DE", "FR": ".PA", "GB": ".L",
+    "IT": ".MI", "ES": ".MC", "NL": ".AS", "SE": ".ST",
+    "DK": ".CO", "NO": ".OL", "FI": ".HE", "AT": ".VI",
+    "BE": ".BR", "PT": ".LS", "HK": ".HK", "JP": ".T",
+    "AU": ".AX", "NZ": ".NZ", "KR": ".KS", "IN": ".NS",
+    "SG": ".SI", "CA": ".TO", "MX": ".MX", "BR": ".SA",
+    "ZA": ".JO",
 }
 
-# Sector synthetic overrides by GICS-like code from vl_branche_cd
-SECTOR_MAP = {
-    "1000": "Energy", "1010": "Energy", "1500": "Materials",
-    "2000": "Industrials", "2010": "Industrials", "2020": "Industrials", "2030": "Industrials",
-    "2500": "Consumer Discretionary", "2510": "Consumer Discretionary",
-    "2520": "Consumer Discretionary", "2530": "Consumer Discretionary",
-    "3000": "Consumer Staples", "3010": "Consumer Staples", "3020": "Consumer Staples",
-    "3510": "Health Care", "3520": "Health Care",
-    "4010": "Financials", "4020": "Financials", "4030": "Financials",
-    "4510": "Information Technology", "4520": "Information Technology", "4530": "Information Technology",
-    "5010": "Communication Services", "5020": "Communication Services",
-    "5510": "Utilities",
-    "6010": "Real Estate",
-}
+# vl_branche_cd → GICS sector (equities only — not used after seed extraction,
+# but kept here for synthetic fallback)
+_SECTORS = [
+    "Financials", "Information Technology", "Health Care", "Industrials",
+    "Consumer Staples", "Consumer Discretionary", "Materials", "Energy",
+    "Communication Services", "Utilities", "Real Estate",
+]
 
-ESG_LABEL_MAP = {
-    "910": "AAA", "920": "AA", "930": "A", "940": "BBB",
-    "950": "BB", "960": "B", "970": "CCC", "980": "CC", "990": "C",
-}
+_BOND_SECTORS = [
+    "Financials", "Government", "Utilities", "Industrials",
+    "Real Estate", "Health Care", "Consumer Staples",
+]
 
 
-def country_from_isin(isin: str) -> str:
-    prefix = isin[:2].upper()
-    return ISIN_COUNTRY.get(prefix, "")
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
-def yf_ticker(isin: str, ticker_csv: str, country: str) -> str:
-    """Construct a best-guess Yahoo Finance ticker symbol."""
-    if not ticker_csv:
-        return ""
-    suffix = EXCHANGE_SUFFIX.get(country, "")
-    if country == "US":
-        return ticker_csv  # US tickers need no suffix on Yahoo
-    return f"{ticker_csv}{suffix}"
-
-
-def safe_float(val, default=None) -> float | None:
+def _safe_float(val) -> Optional[float]:
     try:
         f = float(val)
-        return None if (f != f) else f  # NaN check
+        return None if f != f else f  # NaN → None
     except (TypeError, ValueError):
-        return default
+        return None
 
 
-# ── CSV loading ────────────────────────────────────────────────────────────────
-
-def load_csv(path: str) -> pd.DataFrame:
-    """Parse FINFOX CSV format (semicolon-delimited, comment lines starting with #)."""
-    headers = []
-    rows = []
-    with open(path, encoding="utf-8-sig") as f:
-        for line in f:
-            line = line.rstrip("\n\r")
-            if line.startswith("#") or line.startswith("IN_"):
-                continue
-            parts = line.split(";")
-            if not headers:
-                headers = parts
-                continue
-            rows.append(dict(zip(headers, parts)))
-    return pd.DataFrame(rows)
+def _country_from_isin(isin: str) -> str:
+    return ISIN_COUNTRY.get(isin[:2].upper(), "")
 
 
-# ── Equity ingestion ────────────────────────────────────────────────────────────
+def _yahoo_symbol(seed: InstrumentSeed) -> str:
+    """Best-guess Yahoo Finance symbol for an equity seed."""
+    ticker = seed.ticker.strip()
+    if not ticker:
+        return ""
+    country = _country_from_isin(seed.isin)
+    if country == "US":
+        return ticker
+    suffix = EXCHANGE_SUFFIX.get(country, "")
+    return f"{ticker}{suffix}"
 
-def ingest_equities(df: pd.DataFrame, limit: int | None, fetch_live: bool) -> list[EquityRecord]:
-    eq_df = df[df["class"] == "equity"].copy()
-    eq_df = eq_df[eq_df["isin"].str.len() == 12]  # valid ISINs only
-    if limit:
-        eq_df = eq_df.head(limit)
 
-    records: list[EquityRecord] = []
-    total = len(eq_df)
-    log.info("Processing %d equities (live fetch: %s)", total, fetch_live)
+# ── Master ingestion ───────────────────────────────────────────────────────────
 
-    for i, (_, row) in enumerate(eq_df.iterrows()):
-        isin = row.get("isin", "")
-        valor = row.get("valorenNr", "")
-        ticker_csv = row.get("tickerSymbol", "")
-        currency = row.get("nominalCurrency", "")
-        issuer = row.get("issuerId", "")
-        name_de = row.get("name@de", "")
-        short_de = row.get("shortName@de", "")
-        branche = row.get("vl_branche_cd", "")
-        esg_code = row.get("esg_rating_label", row.get("esg_rating", ""))
-        country = country_from_isin(isin)
+def ingest_equity_master(seeds: list[InstrumentSeed], live: bool) -> list[EquityMaster]:
+    log.info("Equity master: %d seeds (live=%s)", len(seeds), live)
+    records: list[EquityMaster] = []
 
-        rec = EquityRecord(
-            isin=isin,
-            valor_nr=valor,
-            name=name_de,
-            short_name=short_de,
-            ticker=ticker_csv,
-            nominal_currency=currency,
-            issuer_name=issuer,
-            country=country,
-            sector=SECTOR_MAP.get(branche, ""),
-            esg_label=ESG_LABEL_MAP.get(esg_code, ""),
-            fetched_at=datetime.utcnow().isoformat(),
+    for i, seed in enumerate(seeds):
+        rec = EquityMaster(
+            isin=seed.isin,
+            valor_nr=seed.valor_nr,
+            instrument_type=seed.instrument_type,
+            name=seed.name,
+            ticker=seed.ticker,
+            nominal_currency=seed.nominal_currency,
+            country=_country_from_isin(seed.isin),
+            fetched_at=_now(),
         )
 
-        if fetch_live and ticker_csv:
-            yf_sym = yf_ticker(isin, ticker_csv, country)
+        if live and seed.ticker:
+            sym = _yahoo_symbol(seed)
             try:
-                info = yf.Ticker(yf_sym).info
-                rec.name = info.get("longName") or name_de
-                rec.exchange_mic = info.get("exchange", "")
-                rec.sector = info.get("sector") or rec.sector
-                rec.industry = info.get("industry", "")
-                rec.country = info.get("country", country) or country
-                rec.description = (info.get("longBusinessSummary") or "")[:500]
-                rec.last_price = safe_float(info.get("currentPrice") or info.get("regularMarketPrice"))
-                rec.price_currency = info.get("currency", currency)
-                rec.market_cap = safe_float(info.get("marketCap"))
-                rec.shares_outstanding = safe_float(info.get("sharesOutstanding"))
-                rec.pe_ratio = safe_float(info.get("trailingPE"))
-                rec.dividend_yield = safe_float(info.get("dividendYield"))
-                rec.beta = safe_float(info.get("beta"))
-                rec.esg_score = safe_float(info.get("esgScores", {}).get("totalEsg") if isinstance(info.get("esgScores"), dict) else None)
-                rec.source = "yfinance"
-                if i % 20 == 0:
-                    log.info("  [%d/%d] %s (%s) → price %s %s", i + 1, total, isin, yf_sym, rec.last_price, rec.price_currency)
-                time.sleep(0.25)  # polite rate limit
-            except Exception as e:
-                log.debug("  yfinance failed for %s (%s): %s", isin, yf_sym, e)
-                _fill_synthetic_equity(rec, currency)
+                info = yf.Ticker(sym).info
+                if info.get("quoteType"):  # valid response
+                    rec.name = info.get("longName") or seed.name
+                    rec.exchange_mic = info.get("exchange", "")
+                    rec.sector = info.get("sector", "")
+                    rec.industry = info.get("industry", "")
+                    rec.country = info.get("country", rec.country) or rec.country
+                    rec.issuer_name = info.get("longName") or seed.name
+                    rec.description = (info.get("longBusinessSummary") or "")[:500]
+                    rec.source = "yfinance"
+                    if i % 50 == 0:
+                        log.info("  [%d] %s (%s) sector=%s", i, seed.isin, sym, rec.sector)
+                    time.sleep(0.25)
+            except Exception as exc:
+                log.debug("  yfinance failed %s (%s): %s", seed.isin, sym, exc)
+                _synthetic_equity_master(rec)
         else:
-            _fill_synthetic_equity(rec, currency)
+            _synthetic_equity_master(rec)
 
         records.append(rec)
 
     return records
 
 
-def _fill_synthetic_equity(rec: EquityRecord, currency: str) -> None:
-    """Fill realistic-but-synthetic market data when live fetch is skipped/fails."""
+def _synthetic_equity_master(rec: EquityMaster) -> None:
     if not rec.sector:
-        rec.sector = random.choice([
-            "Financials", "Information Technology", "Health Care",
-            "Industrials", "Consumer Staples", "Consumer Discretionary",
-            "Materials", "Energy", "Communication Services", "Utilities",
-        ])
-    rec.last_price = round(random.uniform(10, 800), 2)
-    rec.price_currency = currency or "CHF"
-    rec.market_cap = round(rec.last_price * random.uniform(50e6, 500e9), 0)
-    rec.shares_outstanding = round(rec.market_cap / rec.last_price, 0) if rec.last_price else None
-    rec.pe_ratio = round(random.uniform(8, 40), 1)
-    rec.dividend_yield = round(random.uniform(0, 0.06), 4)
-    rec.beta = round(random.uniform(0.4, 1.8), 2)
+        rec.sector = random.choice(_SECTORS)
+    if not rec.issuer_name:
+        rec.issuer_name = rec.name
     rec.source = "synthetic"
 
 
-# ── Bond ingestion ──────────────────────────────────────────────────────────────
+def ingest_bond_master(seeds: list[InstrumentSeed], raw_df, live: bool) -> list[BondMaster]:
+    """Bond master uses CSV terms (coupon, maturity, rating) as the source of truth —
+    these are fundamental contractual terms, not market data. Only issuer metadata
+    could be enriched from internet, but yfinance doesn't support bonds."""
+    log.info("Bond master: %d seeds", len(seeds))
 
-def ingest_bonds(df: pd.DataFrame, limit: int | None) -> list[BondRecord]:
-    bond_df = df[df["class"] == "simpleBond"].copy()
-    bond_df = bond_df[bond_df["isin"].str.len() == 12]
-    if limit:
-        bond_df = bond_df.head(limit)
+    # Index raw CSV rows by isin for quick lookup
+    csv_by_isin: dict[str, dict] = {}
+    if raw_df is not None and not raw_df.empty:
+        for _, row in raw_df.iterrows():
+            isin = row.get("isin", "")
+            if len(isin) == 12:
+                csv_by_isin[isin] = row.to_dict()
 
-    records: list[BondRecord] = []
-    log.info("Processing %d bonds", len(bond_df))
-
-    for _, row in bond_df.iterrows():
-        isin = row.get("isin", "")
-        valor = row.get("valorenNr", "")
-        name_de = (row.get("name@de", "") or "").replace("\xa0", " ").strip()
-        short_de = (row.get("shortName@de", "") or "").replace("\xa0", " ").strip()
-        currency = row.get("nominalCurrency", "")
-        issuer = row.get("issuerId", "")
-        rating = row.get("rating", "")
-        interest_type_raw = row.get("interestType", "fixedinterest")
+    records: list[BondMaster] = []
+    for seed in seeds:
+        row = csv_by_isin.get(seed.isin, {})
         coupon_str = row.get("actInterestRate", "")
+        coupon = _safe_float(coupon_str)
+        if coupon is not None and coupon > 1:
+            coupon = round(coupon / 100, 6)  # percent → fraction
+
+        interest_type_raw = row.get("interestType", "fixedinterest")
+        interest_type = "floating" if "float" in (interest_type_raw or "").lower() else "fixed"
+
         maturity = row.get("maturityDate", "")
         callable_str = row.get("isCallable", "false")
-        duration_str = row.get("duration", "")
-        country = country_from_isin(isin)
+        rating = row.get("rating", "")
+        duration = _safe_float(row.get("duration", ""))
+        issuer = row.get("issuerId", "")
 
-        interest_type = "floating" if "float" in (interest_type_raw or "").lower() else "fixed"
-        coupon = safe_float(coupon_str)
-        if coupon is not None and coupon > 1:
-            coupon = coupon / 100  # convert percent to fraction
-
-        duration = safe_float(duration_str)
-        ytm = _estimate_ytm(coupon, maturity, duration)
-
-        # Derive sector from issuer name heuristics
-        sector = _bond_sector(issuer)
-
-        rec = BondRecord(
-            isin=isin,
-            valor_nr=valor,
-            name=name_de,
-            short_name=short_de,
-            nominal_currency=currency,
-            issuer_name=issuer,
-            issuer_country=country,
-            sector=sector,
+        rec = BondMaster(
+            isin=seed.isin,
+            valor_nr=seed.valor_nr,
+            instrument_type=seed.instrument_type,
+            name=seed.name,
+            nominal_currency=seed.nominal_currency,
+            issuer_name=issuer or seed.name,
+            issuer_country=_country_from_isin(seed.isin),
+            sector=_bond_sector(issuer),
             coupon_rate=coupon,
             interest_type=interest_type,
             maturity_date=maturity,
-            is_callable=callable_str.lower() == "true",
-            duration=duration,
-            yield_to_maturity=ytm,
-            last_price=_estimate_bond_price(coupon, ytm),
+            is_callable=(callable_str or "false").lower() == "true",
             rating=rating,
-            fetched_at=datetime.utcnow().isoformat(),
-            source="csv_seed",
+            source="csv_terms",
+            fetched_at=_now(),
         )
         records.append(rec)
 
     return records
 
 
-def _estimate_ytm(coupon: float | None, maturity: str, duration: float | None) -> float | None:
-    """Rough YTM estimate: coupon + credit spread noise."""
-    if coupon is None:
-        return None
-    spread = random.uniform(-0.003, 0.015)
-    return round(coupon + spread, 4)
-
-
-def _estimate_bond_price(coupon: float | None, ytm: float | None) -> float | None:
-    """Simplified price estimate as % of face value."""
-    if coupon is None or ytm is None or ytm <= 0:
-        return None
-    if abs(coupon - ytm) < 0.001:
-        return 100.0
-    return round(100.0 + (coupon - ytm) * 5 * 100, 2)  # rough approximation
-
-
 def _bond_sector(issuer: str) -> str:
-    issuer_lower = (issuer or "").lower()
-    if any(w in issuer_lower for w in ["bank", "credit", "finance", "invest", "capital", "asset"]):
+    lower = (issuer or "").lower()
+    if any(w in lower for w in ["bank", "credit", "finance", "invest", "capital", "versicher"]):
         return "Financials"
-    if any(w in issuer_lower for w in ["pharma", "roche", "novartis", "health", "medical"]):
+    if any(w in lower for w in ["pharma", "roche", "novartis", "health", "medical", "spital"]):
         return "Health Care"
-    if any(w in issuer_lower for w in ["elektro", "power", "energie", "energy", "gas", "strom"]):
+    if any(w in lower for w in ["elektro", "power", "energie", "energy", "gas", "strom", "utility"]):
         return "Utilities"
-    if any(w in issuer_lower for w in ["real estate", "immobil", "property", "wohn"]):
+    if any(w in lower for w in ["real estate", "immobil", "property", "wohn", "realty"]):
         return "Real Estate"
-    if any(w in issuer_lower for w in ["tech", "software", "digital", "data", "systems"]):
+    if any(w in lower for w in ["tech", "software", "digital", "data", "systems"]):
         return "Information Technology"
-    if any(w in issuer_lower for w in ["government", "republic", "canton", "kanton", "gemeinde", "bundesrepublik"]):
+    if any(w in lower for w in ["government", "republic", "canton", "kanton", "gemeinde",
+                                  "bundesrepublik", "confederation", "bundesland"]):
         return "Government"
     return "Industrials"
+
+
+# ── Market snapshot ingestion ──────────────────────────────────────────────────
+
+def ingest_equity_snapshots(equities: list[EquityMaster], live: bool) -> list[MarketSnapshot]:
+    log.info("Equity snapshots: %d instruments (live=%s)", len(equities), live)
+    snapshots: list[MarketSnapshot] = []
+    as_of = _now()
+
+    for i, eq in enumerate(equities):
+        snap = MarketSnapshot(isin=eq.isin, instrument_type=eq.instrument_type, as_of=as_of)
+
+        if live and eq.ticker:
+            sym = _yahoo_symbol(_seed_from_equity(eq))
+            try:
+                fi = yf.Ticker(sym).fast_info
+                snap.last_price = _safe_float(getattr(fi, "last_price", None))
+                snap.price_currency = getattr(fi, "currency", eq.nominal_currency) or eq.nominal_currency
+                snap.market_cap = _safe_float(getattr(fi, "market_cap", None))
+                snap.shares_outstanding = _safe_float(getattr(fi, "shares", None))
+                snap.week_52_high = _safe_float(getattr(fi, "year_high", None))
+                snap.week_52_low = _safe_float(getattr(fi, "year_low", None))
+                # pe, beta, dividend_yield require full .info
+                info = yf.Ticker(sym).info
+                snap.pe_ratio = _safe_float(info.get("trailingPE"))
+                snap.forward_pe = _safe_float(info.get("forwardPE"))
+                snap.dividend_yield = _safe_float(info.get("dividendYield"))
+                snap.beta = _safe_float(info.get("beta"))
+                snap.source = "yfinance"
+                if i % 50 == 0:
+                    log.info("  [%d] %s price=%s", i, eq.isin, snap.last_price)
+                time.sleep(0.3)
+            except Exception as exc:
+                log.debug("  snapshot failed %s: %s", eq.isin, exc)
+                _synthetic_equity_snapshot(snap, eq.nominal_currency)
+        else:
+            _synthetic_equity_snapshot(snap, eq.nominal_currency)
+
+        snapshots.append(snap)
+
+    return snapshots
+
+
+def _seed_from_equity(eq: EquityMaster) -> InstrumentSeed:
+    return InstrumentSeed(
+        isin=eq.isin, valor_nr=eq.valor_nr, instrument_type=eq.instrument_type,
+        name=eq.name, ticker=eq.ticker, nominal_currency=eq.nominal_currency,
+    )
+
+
+def _synthetic_equity_snapshot(snap: MarketSnapshot, currency: str) -> None:
+    snap.last_price = round(random.uniform(5, 900), 2)
+    snap.price_currency = currency or "USD"
+    snap.market_cap = round(snap.last_price * random.uniform(10e6, 300e9), 0)
+    snap.shares_outstanding = round(snap.market_cap / snap.last_price, 0) if snap.last_price else None
+    snap.pe_ratio = round(random.uniform(7, 45), 1)
+    snap.forward_pe = round(snap.pe_ratio * random.uniform(0.8, 1.1), 1)
+    snap.dividend_yield = round(random.uniform(0.0, 0.06), 4)
+    snap.beta = round(random.uniform(0.3, 2.0), 2)
+    snap.week_52_high = round((snap.last_price or 100) * random.uniform(1.0, 1.5), 2)
+    snap.week_52_low = round((snap.last_price or 100) * random.uniform(0.5, 1.0), 2)
+    snap.source = "synthetic"
+
+
+def ingest_bond_snapshots(bonds: list[BondMaster]) -> list[MarketSnapshot]:
+    """Bond market data from internet is generally not freely available.
+    Derive price estimate from coupon vs synthetic YTM."""
+    log.info("Bond snapshots: %d instruments (synthetic)", len(bonds))
+    as_of = _now()
+    snapshots: list[MarketSnapshot] = []
+
+    for bond in bonds:
+        snap = MarketSnapshot(isin=bond.isin, instrument_type=bond.instrument_type, as_of=as_of)
+        coupon = bond.coupon_rate or 0.0
+        # Simulate YTM = coupon + credit spread noise
+        spread = random.uniform(-0.003, 0.02)
+        ytm = max(coupon + spread, 0.001)
+        snap.yield_to_maturity = round(ytm, 4)
+
+        # Rough dirty price: par adjusted for coupon vs yield difference
+        if ytm > 0:
+            price_pct = 100.0 + (coupon - ytm) * 4 * 100
+            snap.last_price = round(max(min(price_pct, 130.0), 70.0), 2)
+        snap.price_currency = bond.nominal_currency
+
+        # Synthetic spread in basis points over benchmark
+        snap.spread_bps = round(spread * 10_000, 0)
+        snap.source = "synthetic"
+        snapshots.append(snap)
+
+    return snapshots
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Ingest instrument universe from CSV seeds")
-    parser.add_argument("--csv", default="/Users/danielwirth/PycharmProjects/financial-advisory-project/data/IN_INSTRUMENTS_COMPLETE.csv",
-                        help="Path to IN_INSTRUMENTS_COMPLETE.csv")
-    parser.add_argument("--out", default="data/universe", help="Output directory for parquet files")
-    parser.add_argument("--limit", type=int, default=None, help="Max instruments per class (for dev runs)")
-    parser.add_argument("--live", action="store_true", help="Fetch live data from yfinance (slow, rate-limited)")
+    parser = argparse.ArgumentParser(description="Ingest universe master and market data from internet")
+    parser.add_argument("--seeds", default="data/universe", help="Directory containing seeds.parquet")
+    parser.add_argument("--out", default="data/universe", help="Output directory")
+    parser.add_argument("--step", choices=["master", "market", "all"], default="all")
+    parser.add_argument("--type", dest="instrument_type", default=None,
+                        help="Filter to a single instrument_type (e.g. equity)")
+    parser.add_argument("--limit", type=int, default=None, help="Cap per type (dev mode)")
+    parser.add_argument("--live", action="store_true", help="Fetch live data from yfinance")
     args = parser.parse_args()
 
-    log.info("Loading CSV from %s", args.csv)
-    df = load_csv(args.csv)
-    log.info("Loaded %d instruments across %d classes", len(df), df["class"].nunique())
-
     store = ParquetUniverseStore(args.out)
+    seed_store = ParquetUniverseStore(args.seeds)
 
-    # Equities
-    equities = ingest_equities(df, limit=args.limit, fetch_live=args.live)
-    store.save_equities(equities)
-    log.info("Saved %d equity records → %s/equity.parquet", len(equities), args.out)
+    equity_seeds = seed_store.list_seeds("equity")
+    bond_seeds = [
+        s for s in seed_store.list_seeds()
+        if s.instrument_type in {"simpleBond", "floater", "convertibleBond", "moneyMarket"}
+    ]
 
-    # Bonds
-    bonds = ingest_bonds(df, limit=args.limit)
-    store.save_bonds(bonds)
-    log.info("Saved %d bond records → %s/simpleBond.parquet", len(bonds), args.out)
+    if args.instrument_type:
+        equity_seeds = [s for s in equity_seeds if s.instrument_type == args.instrument_type]
+        bond_seeds = [s for s in bond_seeds if s.instrument_type == args.instrument_type]
 
-    # Summary
-    snap = store.snapshot()
-    for cls, info in snap.items():
-        log.info("Snapshot %s: %s", cls, info)
+    if args.limit:
+        equity_seeds = equity_seeds[:args.limit]
+        bond_seeds = bond_seeds[:args.limit]
+
+    # Load raw CSV once for bond term lookup (bond master uses CSV terms)
+    raw_df = None
+    if args.step in ("master", "all") and bond_seeds:
+        csv_path = "/Users/danielwirth/PycharmProjects/financial-advisory-project/data/IN_INSTRUMENTS_COMPLETE.csv"
+        log.info("Loading bond terms from %s", csv_path)
+        from extract_universe_seeds import parse_finfox_csv
+        raw_df = parse_finfox_csv(csv_path)
+
+    if args.step in ("master", "all"):
+        if equity_seeds:
+            equities = ingest_equity_master(equity_seeds, args.live)
+            store.save_equities(equities)
+            log.info("Saved %d equity master records", len(equities))
+
+        if bond_seeds:
+            bonds = ingest_bond_master(bond_seeds, raw_df, args.live)
+            store.save_bonds(bonds)
+            log.info("Saved %d bond master records", len(bonds))
+
+    if args.step in ("market", "all"):
+        equities = store.search_equities(limit=10_000)
+        if args.limit:
+            equities = equities[:args.limit]
+        if equities:
+            eq_snaps = ingest_equity_snapshots(equities, args.live)
+            store.save_snapshots(eq_snaps)
+            log.info("Saved %d equity snapshots", len(eq_snaps))
+
+        bonds = store.search_bonds(limit=10_000)
+        if args.limit:
+            bonds = bonds[:args.limit]
+        if bonds:
+            bond_snaps = ingest_bond_snapshots(bonds)
+            store.save_snapshots(bond_snaps)
+            log.info("Saved %d bond snapshots", len(bond_snaps))
+
+    snap = store.universe_snapshot()
+    for layer, info in snap.items():
+        log.info("Snapshot %-15s %s", layer + ":", info.get("count", 0))
 
 
 if __name__ == "__main__":

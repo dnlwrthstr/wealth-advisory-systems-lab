@@ -1,86 +1,144 @@
-"""Golden record schemas for the instrument universe."""
+"""Golden record schemas for the instrument universe.
+
+Three layers:
+  InstrumentSeed  — identifiers extracted once from source data (CSV)
+  EquityMaster    — instrument master fetched from internet (slow-changing)
+  BondMaster      — bond master fetched from internet (slow-changing)
+  MarketSnapshot  — time-stamped market data, refreshed independently
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
+
+# OpenWealth FinancialInstrumentType values that map to investable securities
+OPENWEALTH_TYPES = {
+    "equity", "simpleBond", "floater", "convertibleBond",
+    "fund", "moneyMarket", "commodity", "certificate",
+    "highlyStructuredProduct", "future", "option", "other",
+}
+
+# FINFOX class → OpenWealth FinancialInstrumentType
+FINFOX_TO_OW = {
+    "equity":                  "equity",
+    "simpleBond":              "simpleBond",
+    "floater":                 "floater",
+    "convertibleBond":         "convertibleBond",
+    "fund":                    "fund",
+    "moneyMarket":             "moneyMarket",
+    "commodity":               "commodity",
+    "certificate":             "certificate",
+    "highlyStructuredProduct": "highlyStructuredProduct",
+    "callOption":              "option",
+    "putOption":               "option",
+    "future":                  "future",
+    "other":                   "other",
+    # "currency" and "CHF" are excluded — no valid ISIN
+}
 
 
 @dataclass
-class EquityRecord:
-    """Golden record for a single equity instrument."""
+class InstrumentSeed:
+    """Identifiers-only record extracted from source data. Immutable once written."""
+    isin: str
+    valor_nr: str
+    instrument_type: str        # OpenWealth FinancialInstrumentType
+    name: str                   # raw name from source, cleaned
+    ticker: str                 # exchange ticker from source (not Yahoo format)
+    nominal_currency: str       # denomination currency from source
+
+
+@dataclass
+class EquityMaster:
+    """Instrument master for equities — fetched from internet, slow-changing."""
     isin: str
     valor_nr: str
     instrument_type: str = "equity"
 
-    # Identifiers & names
+    # Identity
     name: str = ""
-    short_name: str = ""
     ticker: str = ""
-    exchange_mic: str = ""          # ISO 10383 MIC, e.g. XVTX, XNAS, XLON
+    exchange_mic: str = ""      # ISO 10383 MIC, e.g. XVTX, XNAS, XLON
 
-    # Classification
-    sector: str = ""                # GICS sector
-    industry: str = ""              # GICS industry group
-    country: str = ""               # ISO 3166-1 alpha-2 issuer country
-    nominal_currency: str = ""      # trading currency
+    # Classification (GICS)
+    sector: str = ""
+    industry: str = ""
+
+    # Geography
+    country: str = ""           # ISO 3166-1 alpha-2 of issuer/domicile
+    nominal_currency: str = ""
 
     # Issuer
     issuer_name: str = ""
-    description: str = ""
-
-    # Market data (snapshot at ingestion time)
-    last_price: Optional[float] = None
-    price_currency: str = ""
-    market_cap: Optional[float] = None          # in price_currency
-    shares_outstanding: Optional[float] = None
-    pe_ratio: Optional[float] = None
-    dividend_yield: Optional[float] = None      # as fraction, e.g. 0.025 = 2.5%
-    beta: Optional[float] = None
+    description: str = ""       # max 500 chars
 
     # ESG
-    esg_score: Optional[float] = None          # 0–100 scale
-    esg_label: str = ""                        # e.g. "AAA", "BB"
+    esg_label: str = ""         # e.g. "AAA", "BB" (MSCI ESG)
 
-    # Metadata
-    fetched_at: str = ""                       # ISO datetime of last data pull
-    source: str = "yfinance"
+    # Provenance
+    source: str = ""            # "yfinance" | "synthetic"
+    fetched_at: str = ""        # ISO datetime
 
 
 @dataclass
-class BondRecord:
-    """Golden record for a simple (fixed/floating) bond."""
+class BondMaster:
+    """Instrument master for bonds (simpleBond, floater, convertibleBond, moneyMarket)."""
     isin: str
     valor_nr: str
     instrument_type: str = "simpleBond"
 
-    # Names
+    # Identity
     name: str = ""
-    short_name: str = ""
 
     # Issuer
     issuer_name: str = ""
-    issuer_country: str = ""        # ISO 3166-1 alpha-2
+    issuer_country: str = ""    # ISO 3166-1 alpha-2
     sector: str = ""
 
     # Terms
     nominal_currency: str = ""
     face_value: float = 1000.0
-    coupon_rate: Optional[float] = None         # annual, as fraction, e.g. 0.03 = 3%
-    interest_type: str = "fixed"               # "fixed" | "floating"
-    maturity_date: str = ""                    # ISO date
+    coupon_rate: Optional[float] = None     # annual rate as fraction, e.g. 0.03 = 3%
+    interest_type: str = "fixed"            # "fixed" | "floating"
+    maturity_date: str = ""                 # ISO date
     is_callable: bool = False
-    seniority: str = "senior_unsecured"        # "senior_secured" | "senior_unsecured" | "subordinated"
+    seniority: str = "senior_unsecured"     # "senior_secured" | "senior_unsecured" | "subordinated"
 
-    # Analytics (at ingestion time)
-    duration: Optional[float] = None           # modified duration in years
-    yield_to_maturity: Optional[float] = None  # as fraction
-    last_price: Optional[float] = None         # % of face value, e.g. 99.5
-
-    # Rating
-    rating: str = ""                           # S&P notation: AAA, AA+, ... D
+    # Credit
+    rating: str = ""                        # S&P notation: AAA, AA+, … D
     rating_agency: str = "S&P"
 
-    # Metadata
+    # Provenance
+    source: str = ""
     fetched_at: str = ""
-    source: str = "csv_seed"
+
+
+@dataclass
+class MarketSnapshot:
+    """Time-stamped market data snapshot — applies to any instrument type."""
+    isin: str
+    instrument_type: str
+    as_of: str                              # ISO datetime of snapshot
+
+    # Universal
+    last_price: Optional[float] = None
+    price_currency: str = ""
+
+    # Equity / Fund
+    market_cap: Optional[float] = None
+    shares_outstanding: Optional[float] = None
+    pe_ratio: Optional[float] = None
+    forward_pe: Optional[float] = None
+    dividend_yield: Optional[float] = None  # fraction, e.g. 0.025 = 2.5%
+    beta: Optional[float] = None
+    week_52_high: Optional[float] = None
+    week_52_low: Optional[float] = None
+
+    # Bond
+    yield_to_maturity: Optional[float] = None
+    duration: Optional[float] = None        # modified duration in years
+    spread_bps: Optional[float] = None      # Z-spread over benchmark, basis points
+
+    # Provenance
+    source: str = ""                        # "yfinance" | "synthetic"
