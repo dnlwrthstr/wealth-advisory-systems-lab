@@ -115,6 +115,35 @@ COUNTRY_NAME_TO_ISO2: Dict[str, str] = {
 }
 
 
+# SMI tickers map to CH-prefixed ISINs that yfinance refuses to return
+# (`Ticker(NESN.SW).isin` → "-"). With no ISIN we can't derive the valor;
+# the column would always be "—" for the headline Swiss index. Curating
+# them here is a one-off cost — 20 names that don't change often. Verify
+# against GLEIF / SIX when a constituent rotates.
+SMI_ISIN_MAP: Dict[str, str] = {
+    "NESN.SW": "CH0038863350",   # Nestlé S.A.
+    "ROG.SW":  "CH0012032048",   # Roche Holding AG
+    "NOVN.SW": "CH0012005267",   # Novartis AG
+    "CFR.SW":  "CH0210483332",   # Compagnie Financière Richemont SA
+    "ZURN.SW": "CH0011075394",   # Zurich Insurance Group AG
+    "UBSG.SW": "CH0244767585",   # UBS Group AG
+    "ABBN.SW": "CH0012221716",   # ABB Ltd
+    "LONN.SW": "CH0013841017",   # Lonza Group AG
+    "SIKA.SW": "CH0418792922",   # Sika AG
+    "ALC.SW":  "CH0432492467",   # Alcon Inc.
+    "GIVN.SW": "CH0010645932",   # Givaudan SA
+    "HOLN.SW": "CH0012214059",   # Holcim AG
+    "SCMN.SW": "CH0008742519",   # Swisscom AG
+    "PGHN.SW": "CH0024608827",   # Partners Group Holding AG
+    "SREN.SW": "CH0126881561",   # Swiss Re AG
+    "SOON.SW": "CH0049497724",   # Sonova Holding AG
+    "GEBN.SW": "CH0030170408",   # Geberit AG
+    "SLHN.SW": "CH0014852781",   # Swiss Life Holding AG
+    "LOGN.SW": "CH0025751329",   # Logitech International SA
+    "KNIN.SW": "CH0023405456",   # Kuehne + Nagel International AG
+}
+
+
 # Wikipedia universe sources. Same shape as pms-ontology so the schema
 # is recognisable; SMI is the default smoke-test universe.
 UNIVERSE_SOURCES: Dict[str, Dict[str, Any]] = {
@@ -307,9 +336,17 @@ def yahoo_info_to_golden(
     identifier_list = []
     if isin:
         identifier_list.append(FinancialInstrumentIdentification(identifier=isin, type="isin"))
+    # Valor — prefer the parquet seed value, fall back to deterministic CH-ISIN
+    # derivation when the seed has none and the ISIN encodes one.
+    valor_value: Optional[str] = None
     if seed.get("valor_nr"):
+        valor_value = str(seed["valor_nr"])
+    elif isin:
+        from pipeline.silver import valor_from_isin
+        valor_value = valor_from_isin(isin)
+    if valor_value:
         identifier_list.append(
-            FinancialInstrumentIdentification(identifier=str(seed["valor_nr"]), type="valoren")
+            FinancialInstrumentIdentification(identifier=valor_value, type="valoren")
         )
     identifier_list.append(
         FinancialInstrumentIdentification(identifier=ticker_symbol, type="tickerSymbol")
@@ -482,6 +519,10 @@ def fetch_one(
                     isin = raw_isin
             except Exception:  # noqa: BLE001 — Ticker.isin is flaky
                 pass
+            # yfinance gives "-" for Swiss tickers. Fall back to the curated
+            # SMI map so CH-ISIN valor derivation actually has an ISIN to bite.
+            if not isin and ticker_symbol in SMI_ISIN_MAP:
+                isin = SMI_ISIN_MAP[ticker_symbol]
             if not info:
                 if seed:
                     log.info("  %s: no yfinance data, building seed-only record", ticker_symbol)

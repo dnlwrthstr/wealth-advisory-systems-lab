@@ -109,6 +109,32 @@ def iter_equity_seeds(
         yield {k: (v if v == v else None) for k, v in row.items()}  # NaN → None
 
 
+def valor_from_isin(isin: Optional[str]) -> Optional[str]:
+    """Derive the Swiss VALOREN number from a CH-prefixed ISIN.
+
+    Structure of a CH ISIN:  ``CH`` + 9-digit zero-padded valor + 1 check digit.
+    The valor is the digits at positions 3-11, stripped of leading zeros.
+
+      CH1319968579  →  131996857   (Allreal Holding senior bond)
+      CH0026985082  →  2698508     (Lehman Brothers Switzerland)
+
+    Non-CH ISINs do not encode a valor; SIX Swiss Exchange assigns one
+    proprietarily when a foreign instrument is admitted to Swiss trading,
+    and that mapping is not available through any public free endpoint we've
+    been able to reach (six-group.com is JS-rendered, finanzen.ch blocks
+    automated user agents, OpenFIGI returns FIGI but not valor). For those,
+    we return None and let the column render "—" until a SIX SR feed or a
+    curated lookup table is wired up.
+    """
+    if not isin or len(isin) != 12 or not isin.startswith("CH"):
+        return None
+    digits = isin[2:11]
+    if not digits.isdigit():
+        return None
+    stripped = digits.lstrip("0")
+    return stripped or "0"
+
+
 def yahoo_ticker_for(isin: str, finfox_ticker: str) -> str:
     """Translate a FINFOX bare ticker into Yahoo's symbol convention by
     using the ISIN country code to attach the right venue suffix.

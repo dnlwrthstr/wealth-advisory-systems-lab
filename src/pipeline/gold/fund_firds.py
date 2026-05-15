@@ -211,6 +211,15 @@ def firds_to_golden(
     )
 
     identifier_list = [FinancialInstrumentIdentification(identifier=isin, type="isin")]
+    # CH-prefixed fund ISINs encode the Swiss VALOREN deterministically; add
+    # it. Non-CH funds (most iShares are IE) need a SIX Swiss Exchange lookup
+    # — TODO when we have a credible free source.
+    from pipeline.silver import valor_from_isin
+    valor_value = valor_from_isin(isin)
+    if valor_value:
+        identifier_list.append(
+            FinancialInstrumentIdentification(identifier=valor_value, type="valoren")
+        )
 
     # ── Level 3: Umbrella (legal issuer of the share class) ──────────────────
     umbrella_lei = issuer["umbrellaLei"]
