@@ -36,6 +36,7 @@ issuer_aggregate = "pipeline.gold.issuer_aggregate:main"
 issuer_gleif = "pipeline.gold.issuer_gleif:main"
 search_index_build = "pipeline.gold.search_index_build:main"
 fund_yahoo_enrich = "pipeline.gold.fund_yahoo_enrich:main"
+apply_fund_patch = "pipeline.gold.apply_fund_patch:main"
 load_golden_to_opensearch = "pipeline.gold.load:main"
 
 [tool.setuptools.packages.find]

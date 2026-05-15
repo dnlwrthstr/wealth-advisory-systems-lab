@@ -76,7 +76,10 @@ Map to these FundGolden paths (camelCase, matches the ontology):
 | Currency hedged share class | `isCurrencyHedged`, `hedgingCurrency` |
 | Fund inception date | `inceptionDate` |
 | Share class inception | `shareClass.inceptionDate` |
-| Holdings count | `holdingsCount` |
+| Total constituent count | `holdingsCount` |
+| Holdings as-of date | `holdingsAsOf` |
+| Full constituent list (look-through) | `assetAllocation.holdings` — array of `{identifier, name, weight, assetClass}` |
+| Region allocation | `assetAllocation.byRegion` — array of `{region, percentage}` |
 
 Leave a field out of the patch when the KID doesn't carry it. **Don't
 guess.**
@@ -110,7 +113,11 @@ For an ISIN like `IE00B4L5Y983`:
    otherwise WebFetch + a simple regex pass works for KIDs which follow
    a tight template. Extract the fields from the table above.
 
-5. **Build a JSON patch file** at
+5. **(Optional) Pull the full holdings.** See *Full holdings extraction*
+   below. The skill can populate either fact-sheet fields, full holdings,
+   or both in one patch.
+
+6. **Build a JSON patch file** at
    `data/opensearch/golden/fund/patches/<goldenId>.json`:
    ```json
    {
@@ -131,30 +138,104 @@ For an ISIN like `IE00B4L5Y983`:
        },
        "benchmarkName": "MSCI World Index (Net)",
        "replicationMethod": "physicalSampling",
-       "rebalanceFrequency": "quarterly"
+       "rebalanceFrequency": "quarterly",
+       "holdingsCount": 1418,
+       "holdingsAsOf": "2026-05-12",
+       "assetAllocation": {
+         "holdings": [
+           { "identifier": "US67066G1040", "name": "NVIDIA Corp",   "weight": 0.0529, "assetClass": "EQUITY" },
+           { "identifier": "US0378331005", "name": "Apple Inc",     "weight": 0.0418, "assetClass": "EQUITY" }
+         ]
+       }
      }
    }
    ```
    Show the patch to the user. **Wait for confirmation** before
    applying.
 
-6. **Apply** (after user confirms):
+7. **Apply** (after user confirms). The lab ships a small helper that
+   wraps the OpenSearch update + refresh and rebuilds the search index
+   so any newly populated fields surface in the "Find an instrument" UI:
    ```bash
-   curl -sS -X POST "http://localhost:9200/pms_golden_fund/_update/<goldenId>" \
-     -H "Content-Type: application/json" \
-     --data-binary "@data/opensearch/golden/fund/patches/<goldenId>.json"
-   curl -sS -X POST "http://localhost:9200/pms_golden_fund/_refresh" >/dev/null
+   PYTHONPATH=src python -m pipeline.gold.apply_fund_patch \
+     data/opensearch/golden/fund/patches/<goldenId>.json
    ```
-   Then rebuild the search index so the helper reflects any newly
-   hoisted fields:
-   ```bash
-   PYTHONPATH=src python -m pipeline.gold.search_index_build
-   ```
+   (Direct curl form: `POST /pms_golden_fund/_update/<goldenId>` with
+   the patch as the body, then `POST /pms_golden_fund/_refresh`.)
 
-7. **Append a `recordMeta.sourceOfTruth` entry** so the audit trail
+8. **Append a `recordMeta.sourceOfTruth` entry** so the audit trail
    stays honest: source = the URL you fetched, `fieldGroup` = the group
    you populated (`fees`, `dealing`, `riskRating`, `serviceProviders`,
-   …), `sourceTimestamp` = today.
+   `holdings`, …), `sourceTimestamp` = today.
+
+## Full holdings extraction
+
+`pipeline.gold.fund_yahoo_enrich` only gives the top ~10 constituents.
+For the **complete** holdings list, the skill is the right surface —
+issuer pages aren't programmatically scrapeable (JS-rendered,
+obfuscated ajax URLs) but they yield to WebFetch + intelligent parsing.
+
+The umbrella → issuer routing:
+
+| Management company (LEI) | Look here | Hint |
+|---|---|---|
+| BlackRock Asset Management Ireland Limited | `https://www.ishares.com/uk/individual/en/products/<productID>/.../*holdings*` and any embedded CSV download. Click-through from the iShares product page found by ISIN. | Page has a "Holdings" tab with table + a "Download holdings" link to a CSV. |
+| Vanguard Group (Ireland) Limited | `https://www.vanguard.co.uk/professional/product/etf/equity/<ID>/<slug>/portfolio-data` | Holdings table is server-rendered. |
+| DWS Investment S.A. (Xtrackers) | `https://etf.dws.com/en-gb/<ISIN>/<slug>/` → "Index, Composition, Performance" tab | Public CSV download under "Composition". |
+| Amundi Asset Management / Amundi Luxembourg | `https://www.amundietf.com/en/products/<ISIN>` → "Composition" panel | Top holdings on the page; full list via prospectus or the "All holdings" download. |
+| UBS Fund Management (Luxembourg) S.A. | `https://www.ubs.com/lu/en/asset-management/funds/<ISIN>` → "Composition" | Holdings PDF / Excel link. |
+
+### Per-fund procedure
+
+1. Get the fund's `managementCompany.legalName`. Match against the
+   table above to pick the right starting URL.
+2. WebSearch `site:<provider-domain> <ISIN>` to find the canonical
+   product page.
+3. WebFetch the page. If the holdings table is embedded in HTML
+   (Vanguard, Xtrackers, Amundi often are), parse it directly. If the
+   page only exposes a "Download holdings" link, follow that — most
+   issuers expose a CSV that's well-formed (Ticker, Name, ISIN, Sector,
+   Asset Class, Weight, …).
+4. Project each row into `{ identifier, name, weight, assetClass }` per
+   the `Holding` entity. Prefer ISIN as the identifier; fall back to
+   ticker if ISIN is missing (cash positions often have no ISIN).
+5. Capture the snapshot date the issuer states ("Holdings as of …") and
+   the total count.
+
+### Holdings-specific quality gates
+
+Refuse to apply the holdings part of the patch if any of these holds:
+
+- The sum of `weight` across rows is outside `[0.95, 1.05]` (issuer
+  rounding lives well inside that band; anything else means we mis-
+  parsed weights, units, or skipped a chunk of the table).
+- The list has fewer than 3 rows for an ETF with `holdingsCount > 10`.
+- The "Holdings as of" date is older than 30 days.
+- More than 1 % of rows lack an identifier of any kind.
+
+### Holdings patch shape
+
+Holdings live under `assetAllocation.holdings`; the total constituent
+count is at the top level under `holdingsCount` so the frontend can
+render "10 of 1418" when only a top-N projection is available. The
+patch fragment for holdings looks like:
+
+```json
+"doc": {
+  "holdingsCount": 1418,
+  "holdingsAsOf": "2026-05-12",
+  "assetAllocation": {
+    "holdings": [
+      { "identifier": "US67066G1040", "name": "NVIDIA Corp",   "weight": 0.0529, "assetClass": "EQUITY" },
+      …
+    ]
+  }
+}
+```
+
+If you also derive sector / region / asset-class roll-ups from the
+holdings, include them under `assetAllocation.bySector`,
+`assetAllocation.byRegion`, `assetAllocation.byAssetClass` — same patch.
 
 ## Full holdings: prefer a live parser over downloaded files
 
