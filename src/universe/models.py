@@ -468,9 +468,10 @@ class Segment(RootModel):
     """
     root: str
 
-class Rating(RootModel):
+class PartnerRiskRating(RootModel):
     """
-    Credit or internal rating.
+    Internal partner risk rating (KYC / counterparty risk). Distinct from the credit Rating object in `rating/credit_rating/CreditRating.yml` which carries agency, notation, outlook and dates.
+
     """
     root: str
 
@@ -1617,6 +1618,26 @@ class MarketDataSnapshotEmbedded(BaseModel):
     vwap: Optional[float] = Field(None, description="Volume-weighted average price for the period.")
     marketCapCategory: Optional[str] = Field(None, description="Market-cap bucket (Large-Cap, Mid-Cap, Small-Cap, etc.).")
 
+class IssuerGolden(BaseModel):
+    """
+    Canonical legal-entity record for an instrument issuer. Document `_id` is `issuerId`.
+
+    """
+    goldenId: str = Field(..., description="Stable synthetic identifier for the issuer record.")
+    issuerId: str = Field(..., description="Stable internal issuer identifier. Equals `IssuerSnapshot.issuerId` on all instruments that reference this issuer. When the LEI is present, the convention is `ISS-<LEI>`; otherwise a slug of `legalName`. ")
+    lei: Optional[LegalEntityIdentifier] = Field(None, description="ISO 17442 Legal Entity Identifier.")
+    legalName: str = Field(..., description="Official legal name of the issuer.")
+    issuerType: Optional[str] = Field(None, description="Coarse-grained issuer type. Examples: corporate, government, supranational, bank, insurance_company, fund_company, special_purpose. ")
+    domicileCountry: Optional[Country] = Field(None, description="ISO 3166-1 alpha-2 country of legal domicile.")
+    headquartersCountry: Optional[Country] = Field(None, description="ISO 3166-1 alpha-2 country of operational headquarters.")
+    ultimateParentLei: Optional[str] = Field(None, description="LEI of the ultimate parent (group head) if applicable.")
+    guarantorLei: Optional[str] = Field(None, description="LEI of an explicit external guarantor, if any.")
+    creditProfile: Optional[CreditProfile] = Field(None, description="Aggregated credit ratings across agencies.")
+    esgProfile: Optional[ESGProfile] = Field(None, description="Aggregated ESG ratings and labels.")
+    instrumentsByClass: Optional[Dict[str, Any]] = Field(None, description="Count of per-instrument golden documents that reference this issuer, broken down by `pms_golden_<scope>` family. Maintained by the aggregator. ")
+    instrumentCount: Optional[int] = Field(None, description="Total number of instruments referencing this issuer.")
+    recordMeta: GoldenRecordMeta
+
 class FundGolden(BaseModel):
     """
     Golden (tier-3) record for a Fund instrument. One document per share class / sub-fund, keyed by `goldenId`.
@@ -1937,6 +1958,18 @@ class CommodityLifecycle(BaseModel):
     """
     expiryDate: Optional[date] = Field(None, description="Expiry date of the commodity contract.")
     rollSchedule: Optional[str] = Field(None, description="Roll schedule or rules for contract rollover.")
+
+class Rating(BaseModel):
+    """
+    A credit rating assigned by an agency.
+    """
+    agency: Optional[str] = Field(None, description="The credit rating agency (e.g., S&P, Moody's, Fitch).")
+    rating: Optional[str] = Field(None, description="The assigned rating symbol (e.g., AAA, Baa1).")
+    ratingType: Optional[str] = Field(None, description="The type of rating (e.g., issuer_credit_rating, issue_credit_rating).")
+    outlook: Optional[str] = Field(None, description="The rating outlook (e.g., stable, positive, negative).")
+    scale: Optional[str] = Field(None, description="The rating scale (e.g., long_term, short_term).")
+    dateAssigned: Optional[date] = Field(None, description="The date when the rating was assigned.")
+    status: Optional[str] = Field(None, description="The status of the rating (e.g., active, withdrawn).")
 
 class CreditProfile(BaseModel):
     """

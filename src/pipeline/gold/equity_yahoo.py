@@ -228,28 +228,57 @@ def yahoo_info_to_golden(
     isin: Optional[str],
     run_id: str,
     now: datetime,
+    seed: Optional[Dict[str, Any]] = None,
 ) -> EquityGolden:
-    """Map yfinance `Ticker.info` + ISIN to a validated EquityGolden."""
-    now_iso = now.isoformat()
+    """Map yfinance `Ticker.info` + ISIN to a validated EquityGolden.
 
-    currency_code = _safe(info, "currency") or _safe(info, "financialCurrency")
+    When `seed` is provided (parquet-seeded mode) the seed supplies the
+    fallbacks for currency, name, ticker, valor and ISIN — Yahoo's values
+    overwrite when present, but a record can still be built if Yahoo
+    returns nothing.
+    """
+    now_iso = now.isoformat()
+    seed = seed or {}
+
+    # Prefer seed ISIN (parquet ground truth) over the value Yahoo reports.
+    if seed.get("isin"):
+        isin = seed["isin"]
+
+    currency_code = (
+        _safe(info, "currency")
+        or _safe(info, "financialCurrency")
+        or seed.get("nominal_currency")
+    )
     if not currency_code:
-        raise ValueError(f"{ticker_symbol}: no currency from yfinance")
+        raise ValueError(f"{ticker_symbol}: no currency from yfinance or seed")
     currency = Currency(currency_code)
 
-    mic = _exchange_to_mic(_safe(info, "exchange"))
+    mic = _exchange_to_mic(_safe(info, "exchange")) or seed.get("exchange_mic")
     if not mic:
-        raise ValueError(f"{ticker_symbol}: no exchange code from yfinance")
+        # Derive from ISIN country as a last resort so records always have a MIC.
+        country2 = (isin or "")[:2].upper()
+        mic = {
+            "US": "XNAS", "DE": "XETR", "CH": "XSWX", "GB": "XLON",
+            "FR": "XPAR", "NL": "XAMS", "IT": "MTAA", "ES": "XMAD",
+            "JP": "XTKS", "HK": "XHKG", "AU": "XASX", "CA": "XTSE",
+        }.get(country2, "XOFF")
 
-    long_name = _safe(info, "longName") or _safe(info, "shortName") or ticker_symbol
-    short_name = _safe(info, "shortName") or long_name[:32]
+    long_name = (
+        _safe(info, "longName")
+        or _safe(info, "shortName")
+        or seed.get("name")
+        or ticker_symbol
+    )
+    short_name = _safe(info, "shortName") or seed.get("ticker") or long_name[:32]
 
-    sector = _safe(info, "sector")
-    industry = _safe(info, "industry")
+    sector = _safe(info, "sector") or seed.get("sector")
+    industry = _safe(info, "industry") or seed.get("industry")
     quote_type = _safe(info, "quoteType")
     equity_sub_type = YAHOO_QUOTE_TYPE_TO_SUBTYPE.get(quote_type or "", "other")
 
-    country = _country(_safe(info, "country"))
+    country = _country(_safe(info, "country")) or (
+        Country(seed["country"]) if seed.get("country") else None
+    )
 
     if isin and mic:
         golden_id = f"EQG-{isin}-{mic}-001"
@@ -261,6 +290,10 @@ def yahoo_info_to_golden(
     identifier_list = []
     if isin:
         identifier_list.append(FinancialInstrumentIdentification(identifier=isin, type="isin"))
+    if seed.get("valor_nr"):
+        identifier_list.append(
+            FinancialInstrumentIdentification(identifier=str(seed["valor_nr"]), type="valoren")
+        )
     identifier_list.append(
         FinancialInstrumentIdentification(identifier=ticker_symbol, type="tickerSymbol")
     )
@@ -384,7 +417,19 @@ def yahoo_info_to_golden(
 # Per-ticker fetch with retry
 # ---------------------------------------------------------------------------
 
-def fetch_one(ticker_symbol: str, run_id: str, now: datetime) -> Optional[EquityGolden]:
+def fetch_one(
+    ticker_symbol: str,
+    run_id: str,
+    now: datetime,
+    seed: Optional[Dict[str, Any]] = None,
+) -> Optional[EquityGolden]:
+    """Fetch yfinance info for `ticker_symbol` and build an EquityGolden.
+
+    When `seed` is provided, the seed's identifiers + defaults are used as
+    the baseline; yfinance values overwrite where present. If yfinance
+    returns nothing at all, a seed-only record is still emitted (no
+    market data).
+    """
     import yfinance as yf
 
     attempt = 0
@@ -401,8 +446,11 @@ def fetch_one(ticker_symbol: str, run_id: str, now: datetime) -> Optional[Equity
             except Exception:  # noqa: BLE001 — Ticker.isin is flaky
                 pass
             if not info:
+                if seed:
+                    log.info("  %s: no yfinance data, building seed-only record", ticker_symbol)
+                    return yahoo_info_to_golden(ticker_symbol, {}, isin, run_id, now, seed=seed)
                 raise RuntimeError("empty Ticker.info")
-            return yahoo_info_to_golden(ticker_symbol, info, isin, run_id, now)
+            return yahoo_info_to_golden(ticker_symbol, info, isin, run_id, now, seed=seed)
         except (ValueError, ValidationError) as exc:
             # Deterministic mapping failure — don't retry, just drop with warn.
             log.warning("  %s skipped: %s", ticker_symbol, exc)
@@ -412,6 +460,14 @@ def fetch_one(ticker_symbol: str, run_id: str, now: datetime) -> Optional[Equity
             attempt += 1
             if attempt <= YFINANCE_RETRY:
                 time.sleep(2 ** attempt)
+    if seed:
+        # Yahoo unreachable but we still have the parquet seed — emit it.
+        log.warning("  %s yfinance failed, falling back to seed-only", ticker_symbol)
+        try:
+            return yahoo_info_to_golden(ticker_symbol, {}, None, run_id, now, seed=seed)
+        except (ValueError, ValidationError) as exc:
+            log.warning("  %s seed-only build failed: %s", ticker_symbol, exc)
+            return None
     log.warning("  %s failed after %d attempts: %s", ticker_symbol, YFINANCE_RETRY + 1, last_exc)
     return None
 
@@ -436,7 +492,13 @@ def main() -> None:
     parser.add_argument(
         "--universe", default="smi",
         choices=list(UNIVERSE_SOURCES.keys()),
-        help="Named ticker universe to load (default: smi)",
+        help="Named ticker universe to load (default: smi). Ignored if --from-parquet.",
+    )
+    parser.add_argument(
+        "--from-parquet", action="store_true",
+        help="Seed the run from data/universe/{seeds,equity}.parquet. ISIN and "
+             "valor come from parquet; yfinance is queried per ticker (with the "
+             "ISIN country → Yahoo suffix mapping) and overlays where present.",
     )
     parser.add_argument(
         "--limit", type=int, default=None,
@@ -451,23 +513,40 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    log.info("Loading universe %r", args.universe)
-    tickers = load_universe(args.universe)
-    if args.limit:
-        tickers = tickers[: args.limit]
-    log.info("  %d tickers", len(tickers))
-
-    run_id = f"yahoo-{args.universe}-{uuid.uuid4().hex[:8]}"
+    run_id_tag = "parquet" if args.from_parquet else args.universe
+    run_id = f"yahoo-{run_id_tag}-{uuid.uuid4().hex[:8]}"
     now = datetime.now(timezone.utc)
     docs: List[EquityGolden] = []
-    for i, ticker in enumerate(tickers, 1):
-        log.info("[%d/%d] %s", i, len(tickers), ticker)
-        doc = fetch_one(ticker, run_id, now)
-        if doc is not None:
-            docs.append(doc)
+
+    if args.from_parquet:
+        from pipeline.silver import iter_equity_seeds, yahoo_ticker_for
+
+        seeds = list(iter_equity_seeds())
+        if args.limit:
+            seeds = seeds[: args.limit]
+        log.info("Parquet-seeded run: %d equity seeds", len(seeds))
+        for i, seed in enumerate(seeds, 1):
+            if not seed.get("ticker"):
+                continue
+            ticker = yahoo_ticker_for(seed.get("isin") or "", seed["ticker"])
+            log.info("[%d/%d] %s (ISIN %s)", i, len(seeds), ticker, seed.get("isin"))
+            doc = fetch_one(ticker, run_id, now, seed=seed)
+            if doc is not None:
+                docs.append(doc)
+    else:
+        log.info("Loading universe %r", args.universe)
+        tickers = load_universe(args.universe)
+        if args.limit:
+            tickers = tickers[: args.limit]
+        log.info("  %d tickers", len(tickers))
+        for i, ticker in enumerate(tickers, 1):
+            log.info("[%d/%d] %s", i, len(tickers), ticker)
+            doc = fetch_one(ticker, run_id, now)
+            if doc is not None:
+                docs.append(doc)
 
     n = write_ndjson(docs, args.output)
-    log.info("Wrote %d/%d EquityGolden documents to %s", n, len(tickers), args.output)
+    log.info("Wrote %d EquityGolden documents to %s", n, args.output)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,107 @@
+ontology:
+  name: Issuer Golden
+  version: 0.1.0
+  description: >
+    Canonical issuer (legal entity) record, persisted as its own
+    golden-tier document so the per-instrument `IssuerSnapshot` blocks
+    embedded inside `EquityGolden` / `BondGolden` / `FundGolden` are
+    denormalised projections of *this* record.
+
+    The aggregator (`pipeline.gold.issuer_aggregate`) scans the
+    per-security golden indices, dedupes by LEI (falling back to a
+    synthetic `ISS-<legalName>` issuerId when LEI is absent), and
+    rebuilds this index in batch. External enrichment from GLEIF (LEI
+    metadata, ultimate parent, domicile) is layered on top before
+    indexing.
+
+    Lookup flow: any per-instrument document carries `issuer.issuerId`
+    (or `issuer.lei`); use it to fetch the full canonical record from
+    `pms_golden_issuer` for credit, ESG, and corporate hierarchy.
+
+  source_entity: "derived from pms_golden_{equity,bond,fund}"
+
+  entities:
+
+    IssuerGolden:
+      description: >
+        Canonical legal-entity record for an instrument issuer.
+        Document `_id` is `issuerId`.
+      kind: golden_record
+      type: object
+      required:
+        - goldenId
+        - issuerId
+        - legalName
+        - recordMeta
+      properties:
+        goldenId:
+          description: Stable synthetic identifier for the issuer record.
+          type: string
+          example: ISG-549300UM05ATQ0J0V275-001
+
+        issuerId:
+          description: >
+            Stable internal issuer identifier. Equals `IssuerSnapshot.issuerId`
+            on all instruments that reference this issuer. When the LEI is
+            present, the convention is `ISS-<LEI>`; otherwise a slug of
+            `legalName`.
+          type: string
+          example: ISS-549300UM05ATQ0J0V275
+
+        lei:
+          description: ISO 17442 Legal Entity Identifier.
+          common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/LegalEntityIdentifier"
+          example: 549300UM05ATQ0J0V275
+
+        legalName:
+          description: Official legal name of the issuer.
+          type: string
+          example: Roche Holding AG
+
+        issuerType:
+          description: >
+            Coarse-grained issuer type. Examples: corporate, government,
+            supranational, bank, insurance_company, fund_company, special_purpose.
+          type: string
+          example: corporate
+
+        domicileCountry:
+          description: ISO 3166-1 alpha-2 country of legal domicile.
+          common_ontology: "../../reference_data/country/Country.yml#/ontology/entities/Country"
+          example: CH
+
+        headquartersCountry:
+          description: ISO 3166-1 alpha-2 country of operational headquarters.
+          common_ontology: "../../reference_data/country/Country.yml#/ontology/entities/Country"
+          example: CH
+
+        ultimateParentLei:
+          description: LEI of the ultimate parent (group head) if applicable.
+          type: string
+          example: 506700GE1G29325QX363
+
+        guarantorLei:
+          description: LEI of an explicit external guarantor, if any.
+          type: string
+
+        creditProfile:
+          description: Aggregated credit ratings across agencies.
+          common_ontology: "../../rating/credit_rating/CreditRating.yml#/ontology/entities/CreditProfile"
+
+        esgProfile:
+          description: Aggregated ESG ratings and labels.
+          common_ontology: "../../rating/esg/ESGRating.yml#/ontology/entities/ESGProfile"
+
+        instrumentsByClass:
+          description: >
+            Count of per-instrument golden documents that reference this
+            issuer, broken down by `pms_golden_<scope>` family.
+            Maintained by the aggregator.
+          type: object
+
+        instrumentCount:
+          description: Total number of instruments referencing this issuer.
+          type: integer
+
+        recordMeta:
+          common_ontology: "../bond/BondGolden.yml#/ontology/entities/GoldenRecordMeta"

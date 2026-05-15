@@ -96,12 +96,20 @@ the `pms_golden_*` indices. When `OPENSEARCH_URL` is set on
 families (`pms_golden_equity`, `pms_golden_bond`, `pms_golden_fund`).
 
 ```bash
-# Equities (Yahoo Finance) — supported universes: smi, sp500, nasdaq100, dax40, ftse100
+# Equities (Yahoo Finance) — two modes:
+# 1. Wikipedia-sourced universes: smi, sp500, nasdaq100, dax40, ftse100
 PYTHONPATH=src python -m pipeline.gold.equity_yahoo --universe smi
+# 2. Parquet-seeded (ISIN/valor from FINFOX, Yahoo overlay; seed-only fallback)
+PYTHONPATH=src python -m pipeline.gold.equity_yahoo --from-parquet --limit 50
 PYTHONPATH=src python -m pipeline.gold.load \
   -i data/opensearch/golden/equity/equities.ndjson -x pms_golden_equity
 
-# Bonds (ESMA FIRDS) — bundled curated issuer LEIs
+# Bonds (parquet-direct) — real FINFOX terms + S&P ratings
+PYTHONPATH=src python -m pipeline.gold.bond_parquet --limit 500
+PYTHONPATH=src python -m pipeline.gold.load \
+  -i data/opensearch/golden/bond/bonds.ndjson -x pms_golden_bond
+
+# Bonds alternative (ESMA FIRDS) — when no parquet master is available
 PYTHONPATH=src python -m pipeline.gold.bond_firds --limit-per-issuer 10
 PYTHONPATH=src python -m pipeline.gold.load \
   -i data/opensearch/golden/bond/bonds.ndjson -x pms_golden_bond
@@ -115,6 +123,17 @@ PYTHONPATH=src python -m pipeline.gold.load \
 Add `--limit-per-issuer N` to bond/fund fetchers for smoke testing. FIRDS
 hosts the data on best-effort infra; transient 5xx errors are retried with
 exponential backoff in the bundled Solr client.
+
+After loading any per-security index, regenerate the canonical issuer
+index from the embedded snapshots:
+
+```bash
+PYTHONPATH=src python -m pipeline.gold.issuer_aggregate
+```
+
+This scans `pms_golden_{equity,bond,fund}` and writes one `IssuerGolden`
+document per distinct issuer into `pms_golden_issuer`, with
+`instrumentsByClass` counters.
 
 If the browser still shows an older frontend after changes, rebuild and recreate the frontend container:
 

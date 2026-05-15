@@ -106,7 +106,10 @@ ontology:
       kind: value_object
       type: string
 
-    Rating:
-      description: Credit or internal rating.
+    PartnerRiskRating:
+      description: >
+        Internal partner risk rating (KYC / counterparty risk).
+        Distinct from the credit Rating object in `rating/credit_rating/CreditRating.yml`
+        which carries agency, notation, outlook and dates.
       kind: value_object
       type: string

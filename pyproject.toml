@@ -30,7 +30,9 @@ ontology_2_pydantic = "ontology_tools.ontology_2_pydantic.convert_to_pydantic:ma
 golden_record_2_opensearch = "ontology_tools.golden_record_2_opensearch.convert_to_opensearch:main"
 equity_golden_from_yahoo = "pipeline.gold.equity_yahoo:main"
 bond_golden_from_firds = "pipeline.gold.bond_firds:main"
+bond_golden_from_parquet = "pipeline.gold.bond_parquet:main"
 fund_golden_from_firds = "pipeline.gold.fund_firds:main"
+issuer_aggregate = "pipeline.gold.issuer_aggregate:main"
 load_golden_to_opensearch = "pipeline.gold.load:main"
 
 [tool.setuptools.packages.find]
