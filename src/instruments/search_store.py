@@ -163,12 +163,38 @@ def _issuer_subquery(value: str) -> Dict[str, Any]:
     }
 
 
+_SCOPE_TO_INDEX = {
+    "equity": "pms_golden_equity",
+    "bond": "pms_golden_bond",
+    "fund": "pms_golden_fund",
+}
+
+
 class OpenSearchInstrumentSearch:
     """Search-side store reading the helper index."""
 
     def __init__(self, client: OpenSearch, index: str = SEARCH_INDEX):
         self._client = client
         self._index = index
+
+    def fetch_document(self, scope: str, document_id: str) -> Optional[Dict[str, Any]]:
+        """Return the full per-security source doc, or None if it doesn't exist.
+
+        The search-hit projection is too thin for the detail panel; the
+        per-security index carries everything the ontology defines for the
+        family (corporate hierarchy, fees, NAV, market data, …) and is the
+        right thing to render in the inline detail.
+        """
+        target = _SCOPE_TO_INDEX.get(scope)
+        if not target:
+            return None
+        try:
+            resp = self._client.get(index=target, id=document_id)
+        except Exception:  # noqa: BLE001 — connection errors and 404 both end here
+            return None
+        if not resp.get("found"):
+            return None
+        return resp["_source"]
 
     def search(
         self,

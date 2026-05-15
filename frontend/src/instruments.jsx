@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   cancelOrder,
+  fetchInstrumentDocument,
   fetchInstrumentTypes,
   fetchOrder,
   fetchReference,
@@ -95,6 +96,31 @@ export default function InstrumentsApp() {
   const items = results?.items ?? [];
   const total = results?.total ?? 0;
   const selected = items.find((h) => h.document_id === selectedId) || null;
+
+  // Fetch the full per-security source whenever the selection changes.
+  const [docSource, setDocSource] = useState(null);
+  const [docLoading, setDocLoading] = useState(false);
+  useEffect(() => {
+    if (!selected) {
+      setDocSource(null);
+      return;
+    }
+    let alive = true;
+    setDocLoading(true);
+    fetchInstrumentDocument(selected.scope, selected.document_id)
+      .then((d) => {
+        if (alive) setDocSource(d.source);
+      })
+      .catch(() => {
+        if (alive) setDocSource(null);
+      })
+      .finally(() => {
+        if (alive) setDocLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [selected?.scope, selected?.document_id]);
 
   return (
     <div className="finder">
@@ -210,8 +236,10 @@ export default function InstrumentsApp() {
       </section>
 
       {selected && (
-        <DetailPanel
+        <DetailSection
           hit={selected}
+          source={docSource}
+          loading={docLoading}
           onClose={() => setSelectedId(null)}
           onTrade={() => setShowOrder(true)}
         />
@@ -313,48 +341,444 @@ function ResultTable({ items, typeTab, selectedId, onSelect }) {
   );
 }
 
-// ─── Detail panel (overlay) ─────────────────────────────────────────────────
+// ─── Inline detail section (type-aware sub-panels) ──────────────────────────
 
-function DetailPanel({ hit, onClose, onTrade }) {
+const EM_DASH = "—";
+
+function val(v) {
+  if (v === null || v === undefined || v === "") return EM_DASH;
+  return v;
+}
+
+function fmtPctVal(v) {
+  if (v === null || v === undefined) return EM_DASH;
+  return `${(v * 100).toFixed(3)} %`;
+}
+
+function fmtMoney(amount, currency) {
+  if (amount == null) return EM_DASH;
+  const symbol = ({ USD: "$", EUR: "€", GBP: "£", CHF: "CHF", JPY: "¥" })[currency] || "";
+  const sign = symbol || currency || "";
+  return `${sign}${Number(amount).toLocaleString("en-CH", { maximumFractionDigits: 2 })}`;
+}
+
+function Subpanel({ icon, title, children, span }) {
   return (
-    <aside className="finder-detail" aria-label="Instrument detail">
-      <div className="finder-detail-head">
+    <section className={`subpanel${span === 2 ? " span-2" : ""}`}>
+      <h4 className="subpanel-title">
+        {icon && <span className="subpanel-icon">{icon}</span>}
+        {title}
+      </h4>
+      <div className="subpanel-body">{children}</div>
+    </section>
+  );
+}
+
+function KV({ children }) {
+  return <dl className="subpanel-dl">{children}</dl>;
+}
+
+function Row({ label, value }) {
+  return (
+    <>
+      <dt>{label}</dt>
+      <dd>{value === EM_DASH || value === null || value === undefined ? <span className="muted">{EM_DASH}</span> : value}</dd>
+    </>
+  );
+}
+
+function IdentifierChips({ identifiers }) {
+  const list = identifiers || [];
+  return (
+    <section className="subpanel span-2">
+      <h4 className="subpanel-title">
+        <span className="subpanel-icon mono">#</span>
+        Identifiers
+        <span className="subpanel-count">{list.length} total</span>
+      </h4>
+      <div className="subpanel-body">
+        <div className="id-chip-grid">
+          {list.map((id) => (
+            <span key={`${id.type}:${id.identifier}`} className="id-chip">
+              <span className="id-chip-scheme">{(id.type || "").toUpperCase()}</span>
+              <span className="id-chip-value mono">{id.identifier}</span>
+            </span>
+          ))}
+          {list.length === 0 && <span className="muted">{EM_DASH}</span>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HierarchyStep({ n, label, primary, lines }) {
+  return (
+    <li className="hierarchy-step">
+      <span className="hierarchy-num">{n}</span>
+      <div>
+        <p className="hierarchy-label">{label}</p>
+        <p className="hierarchy-primary">{primary || EM_DASH}</p>
+        {lines && lines.filter(Boolean).map((line, i) => (
+          <p key={i} className="hierarchy-line">{line}</p>
+        ))}
+      </div>
+    </li>
+  );
+}
+
+function FundHierarchy({ source }) {
+  const promoter = source.promoter || {};
+  const mc = source.managementCompany || {};
+  const umbrella = source.umbrella || {};
+  const subFund = source.subFund || {};
+  const shareClass = source.shareClass || {};
+  const isin = (source.identifierList || []).find(
+    (id) => (id.type || "").toLowerCase() === "isin"
+  )?.identifier;
+  return (
+    <section className="subpanel span-2">
+      <h4 className="subpanel-title">
+        <span className="subpanel-icon">⛁</span>
+        Corporate Hierarchy
+      </h4>
+      <ol className="hierarchy-list">
+        <HierarchyStep n={1} label="Promoter" primary={promoter.legalName} />
+        <HierarchyStep
+          n={2}
+          label="Management Company"
+          primary={mc.legalName}
+          lines={[
+            mc.lei && `LEI ${mc.lei}`,
+            mc.domicileCountry && `Domicile ${mc.domicileCountry}`,
+          ]}
+        />
+        <HierarchyStep
+          n={3}
+          label="Umbrella"
+          primary={umbrella.legalName}
+          lines={[
+            umbrella.lei && `LEI ${umbrella.lei}`,
+            [umbrella.legalStructure, umbrella.domicileCountry && `(${umbrella.domicileCountry})`]
+              .filter(Boolean)
+              .join(" · "),
+          ]}
+        />
+        <HierarchyStep
+          n={4}
+          label="Sub-fund"
+          primary={subFund.name}
+          lines={[subFund.inceptionDate && `Inception ${subFund.inceptionDate}`]}
+        />
+        <HierarchyStep
+          n={5}
+          label="Share Class"
+          primary={shareClass.name}
+          lines={[
+            [shareClass.type, shareClass.hedged === false ? "unhedged" : (shareClass.hedged ? "hedged" : null), shareClass.currency]
+              .filter(Boolean)
+              .join(" · "),
+            (shareClass.isin || isin) && `ISIN ${shareClass.isin || isin}`,
+          ]}
+        />
+      </ol>
+    </section>
+  );
+}
+
+function FundDetail({ source }) {
+  const mc = source.managementCompany || {};
+  const primary = source.primaryListing || {};
+  const subFund = source.subFund || {};
+  const shareClass = source.shareClass || {};
+  const umbrella = source.umbrella || {};
+  const fees = source.fees || {};
+  const dealing = source.dealing || {};
+  const risk = source.riskRating || {};
+  const md = source.marketData || {};
+  const sp = source.serviceProviders || {};
+
+  return (
+    <>
+      <IdentifierChips identifiers={source.identifierList} />
+      <FundHierarchy source={source} />
+
+      <Subpanel icon="⌂" title="Management Company">
+        <KV>
+          <Row label="Legal name" value={val(mc.legalName)} />
+          <Row label="Type" value={<span className="mono">{val(mc.organisationType)}</span>} />
+          <Row label="LEI" value={<span className="mono">{val(mc.lei)}</span>} />
+          <Row label="Domicile" value={val(mc.domicileCountry)} />
+          <Row label="HQ country" value={val(mc.headquartersCountry)} />
+          <Row label="ManCo ID" value={<span className="mono">{val(mc.organisationId)}</span>} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="◎" title="Primary Listing">
+        <KV>
+          <Row label="MIC" value={<span className="mono">{val(primary.mic)}</span>} />
+          <Row label="Ticker" value={<span className="mono">{val(primary.ticker)}</span>} />
+          <Row label="Listing currency" value={<span className="mono">{val(primary.listingCurrency)}</span>} />
+          <Row label="Status" value={val(primary.status)} />
+          <Row label="Venue country" value={val(primary.venueCountry)} />
+          <Row label="First trading" value={<span className="mono">{val(primary.firstTradingDate)}</span>} />
+          <Row label="Primary" value={primary.isPrimary === true ? "Yes" : primary.isPrimary === false ? "No" : EM_DASH} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="🏷" title="Classification">
+        <KV>
+          <Row label="Asset class" value={val(source.assetClass)} />
+          <Row label="Asset class ID" value={<span className="mono">{val(source.assetClassId)}</span>} />
+          <Row label="Fund subtype" value={val(source.fundSubType)} />
+          <Row label="CFI code" value={<span className="mono">{val(source.cfiCode)}</span>} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="⛁" title="Fund Profile">
+        <KV>
+          <Row label="Subtype" value={val(source.fundSubType)} />
+          <Row label="Primary exposure" value={val(source.primaryAssetClassExposure)} />
+          <Row label="Sub-fund" value={val(subFund.name)} />
+          <Row label="Share class" value={val(shareClass.name)} />
+          <Row label="Share class type" value={val(shareClass.type)} />
+          <Row label="Benchmark" value={val(source.benchmarkName)} />
+          <Row label="Replication" value={val(source.replicationMethod)} />
+          <Row label="Rebalance" value={val(source.rebalanceFrequency)} />
+          <Row label="Legal framework" value={val(source.legalFramework)} />
+          <Row label="Legal structure" value={val(source.legalStructure)} />
+          <Row label="Dividend policy" value={val(source.dividendPolicy)} />
+          <Row label="Umbrella" value={val(umbrella.legalName)} />
+          <Row label="Inception" value={<span className="mono">{val(source.inceptionDate || subFund.inceptionDate)}</span>} />
+          <Row
+            label="Currency hedged"
+            value={source.isCurrencyHedged === true ? "Yes" : source.isCurrencyHedged === false ? "No" : EM_DASH}
+          />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="%" title="Fees">
+        <KV>
+          <Row label="TER" value={fmtPctVal(fees?.ongoing?.totalExpenseRatio ?? source.totalExpenseRatio)} />
+          <Row label="Ongoing charges" value={fmtPctVal(fees?.ongoing?.totalExpenseRatio ?? source.totalExpenseRatio)} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="⤳" title="Dealing">
+        <KV>
+          <Row label="Frequency" value={val(dealing.dealingFrequency)} />
+          <Row label="Settlement" value={val(dealing.settlementCycle)} />
+          <Row label="Cutoff" value={[dealing.cutoffTimeLocal, dealing.cutoffTimezone].filter(Boolean).join(" ") || EM_DASH} />
+          <Row label="Min initial" value={fmtMoney(dealing.minimumInitialInvestment, source.currencyOfDenomination)} />
+          <Row label="Min subsequent" value={fmtMoney(dealing.minimumSubsequentInvestment, source.currencyOfDenomination)} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="⚠" title="Risk Rating">
+        <KV>
+          <Row label="SRRI (1–7)" value={val(risk.srri)} />
+          <Row label="SRI (1–7)" value={val(risk.sri)} />
+          <Row label="PRIIPS transaction costs" value={fmtPctVal(source.transactionCostsPRIIPs)} />
+          <Row label="Portfolio turnover (annual)" value={fmtPctVal(source.portfolioTurnoverPctAnnual)} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="◷" title="NAV & AUM">
+        <KV>
+          <Row label="NAV" value={fmtMoney(md.nav?.value, md.nav?.currency || source.currencyOfDenomination)} />
+          <Row label="Market price" value={fmtMoney(md.marketPrice?.value, md.marketPrice?.currency || source.currencyOfDenomination)} />
+          <Row label="AUM" value={fmtMoney(md.aum?.amount, md.aum?.currency || source.currencyOfDenomination)} />
+          <Row label="Shares in issue" value={md.sharesInIssue != null ? Number(md.sharesInIssue).toLocaleString() : EM_DASH} />
+          <Row label="Premium / discount" value={fmtPctVal(md.premiumDiscount)} />
+          <Row label="Source MIC" value={<span className="mono">{val(md.sourceMic)}</span>} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="🛠" title="Service Providers">
+        <KV>
+          <Row label="Depositary" value={val(sp.depositary?.legalName || sp.depositary)} />
+          <Row label="Administrator" value={val(sp.administrator?.legalName || sp.administrator)} />
+          <Row label="Transfer agent" value={val(sp.transferAgent?.legalName || sp.transferAgent)} />
+          <Row label="Auditor" value={val(sp.auditor?.legalName || sp.auditor)} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="📈" title="Market Data">
+        <KV>
+          <Row label="Open" value={md.open != null ? md.open : EM_DASH} />
+          <Row label="High" value={md.high != null ? md.high : EM_DASH} />
+          <Row label="Low" value={md.low != null ? md.low : EM_DASH} />
+          <Row label="Close" value={md.close != null ? md.close : EM_DASH} />
+          <Row label="Volume" value={md.volume != null ? Number(md.volume).toLocaleString() : EM_DASH} />
+          <Row label="Source MIC" value={<span className="mono">{val(md.sourceMic)}</span>} />
+        </KV>
+      </Subpanel>
+    </>
+  );
+}
+
+function EquityDetail({ source }) {
+  const issuer = source.issuer || {};
+  const primary = source.primaryListing || {};
+  const industry = source.industrySector || {};
+  const md = source.marketData || {};
+  const kf = source.keyFigures || {};
+  return (
+    <>
+      <IdentifierChips identifiers={source.identifierList} />
+
+      <Subpanel icon="⛁" title="Issuer">
+        <KV>
+          <Row label="Legal name" value={val(issuer.legalName)} />
+          <Row label="LEI" value={<span className="mono">{val(issuer.lei)}</span>} />
+          <Row label="Type" value={val(issuer.issuerType)} />
+          <Row label="Domicile" value={val(issuer.domicileCountry)} />
+          <Row label="HQ country" value={val(issuer.headquartersCountry)} />
+          <Row label="Ultimate parent" value={<span className="mono">{val(issuer.ultimateParentLei)}</span>} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="🏷" title="Classification">
+        <KV>
+          <Row label="Asset class" value={val(source.assetClass)} />
+          <Row label="Asset class ID" value={<span className="mono">{val(source.assetClassId)}</span>} />
+          <Row label="Equity sub-type" value={val(source.equitySubType)} />
+          <Row label="CFI" value={<span className="mono">{val(source.cfiCode)}</span>} />
+          <Row label="Sector" value={val(industry.sectorLabel || industry.canonicalLabel)} />
+          <Row label="Industry" value={val(industry.industryLabel)} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="◎" title="Primary Listing">
+        <KV>
+          <Row label="MIC" value={<span className="mono">{val(primary.mic)}</span>} />
+          <Row label="Ticker" value={<span className="mono">{val(primary.ticker)}</span>} />
+          <Row label="Listing currency" value={<span className="mono">{val(primary.listingCurrency)}</span>} />
+          <Row label="Status" value={val(primary.status)} />
+          <Row label="First trading" value={<span className="mono">{val(primary.firstTradingDate)}</span>} />
+          <Row label="Country of incorporation" value={val(source.incorporationCountry)} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="📈" title="Market Data">
+        <KV>
+          <Row label="Last price" value={md.lastTradePrice?.value != null ? md.lastTradePrice.value : EM_DASH} />
+          <Row label="Open" value={md.open != null ? md.open : EM_DASH} />
+          <Row label="High" value={md.high != null ? md.high : EM_DASH} />
+          <Row label="Low" value={md.low != null ? md.low : EM_DASH} />
+          <Row label="Close" value={md.close != null ? md.close : EM_DASH} />
+          <Row label="Volume" value={md.volume != null ? Number(md.volume).toLocaleString() : EM_DASH} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="$" title="Key Figures">
+        <KV>
+          <Row label="Market cap" value={fmtMoney(kf.marketCapitalization?.amount, kf.marketCapitalization?.currency)} />
+          <Row label="EPS" value={kf.earningsPerShare?.amount != null ? kf.earningsPerShare.amount : EM_DASH} />
+          <Row label="P/E" value={kf.priceToEarningsRatio != null ? kf.priceToEarningsRatio : EM_DASH} />
+          <Row label="Volatility (β)" value={kf.volatility != null ? kf.volatility : EM_DASH} />
+          <Row label="Shares outstanding" value={source.sharesOutstanding != null ? Number(source.sharesOutstanding).toLocaleString() : EM_DASH} />
+          <Row label="Dividend yield" value={fmtPctVal(source.dividendPolicy?.dividendYield)} />
+        </KV>
+      </Subpanel>
+    </>
+  );
+}
+
+function BondDetail({ source }) {
+  const issuer = source.issuer || {};
+  const primary = source.primaryListing || {};
+  const credit = issuer.creditProfile || {};
+  const ratings = credit.issuerRatings || [];
+  return (
+    <>
+      <IdentifierChips identifiers={source.identifierList} />
+
+      <Subpanel icon="⛁" title="Issuer">
+        <KV>
+          <Row label="Legal name" value={val(issuer.legalName)} />
+          <Row label="LEI" value={<span className="mono">{val(issuer.lei)}</span>} />
+          <Row label="Type" value={val(issuer.issuerType)} />
+          <Row label="Domicile" value={val(issuer.domicileCountry)} />
+          <Row label="HQ country" value={val(issuer.headquartersCountry)} />
+          <Row label="Ultimate parent" value={<span className="mono">{val(issuer.ultimateParentLei)}</span>} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="🏷" title="Bond Profile">
+        <KV>
+          <Row label="Asset class" value={val(source.assetClass)} />
+          <Row label="Bond sub-type" value={val(source.bondSubType)} />
+          <Row label="Seniority" value={val(source.seniority)} />
+          <Row label="Country of risk" value={val(source.countryOfRisk)} />
+          <Row label="Currency" value={<span className="mono">{val(source.currencyOfDenomination)}</span>} />
+          <Row label="Coupon type" value={val(source.couponType)} />
+          <Row label="Current coupon" value={fmtPctVal(source.currentCouponRate)} />
+          <Row label="Maturity" value={<span className="mono">{val(source.maturityDate)}</span>} />
+          <Row label="Min denomination" value={source.minimumDenomination != null ? Number(source.minimumDenomination).toLocaleString() : EM_DASH} />
+          <Row label="Lifecycle" value={val(source.lifecycleStatus)} />
+        </KV>
+      </Subpanel>
+
+      <Subpanel icon="★" title="Credit Profile">
+        {ratings.length === 0 ? (
+          <p className="muted">{EM_DASH}</p>
+        ) : (
+          <ul className="rating-list">
+            {ratings.map((r, i) => {
+              const obj = typeof r === "string" ? { rating: r } : r;
+              return (
+                <li key={i}>
+                  <span className="finder-row-chip">{val(obj.rating)}</span>
+                  <span className="muted">
+                    {[obj.agency, obj.ratingType, obj.scale, obj.outlook].filter(Boolean).join(" · ") || ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Subpanel>
+
+      <Subpanel icon="◎" title="Primary Listing">
+        <KV>
+          <Row label="MIC" value={<span className="mono">{val(primary.mic)}</span>} />
+          <Row label="Listing currency" value={<span className="mono">{val(primary.listingCurrency)}</span>} />
+          <Row label="Status" value={val(primary.status)} />
+          <Row label="First trading" value={<span className="mono">{val(primary.firstTradingDate)}</span>} />
+        </KV>
+      </Subpanel>
+    </>
+  );
+}
+
+function DetailSection({ hit, source, loading, onClose, onTrade }) {
+  return (
+    <section className="finder-detail-section" aria-label="Instrument detail">
+      <header className="finder-detail-header">
         <div>
-          <h3>{hit.long_name}</h3>
-          <p className="muted">{hit.asset_class}</p>
+          <p className="muted finder-detail-eyebrow">
+            {hit.scope.toUpperCase()} · {hit.document_id}
+          </p>
+          <h2>{hit.long_name}</h2>
+          <p className="muted">{hit.asset_class || ""}</p>
         </div>
         <div className="finder-detail-actions">
           <button type="button" className="btn-primary" onClick={onTrade}>Place Order</button>
           <button type="button" className="btn-ghost" onClick={onClose}>Close</button>
         </div>
-      </div>
-      <dl className="finder-dl">
-        <dt>Document</dt><dd className="mono">{hit.scope}/{hit.document_id}</dd>
-        {hit.cfi_code && (<><dt>CFI</dt><dd className="mono">{hit.cfi_code}</dd></>)}
-        {hit.currency && (<><dt>Currency</dt><dd className="mono">{hit.currency}</dd></>)}
-        {hit.country && (<><dt>Country</dt><dd className="mono">{hit.country}</dd></>)}
-        {hit.venue_mic && (<><dt>Primary venue</dt><dd className="mono">{hit.venue_mic}</dd></>)}
-        {hit.ticker && (<><dt>Ticker</dt><dd className="mono">{hit.ticker}</dd></>)}
-        {hit.issuer_legal_name && (<><dt>Issuer</dt><dd>{hit.issuer_legal_name}</dd></>)}
-        {hit.issuer_lei && (<><dt>Issuer LEI</dt><dd className="mono">{hit.issuer_lei}</dd></>)}
-        {hit.management_company_name && (<><dt>Management Co.</dt><dd>{hit.management_company_name}</dd></>)}
-        {hit.promoter_name && (<><dt>Promoter</dt><dd>{hit.promoter_name}</dd></>)}
-        {hit.lifecycle_status && (<><dt>Lifecycle</dt><dd>{hit.lifecycle_status}</dd></>)}
-      </dl>
-      {(hit.identifiers || []).length > 0 && (
-        <section>
-          <h4>Identifiers</h4>
-          <ul className="finder-id-list">
-            {(hit.identifiers || []).map((id) => (
-              <li key={`${id.type}:${id.identifier}`}>
-                <span className="finder-tag">{(id.type || "").toUpperCase()}</span>
-                <span className="mono">{id.identifier}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+      </header>
+
+      {loading && !source && <p className="muted">Loading document…</p>}
+      {!loading && !source && <p className="muted">Document not available.</p>}
+
+      {source && (
+        <div className="subpanel-grid">
+          {hit.scope === "fund" && <FundDetail source={source} />}
+          {hit.scope === "equity" && <EquityDetail source={source} />}
+          {hit.scope === "bond" && <BondDetail source={source} />}
+        </div>
       )}
-    </aside>
+    </section>
   );
 }
 

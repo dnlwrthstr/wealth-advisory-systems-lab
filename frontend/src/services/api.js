@@ -117,6 +117,10 @@ export function findInstruments({
   return request(`/instruments/search?${params}`);
 }
 
+export function fetchInstrumentDocument(scope, documentId) {
+  return request(`/instruments/document/${scope}/${encodeURIComponent(documentId)}`);
+}
+
 export function fetchInstrumentTypes() {
   return request("/instruments/types");
 }

@@ -83,6 +83,18 @@ def build_router(
             },
         }
 
+    @router.get("/document/{scope}/{document_id}")
+    def get_document(scope: str, document_id: str) -> dict:
+        if search_store is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Search store not configured; OPENSEARCH_URL is required.",
+            )
+        source = search_store.fetch_document(scope, document_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail="document not found")
+        return {"scope": scope, "documentId": document_id, "source": source}
+
     @router.get("/{instrument_id}")
     def get_instrument(instrument_id: str) -> dict:
         # Accept both internal ID and ISIN
