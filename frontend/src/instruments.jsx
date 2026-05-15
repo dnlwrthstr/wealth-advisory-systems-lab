@@ -614,7 +614,7 @@ function FundDetail({ source }) {
       </Subpanel>
 
       <AllocationPanel allocation={source.assetAllocation} />
-      <TopHoldingsPanel allocation={source.assetAllocation} />
+      <HoldingsPanel source={source} allocation={source.assetAllocation} />
     </>
   );
 }
@@ -661,10 +661,16 @@ function AllocationBars({ title, rows }) {
   );
 }
 
-function TopHoldingsPanel({ allocation }) {
-  const holdings = (allocation?.topHoldings || []).filter((h) => h.weight > 0);
+function HoldingsPanel({ source, allocation }) {
+  const holdings = (allocation?.holdings || []).filter((h) => h.weight > 0);
+  const totalCount = source?.holdingsCount;
+  const subtitle = holdings.length
+    ? (totalCount && totalCount > holdings.length
+        ? `${holdings.length} of ${totalCount}`
+        : `${holdings.length}`)
+    : "";
   return (
-    <Subpanel icon="⛁" title={`Top Holdings (Look-through)${holdings.length ? ` · ${holdings.length}` : ""}`} span={2}>
+    <Subpanel icon="⛁" title={`Holdings (Look-through)${subtitle ? ` · ${subtitle}` : ""}`} span={2}>
       {holdings.length === 0 ? (
         <p className="muted">{EM_DASH}</p>
       ) : (

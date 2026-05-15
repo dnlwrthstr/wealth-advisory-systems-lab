@@ -2311,11 +2311,12 @@ class AssetAllocation(BaseModel):
     byAssetClass: Optional[List[Dict[str, Any]]] = Field(None, description="Allocation by asset class (the \"what\").")
     byRegion: Optional[List[Dict[str, Any]]] = Field(None, description="Allocation by region (the \"where\").")
     bySector: Optional[List[Dict[str, Any]]] = Field(None, description="Allocation by industry_sector (the \"industry\"), mainly for equity exposure.")
-    topHoldings: Optional[List[TopHolding]] = Field(None, description="Look-through data: top underlying holdings of the fund (e.g., top 10/20), each with an identifier, name and portfolio weight. ")
+    holdings: Optional[List[Holding]] = Field(None, description="Look-through data: the underlying holdings of the fund, each with an identifier, name and portfolio weight. The array can be a \"top N\" projection (when the source is yfinance / a fact-sheet) or the full constituent list (when the source is an issuer holdings parser or daily CSV). The total constituent count is recorded in `holdingsCount` at the FundGolden level, separate from `len(holdings)`. ")
 
-class TopHolding(BaseModel):
+class Holding(BaseModel):
     """
-    A single underlying holding within a fund's look-through top holdings list.
+    A single underlying holding within a fund's look-through holdings list. The list can be a top-N projection or the full constituent list — see `FundGolden.holdings` / `holdingsCount` for the source and total count.
+
     """
     identifier: str = Field(..., description="Security identifier of the underlying holding (e.g., ISIN or ticker).")
     name: str = Field(..., description="Human-readable name of the underlying holding.")

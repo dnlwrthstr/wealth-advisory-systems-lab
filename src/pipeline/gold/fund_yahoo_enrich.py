@@ -97,11 +97,13 @@ def _project_funds_data(fd: Any) -> Dict[str, Any]:
     """
     out: Dict[str, Any] = {}
 
-    # Top holdings → TopHolding[] (look-through, typically top 10).
+    # Holdings → Holding[] (look-through). yfinance typically gives the top
+    # ~10; an issuer-side parser would give the full constituent list. Field
+    # naming matches the renamed ontology entity (Fund.yml → FundGolden.holdings).
     try:
         df = fd.top_holdings
         if df is not None and not df.empty:
-            out["topHoldings"] = [
+            out["holdings"] = [
                 {
                     "identifier": str(symbol),
                     "name": row.get("Name") or str(symbol),
@@ -263,15 +265,11 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
     if alloc:
         existing = doc.get("assetAllocation") or {}
         # Fill missing dimensions only — don't overwrite curated allocations.
-        for key in ("topHoldings", "bySector", "byAssetClass", "byRegion"):
+        for key in ("holdings", "bySector", "byAssetClass", "byRegion"):
             if alloc.get(key) and not existing.get(key):
                 existing[key] = alloc[key]
         if existing:
             doc["assetAllocation"] = existing
-            if alloc.get("topHoldings") and not doc.get("holdingsCount"):
-                # yfinance doesn't expose total constituent count, but we can
-                # at least note "top N" so the panel can show 'top 10 of —'.
-                doc["holdingsCount"] = None  # leave for fact-sheet skill to fill
 
     return doc
 

@@ -253,7 +253,7 @@ holdings:
   numberOfHoldings:           1418
   portfolioTurnoverPctAnnual: 0.034
 
-  topHoldings:
+  holdings:
     - { isin: US67066G1040, name: "NVIDIA Corp",        weight: 0.0529 }
     - { isin: US0378331005, name: "Apple Inc",          weight: 0.0418 }
     - { isin: US5949181045, name: "Microsoft Corp",     weight: 0.0411 }

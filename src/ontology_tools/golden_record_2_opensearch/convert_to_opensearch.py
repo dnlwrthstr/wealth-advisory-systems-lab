@@ -244,7 +244,7 @@ def map_field_type(
         if isinstance(items, dict):
             item_mapping = map_field_type(items, local_entities, source_file, seen, depth + 1)
             # Arrays of objects → `nested` so each element retains its
-            # identity for correlated queries (e.g. `topHoldings WHERE
+            # identity for correlated queries (e.g. `holdings WHERE
             # identifier = X AND weight > 0.05`). For object types we
             # promote `object` → `nested`; scalar item types pass through.
             if item_mapping.get("type") == "object":

@@ -237,16 +237,25 @@ ontology:
                 description: Weight of this bucket as a decimal (e.g., 0.22 for 22%).
                 example: 0.22
 
-        topHoldings:
+        holdings:
           type: array
           description: >
-            Look-through data: top underlying holdings of the fund (e.g., top 10/20),
-            each with an identifier, name and portfolio weight.
+            Look-through data: the underlying holdings of the fund, each with
+            an identifier, name and portfolio weight. The array can be a
+            "top N" projection (when the source is yfinance / a fact-sheet)
+            or the full constituent list (when the source is an issuer
+            holdings parser or daily CSV). The total constituent count is
+            recorded in `holdingsCount` at the FundGolden level, separate
+            from `len(holdings)`.
           items:
-            ref: TopHolding
+            ref: Holding
 
-    TopHolding:
-      description: A single underlying holding within a fund's look-through top holdings list.
+    Holding:
+      description: >
+        A single underlying holding within a fund's look-through holdings
+        list. The list can be a top-N projection or the full constituent
+        list — see `FundGolden.holdings` / `holdingsCount` for the source
+        and total count.
       kind: value_object
       type: object
       required:

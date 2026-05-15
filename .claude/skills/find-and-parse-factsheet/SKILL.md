@@ -156,6 +156,20 @@ For an ISIN like `IE00B4L5Y983`:
    you populated (`fees`, `dealing`, `riskRating`, `serviceProviders`,
    …), `sourceTimestamp` = today.
 
+## Full holdings: prefer a live parser over downloaded files
+
+`pipeline.gold.fund_yahoo_enrich` fills `assetAllocation.holdings` with
+yfinance's top-10 projection. For the **complete constituent list**,
+prefer parsing the issuer's live product page over the daily holdings
+CSV files: the CSV downloads are typically T-1 and the page often has
+intraday updates plus a stable HTML table you can scrape. Pattern: for
+each fund's `managementCompany.legalName` (BlackRock Asset Management
+Ireland Limited → iShares; Vanguard Group (Ireland) Limited → Vanguard;
+…), navigate to the issuer's product page for that ISIN, parse the
+holdings table, and PATCH `assetAllocation.holdings` with the full
+list. The ontology already accepts an arbitrary-length array — set
+`holdingsCount` to the total even when you write only the top N.
+
 ## Notes on PDF parsing
 
 UCITS KIDs follow the EU PRIIPS template — a 3-page document with
