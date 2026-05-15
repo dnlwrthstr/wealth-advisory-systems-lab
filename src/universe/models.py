@@ -1648,7 +1648,7 @@ class FundGolden(BaseModel):
     identifierList: Optional[List[FinancialInstrumentIdentification]] = Field(None, description="Per-instrument completeness — every identifier known for this security (ISIN, FIGI, SEDOL, CUSIP, RIC, WKN, VALOREN, Bloomberg ticker, …). Different purpose from the helper index: that's for cross-security lookup, this is for \"show me everything I know about THIS one\". ")
     longName: LongText = Field(..., description="Full fund name including share class.")
     shortName: Optional[ShortText] = Field(None, description="Short fund name for grids.")
-    umbrella: Optional[UmbrellaSnapshot] = Field(None, description="Full umbrella entity snapshot (LEI, domicile, structure).")
+    umbrella: UmbrellaSnapshot = Field(..., description="Full umbrella entity snapshot (LEI, domicile, structure).")
     subFund: Optional[SubFund] = Field(None, description="Sub-fund-level grouping inside the umbrella.")
     shareClass: Optional[ShareClass] = Field(None, description="Share-class-level grouping. ISIN, currency and the hedging flag live here — they discriminate share classes inside the sub-fund. For cross-security identifier lookups, use the helper index (`pms_golden_identifier`). ")
     assetClass: str = Field(..., description="Resolved asset class label (e.g., \"Fund / Equity ETF\").")

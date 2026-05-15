@@ -33,8 +33,10 @@ from universe.models import (
     LegalEntityIdentifier,
     ListingSnapshot,
     OrganisationSnapshot,
+    ShareClass,
     SourceAttribution,
     SourceFingerprint,
+    SubFund,
     UmbrellaSnapshot,
 )
 
@@ -116,6 +118,10 @@ def _fingerprint(doc: Dict[str, Any]) -> str:
 
 
 def load_issuers(path: Optional[Path]) -> List[Dict[str, Any]]:
+    """Load umbrella records. Each entry carries separate LEIs for the
+    umbrella, the management company, and (by name) the promoter — the
+    five-level UCITS hierarchy is reconstructed by the fetcher.
+    """
     if path is None:
         text = files("pipeline.gold.data").joinpath("fund_umbrellas.yml").read_text(encoding="utf-8")
     else:
@@ -125,11 +131,12 @@ def load_issuers(path: Optional[Path]) -> List[Dict[str, Any]]:
     if not issuers:
         raise SystemExit("Empty umbrella file.")
     for entry in issuers:
-        if not entry.get("lei") or not entry.get("umbrellaName"):
-            raise SystemExit(f"umbrella missing lei/umbrellaName: {entry}")
-        entry.setdefault("managementCompany", entry["umbrellaName"])
+        if not entry.get("umbrellaLei") or not entry.get("umbrellaName"):
+            raise SystemExit(f"umbrella record missing umbrellaLei/umbrellaName: {entry}")
+        entry.setdefault("managementCompanyName", entry["umbrellaName"])
+        entry.setdefault("managementCompanyLei", entry["umbrellaLei"])
         entry.setdefault("legalFramework", "UCITS")
-        entry.setdefault("legalStructure", "Plc")
+        entry.setdefault("legalStructure", "plc")
         entry.setdefault("country", "IE")
     return issuers
 
@@ -205,21 +212,58 @@ def firds_to_golden(
 
     identifier_list = [FinancialInstrumentIdentification(identifier=isin, type="isin")]
 
+    # ── Level 3: Umbrella (legal issuer of the share class) ──────────────────
+    umbrella_lei = issuer["umbrellaLei"]
     umbrella = UmbrellaSnapshot(
-        umbrellaId=f"UMB-{issuer['lei']}",
+        umbrellaId=f"UMB-{umbrella_lei}",
         legalName=issuer["umbrellaName"],
-        lei=LegalEntityIdentifier(issuer["lei"]),
+        lei=LegalEntityIdentifier(umbrella_lei),
         domicileCountry=country,
         legalStructure=issuer.get("legalStructure"),
     )
 
+    # ── Level 2: Management company (regulated operator) ────────────────────
+    manco_lei = issuer.get("managementCompanyLei")
     management_company = OrganisationSnapshot(
-        organisationId=f"MGT-{issuer['lei']}",
-        legalName=issuer["managementCompany"],
-        lei=LegalEntityIdentifier(issuer["lei"]),
+        organisationId=issuer.get("managementCompanyId") or f"MGT-{manco_lei or umbrella_lei}",
+        legalName=issuer["managementCompanyName"],
+        lei=LegalEntityIdentifier(manco_lei) if manco_lei else None,
         organisationType="fund_company",
         domicileCountry=country,
         headquartersCountry=country,
+    )
+
+    # ── Level 1: Promoter (group brand / sponsor) ───────────────────────────
+    promoter = None
+    if issuer.get("promoterName"):
+        promoter = OrganisationSnapshot(
+            organisationId=f"PROM-{issuer['promoterName'].split(',')[0].replace(' ', '-')}",
+            legalName=issuer["promoterName"],
+            organisationType="promoter",
+        )
+
+    # ── Level 4: Sub-fund (strategy) — derive from FIRDS full name ───────────
+    # FIRDS reports the full share-class name; we conservatively use it as the
+    # sub-fund name too. A future enrichment can normalise sub-fund vs share-
+    # class by stripping the trailing share-class suffix.
+    sub_fund = SubFund(
+        name=doc.get("gnr_full_name") or issuer["umbrellaName"],
+        inceptionDate=first_trading_date,
+    )
+
+    # ── Level 5: Share class (tradable instrument) ──────────────────────────
+    share_class_type: Optional[str] = None
+    if dividend_policy == "ACCUMULATING":
+        share_class_type = "accumulating"
+    elif dividend_policy == "DISTRIBUTING":
+        share_class_type = "distributing"
+    share_class = ShareClass(
+        name=doc.get("gnr_short_name") or doc.get("gnr_full_name") or isin,
+        type=share_class_type,
+        isin=isin,
+        currency=currency,
+        hedged=False,
+        inceptionDate=first_trading_date,
     )
 
     meta = GoldenRecordMeta(
@@ -230,6 +274,8 @@ def firds_to_golden(
             SourceAttribution(fieldGroup="identifiers", source="esma-firds"),
             SourceAttribution(fieldGroup="classification", source="esma-firds + cfi-derived"),
             SourceAttribution(fieldGroup="umbrella", source="curated-issuers.yml"),
+            SourceAttribution(fieldGroup="managementCompany", source="curated-issuers.yml"),
+            SourceAttribution(fieldGroup="promoter", source="curated-issuers.yml"),
             SourceAttribution(fieldGroup="primaryListing", source="esma-firds"),
         ],
         sourceFingerprints=[
@@ -246,6 +292,8 @@ def firds_to_golden(
             longName=doc.get("gnr_full_name") or issuer["umbrellaName"],
             shortName=doc.get("gnr_short_name"),
             umbrella=umbrella,
+            subFund=sub_fund,
+            shareClass=share_class,
             assetClass=asset_class_label,
             assetClassId=asset_class_id,
             fundSubType=fund_sub_type,
@@ -257,6 +305,7 @@ def firds_to_golden(
             dividendPolicy=dividend_policy,
             lifecycleStatus=lifecycle,
             managementCompany=management_company,
+            promoter=promoter,
             primaryListing=primary_listing,
             recordMeta=meta,
         )
@@ -311,9 +360,9 @@ def main() -> None:
     now = datetime.now(timezone.utc)
     all_docs: List[FundGolden] = []
     for i, issuer in enumerate(issuers, 1):
-        lei = issuer["lei"]
-        log.info("[%d/%d] %s (%s)", i, len(issuers), issuer["umbrellaName"], lei)
-        records = list(iter_issuer_records(lei, FIRDS_FL))
+        umbrella_lei = issuer["umbrellaLei"]
+        log.info("[%d/%d] %s (%s)", i, len(issuers), issuer["umbrellaName"], umbrella_lei)
+        records = list(iter_issuer_records(umbrella_lei, FIRDS_FL))
         funds = dedupe_by_isin(iter(records))
         if args.limit_per_issuer:
             funds = funds[: args.limit_per_issuer]

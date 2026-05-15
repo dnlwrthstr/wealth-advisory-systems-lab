@@ -65,6 +65,7 @@ ontology:
         - longName
         - assetClass
         - currencyOfDenomination
+        - umbrella
         - managementCompany
         - recordMeta
       properties:

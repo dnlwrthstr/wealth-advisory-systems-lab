@@ -1,80 +1,126 @@
-# Curated UCITS umbrella LEIs for FundGolden sample-data generation.
+# Curated UCITS umbrella records for FundGolden sample-data generation.
 #
-# A UCITS fund umbrella is the legal entity that contains one or more
-# sub-funds; FIRDS reports the umbrella's LEI as the instrument's `lei`.
-# The management company is a separate legal entity (BlackRock Asset
-# Management Ireland Ltd, Amundi Asset Management, etc.) and is captured
-# in the `managementCompany` field below so the FundGolden record can
-# express both the umbrella and the manager.
+# UCITS funds have a five-level corporate hierarchy:
 #
-# Verified by querying a known ETF ISIN from each family against ESMA FIRDS.
+#   1. PROMOTER         — the group brand / sponsor (BlackRock, Inc.)
+#   2. MANAGEMENT CO.   — the regulated operator (BlackRock Asset Management Ireland Ltd)
+#   3. UMBRELLA         — the legal vehicle hosting the sub-funds (iShares III plc)
+#   4. SUB-FUND         — the specific fund strategy (iShares Core MSCI World UCITS ETF)
+#   5. SHARE CLASS      — the tradable instrument (USD Acc, ISIN IE00B4L5Y983)
+#
+# Each level is a separate legal/business entity with its own LEI (levels 1-3).
+# FIRDS reports the **umbrella** LEI as the instrument's issuer LEI, so we
+# query FIRDS by umbrellaLei. The other LEIs are looked up separately here
+# (GLEIF is the eventual enrichment source).
+#
+# Verified by spot-checks against GLEIF + the BlackRock fund pages. The
+# promoter is the group brand and intentionally does not carry an LEI here
+# (BlackRock, Inc. as a US holding company has its own LEI, but it is the
+# corporate parent, not a fund-industry registered entity for these funds).
 
 issuers:
 
   # --- iShares (BlackRock) UCITS umbrellas ----------------------------------
-  - lei: "549300QS4Q1IT6XCA514"
+  - umbrellaLei: "549300UM05ATQ0J0V275"
     umbrellaName: "iShares III plc"
-    managementCompany: "BlackRock Asset Management Ireland Limited"
+    legalStructure: "plc"
     country: "IE"
     legalFramework: "UCITS"
-    legalStructure: "Plc"
+    managementCompanyLei: "549300MS535KQL2L3F94"
+    managementCompanyName: "BlackRock Asset Management Ireland Limited"
+    managementCompanyId: "MGT-IE-BAMIL-001"
+    promoterName: "BlackRock, Inc."
 
-  - lei: "5493006ESS9BM09FB892"
+  - umbrellaLei: "549300QS4Q1IT6XCA514"
+    umbrellaName: "iShares plc"
+    legalStructure: "plc"
+    country: "IE"
+    legalFramework: "UCITS"
+    managementCompanyLei: "549300MS535KQL2L3F94"
+    managementCompanyName: "BlackRock Asset Management Ireland Limited"
+    managementCompanyId: "MGT-IE-BAMIL-001"
+    promoterName: "BlackRock, Inc."
+
+  - umbrellaLei: "5493006ESS9BM09FB892"
     umbrellaName: "iShares VII plc"
-    managementCompany: "BlackRock Asset Management Ireland Limited"
+    legalStructure: "plc"
     country: "IE"
     legalFramework: "UCITS"
-    legalStructure: "Plc"
+    managementCompanyLei: "549300MS535KQL2L3F94"
+    managementCompanyName: "BlackRock Asset Management Ireland Limited"
+    managementCompanyId: "MGT-IE-BAMIL-001"
+    promoterName: "BlackRock, Inc."
 
-  - lei: "549300IJBBIPXKWNXJ28"
+  - umbrellaLei: "549300IJBBIPXKWNXJ28"
     umbrellaName: "iShares (Bond Funds) plc"
-    managementCompany: "BlackRock Asset Management Ireland Limited"
+    legalStructure: "plc"
     country: "IE"
     legalFramework: "UCITS"
-    legalStructure: "Plc"
+    managementCompanyLei: "549300MS535KQL2L3F94"
+    managementCompanyName: "BlackRock Asset Management Ireland Limited"
+    managementCompanyId: "MGT-IE-BAMIL-001"
+    promoterName: "BlackRock, Inc."
 
   # --- Xtrackers (DWS) ------------------------------------------------------
-  - lei: "549300ZPCMJ0UKSMRS71"
+  - umbrellaLei: "549300ZPCMJ0UKSMRS71"
     umbrellaName: "Xtrackers"
-    managementCompany: "DWS Investment S.A."
+    legalStructure: "ICAV"
     country: "IE"
     legalFramework: "UCITS"
-    legalStructure: "Plc"
+    managementCompanyLei: "529900XR97PSZ7M2YA61"
+    managementCompanyName: "DWS Investment S.A."
+    managementCompanyId: "MGT-LU-DWS-001"
+    promoterName: "DWS Group GmbH & Co. KGaA"
 
   # --- Vanguard -------------------------------------------------------------
-  - lei: "EEXSPYGY7X8YAH8ZJF49"
+  - umbrellaLei: "EEXSPYGY7X8YAH8ZJF49"
     umbrellaName: "Vanguard Funds plc"
-    managementCompany: "Vanguard Group (Ireland) Limited"
+    legalStructure: "plc"
     country: "IE"
     legalFramework: "UCITS"
-    legalStructure: "Plc"
+    managementCompanyLei: "213800NEDJPNGSCQ8I29"
+    managementCompanyName: "Vanguard Group (Ireland) Limited"
+    managementCompanyId: "MGT-IE-VGI-001"
+    promoterName: "The Vanguard Group, Inc."
 
-  - lei: "B8GS85IADJB33D8WL305"
+  - umbrellaLei: "B8GS85IADJB33D8WL305"
     umbrellaName: "Vanguard Investment Series plc"
-    managementCompany: "Vanguard Group (Ireland) Limited"
+    legalStructure: "plc"
     country: "IE"
     legalFramework: "UCITS"
-    legalStructure: "Plc"
+    managementCompanyLei: "213800NEDJPNGSCQ8I29"
+    managementCompanyName: "Vanguard Group (Ireland) Limited"
+    managementCompanyId: "MGT-IE-VGI-001"
+    promoterName: "The Vanguard Group, Inc."
 
   # --- Amundi (incl. former Lyxor) ------------------------------------------
-  - lei: "5493003BFED2MWDBYH64"
+  - umbrellaLei: "5493003BFED2MWDBYH64"
     umbrellaName: "Amundi Index Solutions"
-    managementCompany: "Amundi Luxembourg S.A."
+    legalStructure: "SICAV"
     country: "LU"
     legalFramework: "UCITS"
-    legalStructure: "SICAV"
+    managementCompanyLei: "9695002LFLZUR9JOMD63"
+    managementCompanyName: "Amundi Luxembourg S.A."
+    managementCompanyId: "MGT-LU-AMUNDI-001"
+    promoterName: "Amundi S.A."
 
-  - lei: "549300QB128BFB840071"
+  - umbrellaLei: "549300QB128BFB840071"
     umbrellaName: "Amundi MSCI World UCITS ETF"
-    managementCompany: "Amundi Asset Management"
+    legalStructure: "SICAV"
     country: "LU"
     legalFramework: "UCITS"
-    legalStructure: "SICAV"
+    managementCompanyLei: "9695002LFLZUR9JOMD63"
+    managementCompanyName: "Amundi Asset Management"
+    managementCompanyId: "MGT-LU-AMUNDI-002"
+    promoterName: "Amundi S.A."
 
   # --- UBS Asset Management -------------------------------------------------
-  - lei: "549300HX54UVCB4TEH06"
+  - umbrellaLei: "549300HX54UVCB4TEH06"
     umbrellaName: "UBS (Lux) Fund Solutions"
-    managementCompany: "UBS Fund Management (Luxembourg) S.A."
+    legalStructure: "SICAV"
     country: "LU"
     legalFramework: "UCITS"
-    legalStructure: "SICAV"
+    managementCompanyLei: "5493005SFW7KX0YDA822"
+    managementCompanyName: "UBS Fund Management (Luxembourg) S.A."
+    managementCompanyId: "MGT-LU-UBSFM-001"
+    promoterName: "UBS Group AG"

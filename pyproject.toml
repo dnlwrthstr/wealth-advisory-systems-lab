@@ -33,6 +33,7 @@ bond_golden_from_firds = "pipeline.gold.bond_firds:main"
 bond_golden_from_parquet = "pipeline.gold.bond_parquet:main"
 fund_golden_from_firds = "pipeline.gold.fund_firds:main"
 issuer_aggregate = "pipeline.gold.issuer_aggregate:main"
+issuer_gleif = "pipeline.gold.issuer_gleif:main"
 load_golden_to_opensearch = "pipeline.gold.load:main"
 
 [tool.setuptools.packages.find]

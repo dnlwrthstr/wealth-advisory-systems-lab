@@ -42,11 +42,56 @@ SOURCE_INDICES = ["pms_golden_equity", "pms_golden_bond", "pms_golden_fund"]
 TARGET_INDEX = "pms_golden_issuer"
 
 
-# Fund records carry the issuer in `managementCompany` rather than `issuer`.
-def _extract_issuer_block(src: Dict[str, Any], class_name: str) -> Optional[Dict[str, Any]]:
+# A fund instrument carries THREE distinct legal entities in its corporate
+# hierarchy — umbrella (the legal issuer per UCITS), management company
+# (regulated operator), and promoter (group sponsor) — plus optional
+# investmentManager. Each is its own issuer record. We emit one per role so
+# downstream consumers can look up any of them by issuerId.
+def _extract_issuer_blocks(
+    src: Dict[str, Any], class_name: str
+) -> Iterable[Dict[str, Any]]:
     if class_name == "fund":
-        return src.get("managementCompany") or src.get("issuer")
-    return src.get("issuer")
+        umbrella = src.get("umbrella")
+        if umbrella:
+            # Project umbrella → issuer-block shape so the aggregator can
+            # treat it uniformly. issuerId convention: `ISS-<LEI>` when LEI
+            # is present.
+            yield {
+                "issuerId": (
+                    f"ISS-{umbrella['lei']}"
+                    if umbrella.get("lei")
+                    else f"ISS-{umbrella['legalName']}"
+                ),
+                "lei": umbrella.get("lei"),
+                "legalName": umbrella.get("legalName"),
+                "issuerType": "fund_umbrella",
+                "domicileCountry": umbrella.get("domicileCountry"),
+                "headquartersCountry": umbrella.get("domicileCountry"),
+            }
+        for role_field, role_type in (
+            ("managementCompany", "fund_company"),
+            ("promoter", "promoter"),
+            ("investmentManager", "investment_manager"),
+        ):
+            org = src.get(role_field)
+            if not org:
+                continue
+            yield {
+                "issuerId": org.get("organisationId") or (
+                    f"ISS-{org['lei']}" if org.get("lei") else f"ISS-{org['legalName']}"
+                ),
+                "lei": org.get("lei"),
+                "legalName": org.get("legalName"),
+                "issuerType": org.get("organisationType") or role_type,
+                "domicileCountry": org.get("domicileCountry"),
+                "headquartersCountry": org.get("headquartersCountry"),
+                "ultimateParentLei": org.get("ultimateParentLei"),
+                "esgProfile": org.get("esgProfile"),
+            }
+        return
+    issuer = src.get("issuer")
+    if issuer:
+        yield issuer
 
 
 def _class_from_index(index_name: str) -> str:
@@ -69,44 +114,41 @@ def scan_issuers(client: OpenSearch) -> Dict[str, Dict[str, Any]]:
         seen_in_index = 0
         for hit in cursor:
             src = hit.get("_source") or {}
-            issuer = _extract_issuer_block(src, class_name)
-            if not issuer:
-                continue
-            issuer_id = issuer.get("issuerId") or (
-                f"ISS-{issuer['lei']}" if issuer.get("lei") else None
-            )
-            if not issuer_id:
-                continue
+            for issuer in _extract_issuer_blocks(src, class_name):
+                issuer_id = issuer.get("issuerId") or (
+                    f"ISS-{issuer['lei']}" if issuer.get("lei") else None
+                )
+                if not issuer_id:
+                    continue
 
-            entry = aggregated.setdefault(
-                issuer_id,
-                {
-                    "issuerId": issuer_id,
-                    "lei": issuer.get("lei"),
-                    "legalName": issuer.get("legalName"),
-                    "issuerType": issuer.get("issuerType"),
-                    "domicileCountry": issuer.get("domicileCountry"),
-                    "headquartersCountry": issuer.get("headquartersCountry"),
-                    "ultimateParentLei": issuer.get("ultimateParentLei"),
-                    "guarantorLei": issuer.get("guarantorLei"),
-                    "creditProfile": issuer.get("creditProfile"),
-                    "esgProfile": issuer.get("esgProfile"),
-                    "instrumentsByClass": defaultdict(int),
-                    "instrumentCount": 0,
-                },
-            )
-            entry["instrumentsByClass"][class_name] += 1
-            entry["instrumentCount"] += 1
-            # Fill blanks from later sources without overwriting earlier values.
-            for field in (
-                "lei", "legalName", "issuerType",
-                "domicileCountry", "headquartersCountry",
-                "ultimateParentLei", "guarantorLei",
-                "creditProfile", "esgProfile",
-            ):
-                if entry.get(field) is None and issuer.get(field) is not None:
-                    entry[field] = issuer[field]
-            seen_in_index += 1
+                entry = aggregated.setdefault(
+                    issuer_id,
+                    {
+                        "issuerId": issuer_id,
+                        "lei": issuer.get("lei"),
+                        "legalName": issuer.get("legalName"),
+                        "issuerType": issuer.get("issuerType"),
+                        "domicileCountry": issuer.get("domicileCountry"),
+                        "headquartersCountry": issuer.get("headquartersCountry"),
+                        "ultimateParentLei": issuer.get("ultimateParentLei"),
+                        "guarantorLei": issuer.get("guarantorLei"),
+                        "creditProfile": issuer.get("creditProfile"),
+                        "esgProfile": issuer.get("esgProfile"),
+                        "instrumentsByClass": defaultdict(int),
+                        "instrumentCount": 0,
+                    },
+                )
+                entry["instrumentsByClass"][class_name] += 1
+                entry["instrumentCount"] += 1
+                for field in (
+                    "lei", "legalName", "issuerType",
+                    "domicileCountry", "headquartersCountry",
+                    "ultimateParentLei", "guarantorLei",
+                    "creditProfile", "esgProfile",
+                ):
+                    if entry.get(field) is None and issuer.get(field) is not None:
+                        entry[field] = issuer[field]
+                seen_in_index += 1
         log.info("scanned %s: %d issuer references", index, seen_in_index)
 
     return aggregated
