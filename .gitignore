@@ -21,8 +21,9 @@ data/external/*
 !data/processed/.gitkeep
 !data/external/.gitkeep
 
-# Generated Parquet files (regenerate with scripts/generate_custodian_data.py)
+# Generated Parquet files (regenerate with scripts/)
 data/custodian/*.parquet
+data/universe/*.parquet
 
 # Environment files
 .env
