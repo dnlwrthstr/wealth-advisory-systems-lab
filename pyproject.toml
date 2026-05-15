@@ -37,6 +37,7 @@ issuer_gleif = "pipeline.gold.issuer_gleif:main"
 search_index_build = "pipeline.gold.search_index_build:main"
 fund_yahoo_enrich = "pipeline.gold.fund_yahoo_enrich:main"
 bond_synthetic_market_data = "pipeline.gold.bond_synthetic_market_data:main"
+bond_boerse_frankfurt_enrich = "pipeline.gold.bond_boerse_frankfurt_enrich:main"
 apply_fund_patch = "pipeline.gold.apply_fund_patch:main"
 load_golden_to_opensearch = "pipeline.gold.load:main"
 
