@@ -1,13 +1,17 @@
 """HTTP routes for the Investment Universe.
 
-Built on top of the agentic assembler. `POST /universe/add` assembles a
-golden record and stamps `universeStatus` on it; `GET /universe` lists
-every persisted document that has a `universeStatus` field across the
-three instrument scopes; `PATCH /universe/{scope}/{goldenId}/status`
-flips membership without re-assembling.
+Per-type routes split the surface by instrument scope:
 
-Silver-tier components / time series for each universe member are a
-future iteration — the goldenId returned here is the join key.
+  POST  /universe/equity            — assemble + persist via EquityAgent
+  POST  /universe/bond              — assemble + persist via BondAgent
+  POST  /universe/fund              — assemble + persist via FundAgent
+  GET   /universe                   — list across scopes (optional ?scope= filter)
+  GET   /universe/{scope}           — sugar for the scoped list
+  PATCH /universe/{scope}/{id}/status — flip membership without re-assembling
+
+The agents (`pipeline.agentic.agents`) carry the scope-specific defaults
+(chiefly the cost-class cap: fund=llm_skill, equity/bond=web_fetch). The
+generic `POST /universe/add` route was removed when these were split.
 """
 from __future__ import annotations
 
@@ -17,7 +21,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from pipeline.agentic import assemble_and_persist
+from pipeline.agentic.agents import AGENTS, BaseAgent
 from pipeline.agentic.persist import (
     ALLOWED_UNIVERSE_STATUSES,
     update_universe_status,
@@ -56,14 +60,21 @@ class _IdentifierIn(BaseModel):
 
 
 class UniverseAddRequest(BaseModel):
-    scope: str = Field(..., description="Instrument scope: 'equity', 'bond', 'fund'.")
+    """Body for the per-scope POST routes — scope comes from the path."""
     identifier: _IdentifierIn
     status: str = Field(
         default="in_universe",
         description="Initial universe status: 'watchlist' | 'in_universe' | 'excluded'.",
     )
     budget: Optional[int] = Field(default=None, ge=1, le=50)
-    invoke_llm_skills: bool = Field(default=False)
+    invoke_llm_skills: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override the agent's default cost-class cap. None = use the agent default "
+            "(fund: llm_skill, equity/bond: web_fetch). True = enable LLM-skill sources. "
+            "False = restrict to web_fetch."
+        ),
+    )
 
 
 class UniverseStatusUpdate(BaseModel):
@@ -130,21 +141,23 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
                 ),
             )
 
-    @router.post("/add", response_model=UniverseAddResponse)
-    def add_to_universe(body: UniverseAddRequest) -> UniverseAddResponse:
+    def _add(agent: type[BaseAgent], body: UniverseAddRequest) -> UniverseAddResponse:
         _require_client()
-        _validate_scope(body.scope)
         _validate_status(body.status)
         identifier = {"kind": body.identifier.kind, "value": body.identifier.value}
-        max_cost_class = "llm_skill" if body.invoke_llm_skills else "web_fetch"
+        # invoke_llm_skills: None → agent default; True → llm_skill; False → web_fetch
+        max_cost_class: Optional[str]
+        if body.invoke_llm_skills is None:
+            max_cost_class = None
+        else:
+            max_cost_class = "llm_skill" if body.invoke_llm_skills else "web_fetch"
         try:
-            outcome = assemble_and_persist(
+            outcome = agent.assemble_and_persist(
                 client=opensearch_client,
-                scope=body.scope,
                 identifier=identifier,
-                budget=body.budget or 10,
+                status=body.status,
+                budget=body.budget,
                 max_cost_class=max_cost_class,
-                universe_status=body.status,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -159,12 +172,19 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
             chainedIssuers=outcome["chained_issuers"],
         )
 
-    @router.get("", response_model=UniverseListResponse)
-    def list_universe(
-        scope: Optional[str] = None,
-        status: Optional[str] = None,
-        limit: int = 200,
-    ) -> UniverseListResponse:
+    @router.post("/equity", response_model=UniverseAddResponse)
+    def add_equity(body: UniverseAddRequest) -> UniverseAddResponse:
+        return _add(AGENTS["equity"], body)
+
+    @router.post("/bond", response_model=UniverseAddResponse)
+    def add_bond(body: UniverseAddRequest) -> UniverseAddResponse:
+        return _add(AGENTS["bond"], body)
+
+    @router.post("/fund", response_model=UniverseAddResponse)
+    def add_fund(body: UniverseAddRequest) -> UniverseAddResponse:
+        return _add(AGENTS["fund"], body)
+
+    def _list(scope: Optional[str], status: Optional[str], limit: int) -> UniverseListResponse:
         _require_client()
         if scope is not None:
             _validate_scope(scope)
@@ -217,6 +237,23 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
                 )
             )
         return UniverseListResponse(items=items, total=len(items))
+
+    @router.get("", response_model=UniverseListResponse)
+    def list_universe(
+        scope: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 200,
+    ) -> UniverseListResponse:
+        return _list(scope, status, limit)
+
+    @router.get("/{scope}", response_model=UniverseListResponse)
+    def list_universe_by_scope(
+        scope: str,
+        status: Optional[str] = None,
+        limit: int = 200,
+    ) -> UniverseListResponse:
+        _validate_scope(scope)
+        return _list(scope, status, limit)
 
     @router.patch("/{scope}/{golden_id}/status")
     def update_status(scope: str, golden_id: str, body: UniverseStatusUpdate) -> Dict[str, Any]:

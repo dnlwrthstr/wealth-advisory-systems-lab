@@ -1,4 +1,8 @@
-"""HTTP-level tests for /universe routes against a stub OpenSearch client."""
+"""HTTP-level tests for /universe routes against a stub OpenSearch client.
+
+Covers the per-scope POST routes (equity / bond / fund), the cross-scope
+and per-scope GET lists, and PATCH status updates.
+"""
 from __future__ import annotations
 
 from typing import Any, Dict, List
@@ -21,6 +25,7 @@ class _StubClient:
         self.docs: Dict[tuple[str, str], Dict[str, Any]] = {}
         self.update_calls: List[Dict[str, Any]] = []
         self.search_response: Dict[str, Any] = {"hits": {"hits": []}}
+        self.search_calls: List[Dict[str, Any]] = []
         self.not_found_on_update: bool = False
 
     def index(self, *, index: str, id: str, body: Dict[str, Any], refresh: str = "wait_for"):
@@ -38,6 +43,7 @@ class _StubClient:
         self.docs[(index, id)] = existing
 
     def search(self, *, index: str, body: Dict[str, Any], **kwargs):
+        self.search_calls.append({"index": index, "body": body})
         return self.search_response
 
 
@@ -81,13 +87,12 @@ def _stub_equity_sources(monkeypatch):
     monkeypatch.setattr(adapter_gleif, "fetch", gleif_fetch)
 
 
-def test_add_to_universe_persists_with_status(monkeypatch):
+def test_add_equity_persists_with_status(monkeypatch):
     _stub_equity_sources(monkeypatch)
     client = _StubClient()
     resp = _app_with_client(client).post(
-        "/universe/add",
+        "/universe/equity",
         json={
-            "scope": "equity",
             "identifier": {"kind": "isin", "value": "US0378331005"},
             "status": "in_universe",
         },
@@ -104,39 +109,175 @@ def test_add_to_universe_persists_with_status(monkeypatch):
     assert any(idx == "pms_golden_issuer" for (idx, _) in client.docs)
 
 
-def test_add_to_universe_defaults_to_in_universe(monkeypatch):
+def test_add_equity_defaults_to_in_universe(monkeypatch):
     _stub_equity_sources(monkeypatch)
     client = _StubClient()
     resp = _app_with_client(client).post(
-        "/universe/add",
-        json={"scope": "equity", "identifier": {"kind": "isin", "value": "US0378331005"}},
+        "/universe/equity",
+        json={"identifier": {"kind": "isin", "value": "US0378331005"}},
     )
     assert resp.status_code == 200
     assert resp.json()["universeStatus"] == "in_universe"
 
 
-def test_add_to_universe_rejects_invalid_scope():
+def test_add_equity_rejects_invalid_status():
     client = _StubClient()
     resp = _app_with_client(client).post(
-        "/universe/add",
-        json={"scope": "warrant", "identifier": {"kind": "isin", "value": "X"}},
-    )
-    assert resp.status_code == 400
-    assert "scope" in resp.json()["detail"]
-
-
-def test_add_to_universe_rejects_invalid_status():
-    client = _StubClient()
-    resp = _app_with_client(client).post(
-        "/universe/add",
+        "/universe/equity",
         json={
-            "scope": "equity",
             "identifier": {"kind": "isin", "value": "US0378331005"},
             "status": "maybe",
         },
     )
     assert resp.status_code == 400
     assert "status" in resp.json()["detail"]
+
+
+def test_add_bond_dispatches_to_bond_agent(monkeypatch):
+    """The /universe/bond route must run the bond planner, not equity."""
+    from pipeline.agentic.agents import BondAgent
+
+    seen: Dict[str, Any] = {}
+
+    def fake_assemble_and_persist(*, client, identifier, status, budget=None, max_cost_class=None):
+        seen["scope"] = "bond"
+        seen["identifier"] = identifier
+        seen["status"] = status
+        seen["max_cost_class"] = max_cost_class
+        from pipeline.agentic.assemble import AssembleResult
+
+        primary = AssembleResult(
+            scope="bond",
+            identifier=identifier,
+            record={"goldenId": "BG-XS-001"},
+            quality_score=0.5,
+            remaining_gaps=[],
+            provenance=[],
+            trace=None,  # not used by the response
+            run_id="t",
+        )
+        return {"primary": primary, "chained_issuers": []}
+
+    monkeypatch.setattr(BondAgent, "assemble_and_persist", classmethod(
+        lambda cls, **kw: fake_assemble_and_persist(**kw)
+    ))
+    client = _StubClient()
+    resp = _app_with_client(client).post(
+        "/universe/bond",
+        json={"identifier": {"kind": "isin", "value": "XS1234567890"}},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["scope"] == "bond"
+    assert body["goldenId"] == "BG-XS-001"
+    # Bond agent default cost cap = web_fetch; the route lets it through as None.
+    assert seen["max_cost_class"] is None
+
+
+def test_add_fund_dispatches_to_fund_agent(monkeypatch):
+    """The /universe/fund route must run the fund planner, not equity."""
+    from pipeline.agentic.agents import FundAgent
+
+    seen: Dict[str, Any] = {}
+
+    def fake_assemble_and_persist(*, client, identifier, status, budget=None, max_cost_class=None):
+        seen["scope"] = "fund"
+        seen["max_cost_class"] = max_cost_class
+        from pipeline.agentic.assemble import AssembleResult
+
+        primary = AssembleResult(
+            scope="fund",
+            identifier=identifier,
+            record={"goldenId": "FG-IE-001"},
+            quality_score=0.7,
+            remaining_gaps=[],
+            provenance=[],
+            trace=None,
+            run_id="t",
+        )
+        return {"primary": primary, "chained_issuers": []}
+
+    monkeypatch.setattr(FundAgent, "assemble_and_persist", classmethod(
+        lambda cls, **kw: fake_assemble_and_persist(**kw)
+    ))
+    client = _StubClient()
+    resp = _app_with_client(client).post(
+        "/universe/fund",
+        json={"identifier": {"kind": "isin", "value": "IE00B4L5Y983"}},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["scope"] == "fund"
+    # invoke_llm_skills not set → router passes None → agent uses its own
+    # default ("llm_skill"). The route doesn't override.
+    assert seen["max_cost_class"] is None
+
+
+def test_invoke_llm_skills_true_pins_cost_cap_to_llm_skill(monkeypatch):
+    """Body flag True must force max_cost_class='llm_skill' on the agent call."""
+    from pipeline.agentic.agents import EquityAgent
+
+    seen: Dict[str, Any] = {}
+
+    def fake(cls, **kw):
+        seen.update(kw)
+        from pipeline.agentic.assemble import AssembleResult
+
+        primary = AssembleResult(
+            scope=cls.scope,
+            identifier=kw["identifier"],
+            record={"goldenId": "EQG-X-001"},
+            quality_score=0.5,
+            remaining_gaps=[],
+            provenance=[],
+            trace=None,
+            run_id="t",
+        )
+        return {"primary": primary, "chained_issuers": []}
+
+    monkeypatch.setattr(EquityAgent, "assemble_and_persist", classmethod(fake))
+    resp = _app_with_client(_StubClient()).post(
+        "/universe/equity",
+        json={
+            "identifier": {"kind": "isin", "value": "US0378331005"},
+            "invoke_llm_skills": True,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert seen["max_cost_class"] == "llm_skill"
+
+
+def test_invoke_llm_skills_false_pins_cost_cap_to_web_fetch(monkeypatch):
+    """Body flag False must force max_cost_class='web_fetch' even for funds."""
+    from pipeline.agentic.agents import FundAgent
+
+    seen: Dict[str, Any] = {}
+
+    def fake(cls, **kw):
+        seen.update(kw)
+        from pipeline.agentic.assemble import AssembleResult
+
+        primary = AssembleResult(
+            scope=cls.scope,
+            identifier=kw["identifier"],
+            record={"goldenId": "FG-X-001"},
+            quality_score=0.5,
+            remaining_gaps=[],
+            provenance=[],
+            trace=None,
+            run_id="t",
+        )
+        return {"primary": primary, "chained_issuers": []}
+
+    monkeypatch.setattr(FundAgent, "assemble_and_persist", classmethod(fake))
+    resp = _app_with_client(_StubClient()).post(
+        "/universe/fund",
+        json={
+            "identifier": {"kind": "isin", "value": "IE00B4L5Y983"},
+            "invoke_llm_skills": False,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert seen["max_cost_class"] == "web_fetch"
 
 
 def test_list_universe_projects_search_hits():
@@ -177,6 +318,20 @@ def test_list_universe_projects_search_hits():
     assert item["qualityScore"] == 0.95
 
 
+def test_list_universe_by_scope_filters_to_single_index():
+    """GET /universe/equity must hit only pms_golden_equity."""
+    client = _StubClient()
+    resp = _app_with_client(client).get("/universe/equity")
+    assert resp.status_code == 200
+    assert client.search_calls, "expected an OpenSearch search call"
+    assert client.search_calls[-1]["index"] == "pms_golden_equity"
+
+
+def test_list_universe_by_scope_rejects_unknown_scope():
+    resp = _app_with_client(_StubClient()).get("/universe/warrant")
+    assert resp.status_code == 400
+
+
 def test_update_status_calls_partial_update():
     client = _StubClient()
     resp = _app_with_client(client).patch(
@@ -208,13 +363,29 @@ def test_update_status_returns_404_when_doc_missing():
     assert resp.status_code == 404
 
 
+def test_generic_add_route_is_gone():
+    """The legacy POST /universe/add was deleted in the per-type split.
+
+    FastAPI returns 405 here because GET /universe/{scope} matches the
+    path on a different method; either way, no POST handler exists.
+    """
+    resp = _app_with_client(_StubClient()).post(
+        "/universe/add",
+        json={"scope": "equity", "identifier": {"kind": "isin", "value": "X"}},
+    )
+    assert resp.status_code in (404, 405)
+
+
 def test_universe_endpoints_503_without_opensearch():
     app = FastAPI()
     app.include_router(build_universe_router(opensearch_client=None))
     tc = TestClient(app)
     for path, method, kwargs in (
-        ("/universe/add", "post", {"json": {"scope": "equity", "identifier": {"kind": "isin", "value": "X"}}}),
+        ("/universe/equity", "post", {"json": {"identifier": {"kind": "isin", "value": "X"}}}),
+        ("/universe/bond", "post", {"json": {"identifier": {"kind": "isin", "value": "X"}}}),
+        ("/universe/fund", "post", {"json": {"identifier": {"kind": "isin", "value": "X"}}}),
         ("/universe", "get", {}),
+        ("/universe/equity", "get", {}),
         ("/universe/equity/EQG-X/status", "patch", {"json": {"status": "in_universe"}}),
     ):
         resp = getattr(tc, method)(path, **kwargs)
