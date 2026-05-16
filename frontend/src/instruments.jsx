@@ -295,12 +295,14 @@ function AssembleEmptyState({ identifier, name, typeTab, onAssembled }) {
   // The agent needs an identifier to act on.
   const canAssemble = queryValue.length > 0;
 
-  const run = async (persist) => {
+  const run = async ({ persist = false, invokeLlmSkills = false } = {}) => {
     if (!canAssemble) return;
     setBusy(true);
     setError(null);
     try {
-      const out = await assembleInstrument({ scope, kind, value: queryValue, persist });
+      const out = await assembleInstrument({
+        scope, kind, value: queryValue, persist, invokeLlmSkills,
+      });
       setResult(out);
       setPersisted(Boolean(out.persisted));
       if (out.persisted && onAssembled) onAssembled();
@@ -340,7 +342,7 @@ function AssembleEmptyState({ identifier, name, typeTab, onAssembled }) {
         </span>
         <button
           type="button"
-          onClick={() => run(false)}
+          onClick={() => run({ persist: false })}
           disabled={busy}
           className="finder-tab"
         >
@@ -349,11 +351,22 @@ function AssembleEmptyState({ identifier, name, typeTab, onAssembled }) {
         {result && !persisted && (
           <button
             type="button"
-            onClick={() => run(true)}
+            onClick={() => run({ persist: true })}
             disabled={busy}
             className="finder-tab active"
           >
             Save to library
+          </button>
+        )}
+        {result && scope === "fund" && (result.remaining_gaps || []).length > 0 && (
+          <button
+            type="button"
+            onClick={() => run({ persist: persisted, invokeLlmSkills: true })}
+            disabled={busy}
+            className="finder-tab"
+            title="Slow + costs money — invokes find-and-parse-factsheet via Claude"
+          >
+            Deep enrich (LLM)
           </button>
         )}
       </div>

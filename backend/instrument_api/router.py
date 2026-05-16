@@ -33,6 +33,14 @@ class AssembleRequest(BaseModel):
             "records derivable from LEIs embedded in the result."
         ),
     )
+    invoke_llm_skills: bool = Field(
+        default=False,
+        description=(
+            "When true, raise the planner's cost cap to include llm_skill "
+            "sources (e.g. fund_factsheet_skill via the Claude Agent SDK). "
+            "Slow and costs money — opt in per request."
+        ),
+    )
 
 
 class _ChainedIssuer(BaseModel):
@@ -154,6 +162,7 @@ def build_router(
         """
         identifier = {"kind": body.identifier.kind, "value": body.identifier.value}
         budget = body.budget or 10
+        max_cost_class = "llm_skill" if body.invoke_llm_skills else "web_fetch"
 
         if body.persist:
             if opensearch_client is None:
@@ -170,6 +179,7 @@ def build_router(
                     scope=body.scope,
                     identifier=identifier,
                     budget=budget,
+                    max_cost_class=max_cost_class,
                 )
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -178,7 +188,12 @@ def build_router(
             persisted = True
         else:
             try:
-                result = assemble_golden(scope=body.scope, identifier=identifier, budget=budget)
+                result = assemble_golden(
+                    scope=body.scope,
+                    identifier=identifier,
+                    budget=budget,
+                    max_cost_class=max_cost_class,
+                )
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             chained = []

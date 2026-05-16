@@ -56,9 +56,12 @@ services:
       dockerfile: backend/instrument_api/Dockerfile
     environment:
       OPENSEARCH_URL: http://opensearch:9200
-      # OPENFIGI_API_KEY is read from the project .env (gitignored) and lifts
-      # the OpenFIGI rate limit from 25 to 250 req/min for the agentic loop.
+      # API keys read from the project .env (gitignored). Agentic sources
+      # skip silently when their key is unset, so omitting any of these
+      # just narrows source coverage — nothing breaks.
       OPENFIGI_API_KEY: ${OPENFIGI_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8003:8003"
     depends_on:

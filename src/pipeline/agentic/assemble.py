@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from pipeline.agentic.manifest import compute_gaps, manifest_for, quality_score
-from pipeline.agentic.planner import PlannerTrace, run_planner
+from pipeline.agentic.planner import DEFAULT_MAX_COST_CLASS, PlannerTrace, run_planner
 from pipeline.agentic.registry import sources_for
 
 # Bumped in lockstep with the per-scope ontology — see equity_yahoo.SCHEMA_VERSION.
@@ -37,12 +37,16 @@ def assemble_golden(
     identifier: Dict[str, str],
     *,
     budget: int = 10,
+    max_cost_class: str = DEFAULT_MAX_COST_CLASS,
     run_id: Optional[str] = None,
     now: Optional[datetime] = None,
 ) -> AssembleResult:
     """Assemble a golden record for the given (scope, identifier).
 
     `identifier` is `{"kind": "isin"|"ticker"|..., "value": "..."}`.
+    `max_cost_class` caps which sources are eligible — defaults to
+    "web_fetch" so LLM-skill sources are opt-in (callers pass
+    "llm_skill" to enable them).
     """
     _validate_identifier(identifier)
     run_id = run_id or f"agentic-{scope}-{uuid.uuid4().hex[:8]}"
@@ -58,6 +62,7 @@ def assemble_golden(
         manifest=manifest,
         sources=sources,
         budget=budget,
+        max_cost_class=max_cost_class,
     )
 
     quality = quality_score(manifest, current)

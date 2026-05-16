@@ -18,6 +18,11 @@ _REGISTRY_DIR = Path(__file__).parent
 _CONFIDENCE_RANK = {"high": 3, "medium": 2, "low": 1}
 _COST_RANK = {"file_read": 0, "api_call": 1, "web_fetch": 2, "llm_skill": 3}
 
+
+def cost_rank_of(cost_class: str) -> int:
+    """Public accessor for the planner's max_cost_class cap."""
+    return _COST_RANK[cost_class]
+
 _REQUIRED_KEYS = {
     "id", "module", "entrypoint", "covers",
     "requires_identifier", "produces_fields", "confidence", "cost_class",

@@ -1,0 +1,19 @@
+id: finnhub
+description: |
+  Finnhub equity overlay — live quote + company profile by ticker.
+  Second-opinion source alongside equity_yahoo; covers when Yahoo is
+  throttled / returns "-" / misses fields. Free tier: 60 req/min with
+  FINNHUB_API_KEY (skips silently when the key is unset).
+module: pipeline.agentic.sources.finnhub
+entrypoint: fetch
+covers: [equity]
+requires_identifier:
+  any_of: [isin, ticker]
+produces_fields:
+  - marketData
+  - keyFigures
+  - incorporationCountry
+  - industrySector
+  - firstTradingDate
+confidence: medium
+cost_class: api_call

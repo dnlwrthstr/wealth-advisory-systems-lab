@@ -24,7 +24,11 @@ from typing import Any, Callable, Dict, List, Optional
 
 from pipeline.agentic.manifest import FieldSpec, compute_gaps
 from pipeline.agentic.merger import SourceFetchResult, merge_patch
-from pipeline.agentic.registry import SourceDescriptor
+from pipeline.agentic.registry import SourceDescriptor, cost_rank_of
+
+# Default cap: include everything network-cheap but exclude LLM-skill sources,
+# which are slow and cost money. Callers opt in by raising the cap.
+DEFAULT_MAX_COST_CLASS = "web_fetch"
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +61,7 @@ def run_planner(
     manifest: Dict[str, FieldSpec],
     sources: List[SourceDescriptor],
     budget: int = 10,
+    max_cost_class: str = DEFAULT_MAX_COST_CLASS,
     invoker: Optional[Callable[[SourceDescriptor, str, str, Dict[str, Any]], Optional[SourceFetchResult]]] = None,
 ) -> tuple[Dict[str, Any], List[Dict[str, Any]], PlannerTrace]:
     """Run the planner loop; return (current, provenance_rows, trace).
@@ -68,6 +73,7 @@ def run_planner(
     if invoker is None:
         invoker = _default_invoker
 
+    cost_cap = cost_rank_of(max_cost_class)
     current: Dict[str, Any] = {}
     provenance: List[Dict[str, Any]] = []
     called: set[str] = set()
@@ -84,6 +90,7 @@ def run_planner(
             s for s in sources
             if s.id not in called
             and s.accepts_identifier(identifier_kind)
+            and s.cost_rank <= cost_cap
             and set(s.produces_fields) & gaps
         ]
         if not candidates:

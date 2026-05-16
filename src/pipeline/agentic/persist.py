@@ -64,6 +64,7 @@ def assemble_and_persist(
     identifier: Dict[str, str],
     budget: int = 10,
     chain_issuers: bool = True,
+    max_cost_class: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Assemble + persist the primary record; chain into issuer assembly.
 
@@ -73,8 +74,11 @@ def assemble_and_persist(
         "chained_issuers": [{lei, golden_id, quality_score, remaining_gaps}, ...]
       }
     """
+    extra: Dict[str, Any] = {"budget": budget}
+    if max_cost_class is not None:
+        extra["max_cost_class"] = max_cost_class
     primary: AssembleResult = assemble_golden(
-        scope=scope, identifier=identifier, budget=budget
+        scope=scope, identifier=identifier, **extra
     )
     persist_record(client, scope, primary.record)
 
