@@ -13,22 +13,74 @@ from `opensearch_client_from_env()`.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pipeline.agentic.assemble import AssembleResult, assemble_golden
 
 log = logging.getLogger(__name__)
 
+# Allowed universeStatus values stamped on persisted documents by the
+# Investment Universe feature. `watchlist` = tracked but not part of the
+# investable set; `in_universe` = actively part of the PMS universe;
+# `excluded` = explicitly rejected (kept so re-fetching doesn't silently
+# re-add it). Silver-tier components / time series will hang off the
+# same goldenId in a later iteration.
+ALLOWED_UNIVERSE_STATUSES = frozenset({"watchlist", "in_universe", "excluded"})
 
-def persist_record(client: Any, scope: str, record: Dict[str, Any]) -> None:
+
+def persist_record(
+    client: Any,
+    scope: str,
+    record: Dict[str, Any],
+    *,
+    universe_status: Optional[str] = None,
+) -> None:
     """Index `record` under `pms_golden_{scope}` with refresh=wait_for.
 
     `refresh=wait_for` makes the write visible to subsequent searches —
     crucial when the frontend's next call is a "did the assembled record
     show up?" lookup.
+
+    `universe_status`, when set, is stamped as a top-level field on the
+    document — outside the pydantic-validated golden record so the
+    ontology stays clean. None leaves any pre-existing status untouched
+    on an update? No — index() replaces; callers wanting partial updates
+    use `update_universe_status` instead.
     """
+    if universe_status is not None and universe_status not in ALLOWED_UNIVERSE_STATUSES:
+        raise ValueError(
+            f"universe_status must be one of {sorted(ALLOWED_UNIVERSE_STATUSES)}, "
+            f"got {universe_status!r}"
+        )
+    body = dict(record)
+    if universe_status is not None:
+        body["universeStatus"] = universe_status
     index = f"pms_golden_{scope}"
-    client.index(index=index, id=record["goldenId"], body=record, refresh="wait_for")
+    client.index(index=index, id=record["goldenId"], body=body, refresh="wait_for")
+
+
+def update_universe_status(
+    client: Any,
+    scope: str,
+    golden_id: str,
+    status: str,
+) -> None:
+    """Set `universeStatus` on an existing document without re-assembling.
+
+    Uses a partial _update so the rest of the record is untouched.
+    """
+    if status not in ALLOWED_UNIVERSE_STATUSES:
+        raise ValueError(
+            f"status must be one of {sorted(ALLOWED_UNIVERSE_STATUSES)}, "
+            f"got {status!r}"
+        )
+    index = f"pms_golden_{scope}"
+    client.update(
+        index=index,
+        id=golden_id,
+        body={"doc": {"universeStatus": status}},
+        refresh="wait_for",
+    )
 
 
 def extract_leis(record: Dict[str, Any]) -> List[str]:
@@ -65,8 +117,12 @@ def assemble_and_persist(
     budget: int = 10,
     chain_issuers: bool = True,
     max_cost_class: Optional[str] = None,
+    universe_status: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Assemble + persist the primary record; chain into issuer assembly.
+
+    `universe_status` is stamped on the primary record only — chained
+    issuer records are platform-shared and don't carry membership.
 
     Returns:
       {
@@ -80,7 +136,7 @@ def assemble_and_persist(
     primary: AssembleResult = assemble_golden(
         scope=scope, identifier=identifier, **extra
     )
-    persist_record(client, scope, primary.record)
+    persist_record(client, scope, primary.record, universe_status=universe_status)
 
     chained: List[Dict[str, Any]] = []
     if chain_issuers and scope != "issuer":
