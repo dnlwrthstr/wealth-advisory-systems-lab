@@ -1,0 +1,45 @@
+# SIX Swiss Exchange ticker → ISIN map.
+#
+# The SIX listing of a CH-issued equity is NOT in ESMA FIRDS (Swiss
+# issuers report to FINMA), and yfinance returns "-" for `.isin` on
+# Swiss tickers. So we maintain a small curated table that lets the
+# agentic platform resolve a Yahoo-suffixed Swiss ticker to its ISIN
+# before the rest of the equity flow runs. Once the ISIN is on the
+# record, equity_firds + valor derivation + issuer chaining all kick in.
+#
+# To extend: add `ticker: ISIN` pairs below. Verify each ISIN at the
+# CLI with:
+#   docker exec wealth-advisory-systems-lab-instrument-api-1 python -c \
+#     "from pipeline.gold.equity_firds import fetch_by_isin; \
+#      print(fetch_by_isin('CH...').get('longName'))"
+# If the printed name matches the company, the ISIN is real.
+#
+# Source of truth: SIX Swiss Exchange product directory (six-group.com).
+# Last verified: 2026-05-16.
+
+# ─── SMI (Swiss Market Index, 20 large caps) ─────────────────────────────
+NESN.SW: CH0038863350   # Nestlé S.A.
+ROG.SW: CH0012032048    # Roche Holding AG
+NOVN.SW: CH0012005267   # Novartis AG
+CFR.SW: CH0210483332    # Compagnie Financière Richemont SA
+ZURN.SW: CH0011075394   # Zurich Insurance Group AG
+UBSG.SW: CH0244767585   # UBS Group AG
+ABBN.SW: CH0012221716   # ABB Ltd
+LONN.SW: CH0013841017   # Lonza Group AG
+SIKA.SW: CH0418792922   # Sika AG
+ALC.SW: CH0432492467    # Alcon Inc.
+GIVN.SW: CH0010645932   # Givaudan SA
+HOLN.SW: CH0012214059   # Holcim AG
+SCMN.SW: CH0008742519   # Swisscom AG
+PGHN.SW: CH0024608827   # Partners Group Holding AG
+SREN.SW: CH0126881561   # Swiss Re AG
+SOON.SW: CH0049497724   # Sonova Holding AG
+GEBN.SW: CH0030170408   # Geberit AG
+SLHN.SW: CH0014852781   # Swiss Life Holding AG
+LOGN.SW: CH0025751329   # Logitech International SA
+KNIN.SW: CH0023405456   # Kuehne + Nagel International AG
+
+# ─── SMIM (Swiss Market Index Mid, selected) ─────────────────────────────
+# Started with high-confidence names; extend as needed. Each entry
+# should be FIRDS-verified before being added (see header).
+LISN.SW: CH0010570767   # Lindt & Sprüngli AG (participation certificate)

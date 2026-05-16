@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from pipeline.agentic.merger import SourceFetchResult
 from pipeline.gold.openfigi import SECURITY_TYPE_TO_SUBTYPE, fetch_openfigi_by_isin
+from pipeline.silver import valor_from_isin
 
 
 def fetch(
@@ -26,6 +27,9 @@ def fetch(
     identifiers: List[Dict[str, str]] = [
         {"identifier": identifier_value, "type": "isin"},
     ]
+    valor = valor_from_isin(identifier_value)
+    if valor:
+        identifiers.append({"identifier": valor, "type": "valor"})
     if rec.get("figi"):
         identifiers.append({"identifier": rec["figi"], "type": "figi"})
     if rec.get("compositeFIGI") and rec["compositeFIGI"] != rec.get("figi"):

@@ -1,0 +1,21 @@
+id: equity_firds
+description: |
+  ESMA FIRDS lookup by ISIN — equity enrichment. Adds LEI, regulator-
+  quality long name, CFI code, multi-venue secondary listings, and
+  lifecycle status when given an ISIN. Free, no API key, public Solr
+  endpoint. Skipped for ticker inputs (FIRDS is not ticker-indexed).
+module: pipeline.agentic.sources.equity_firds
+entrypoint: fetch
+covers: [equity]
+requires_identifier:
+  any_of: [isin, ticker]
+produces_fields:
+  - longName
+  - cfiCode
+  - currencyOfDenomination
+  - issuer
+  - secondaryListings
+  - lifecycleStatus
+  - firstTradingDate
+confidence: high
+cost_class: api_call

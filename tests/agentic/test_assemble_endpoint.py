@@ -25,6 +25,7 @@ def _client():
 
 def test_assemble_endpoint_happy_path(monkeypatch):
     """Mock the equity sources and verify the endpoint returns the composed record."""
+    from pipeline.agentic.sources import equity_firds as adapter_firds
     from pipeline.agentic.sources import equity_yahoo as adapter_yahoo
     from pipeline.agentic.sources import openfigi as adapter_openfigi
 
@@ -43,6 +44,7 @@ def test_assemble_endpoint_happy_path(monkeypatch):
         )
 
     monkeypatch.setattr(adapter_openfigi, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_firds, "fetch", lambda k, v, c: None)
     monkeypatch.setattr(adapter_yahoo, "fetch", yahoo_fetch)
 
     resp = _client().post(
