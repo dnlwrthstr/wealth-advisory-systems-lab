@@ -40,7 +40,7 @@ from universe.models import (
     UmbrellaSnapshot,
 )
 
-from ._firds import iter_issuer_records
+from ._firds import iter_issuer_records, solr_get
 
 log = logging.getLogger("fund_firds")
 
@@ -321,6 +321,49 @@ def firds_to_golden(
     except ValidationError as exc:
         log.warning("validation failed for %s: %s", isin, exc.errors()[0]["msg"])
         return None
+
+
+def _solr_query_by_isin(isin: str) -> List[Dict[str, Any]]:
+    """Query FIRDS Solr for a single ISIN and return the (small) doc list."""
+    params = {
+        "q": f"isin:{isin}+AND+latest_received_flag:1",
+        "wt": "json",
+        "rows": "50",
+        "start": "0",
+        "fl": ",".join(FIRDS_FL),
+        "sort": "valid_from_date desc",
+    }
+    data = solr_get(params)
+    return list((data.get("response") or {}).get("docs", []))
+
+
+def fetch_by_isin(
+    isin: str,
+    *,
+    run_id: Optional[str] = None,
+    now: Optional[datetime] = None,
+    issuers_path: Optional[Path] = None,
+) -> Optional[FundGolden]:
+    """Build a FundGolden for `isin` by querying FIRDS Solr directly.
+
+    The share class's umbrella LEI must exist in `fund_umbrellas.yml` —
+    that file is the lab's curated map of umbrella → managementCompany →
+    promoter. Without an entry the umbrella name can't be filled and the
+    build fails validation (returns None).
+    """
+    docs = [d for d in _solr_query_by_isin(isin) if (d.get("gnr_cfi_code") or "").upper().startswith("C")]
+    if not docs:
+        return None
+    doc = max(docs, key=_record_quality)
+    issuers = load_issuers(issuers_path)
+    lei = doc.get("lei")
+    issuer = next((i for i in issuers if i.get("umbrellaLei") == lei), None)
+    if issuer is None:
+        log.info("isin %s: umbrella LEI %s not in curated issuers — skipping", isin, lei)
+        return None
+    run_id = run_id or f"firds-fund-{uuid.uuid4().hex[:8]}"
+    now = now or datetime.now(timezone.utc)
+    return firds_to_golden(doc, issuer, run_id, now)
 
 
 def write_ndjson(docs: List[FundGolden], path: Path) -> int:

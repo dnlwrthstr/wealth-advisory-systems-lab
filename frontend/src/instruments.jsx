@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  assembleInstrument,
   cancelOrder,
   fetchInstrumentDocument,
   fetchInstrumentTypes,
@@ -224,7 +225,22 @@ export default function InstrumentsApp() {
         </div>
 
         {!loading && items.length === 0 ? (
-          <p className="finder-empty">No instruments matched.</p>
+          <AssembleEmptyState
+            identifier={identifier}
+            name={name}
+            typeTab={typeTab}
+            onAssembled={() => {
+              // Re-trigger search so the freshly-persisted record shows up.
+              doSearch({
+                identifier,
+                name,
+                type: typeTab,
+                currency: currencyFilter || null,
+                country: countryFilter || null,
+                limit: 10,
+              });
+            }}
+          />
         ) : (
           <ResultTable
             items={items}
@@ -251,6 +267,166 @@ export default function InstrumentsApp() {
           onClose={() => setShowOrder(false)}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Empty-state: invoke the agentic data-engineering platform ──────────────
+
+// Heuristic ISIN check: 12 alphanumeric, ends in a digit.
+const ISIN_RE = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/i;
+
+// Frontend "all" tab maps to a scope hint we have to disambiguate manually.
+// OpenWealth typeTab → agentic scope: simpleBond is OW's name for plain bonds.
+const TYPETAB_TO_SCOPE = { equity: "equity", simpleBond: "bond", fund: "fund" };
+
+function AssembleEmptyState({ identifier, name, typeTab, onAssembled }) {
+  // Default scope: derive from the active type tab, fall back to equity.
+  const [scope, setScope] = useState(() => TYPETAB_TO_SCOPE[typeTab] || "equity");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [persisted, setPersisted] = useState(false);
+
+  const queryValue = (identifier || name || "").trim();
+  const isIsin = ISIN_RE.test(queryValue);
+  const kind = isIsin ? "isin" : "ticker";
+
+  // The agent needs an identifier to act on.
+  const canAssemble = queryValue.length > 0;
+
+  const run = async (persist) => {
+    if (!canAssemble) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const out = await assembleInstrument({ scope, kind, value: queryValue, persist });
+      setResult(out);
+      setPersisted(Boolean(out.persisted));
+      if (out.persisted && onAssembled) onAssembled();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!canAssemble) {
+    return <p className="finder-empty">No instruments matched.</p>;
+  }
+
+  return (
+    <div className="finder-empty" style={{ textAlign: "left" }}>
+      <p style={{ marginBottom: "0.75rem" }}>
+        No instruments matched <strong className="mono">{queryValue}</strong>.
+        Want the agent to assemble a golden record for it?
+      </p>
+
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+        <label style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}>
+          <span style={{ fontSize: "0.85rem", opacity: 0.7 }}>Scope</span>
+          <select
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            disabled={busy}
+          >
+            <option value="equity">equity</option>
+            <option value="bond">bond</option>
+            <option value="fund">fund</option>
+          </select>
+        </label>
+        <span style={{ fontSize: "0.85rem", opacity: 0.6 }}>
+          identifier kind: <code>{kind}</code>
+        </span>
+        <button
+          type="button"
+          onClick={() => run(false)}
+          disabled={busy}
+          className="finder-tab"
+        >
+          {busy ? "Assembling…" : "Assemble with agent"}
+        </button>
+        {result && !persisted && (
+          <button
+            type="button"
+            onClick={() => run(true)}
+            disabled={busy}
+            className="finder-tab active"
+          >
+            Save to library
+          </button>
+        )}
+      </div>
+
+      {error && <p className="finder-error" style={{ marginTop: "0.75rem" }}>{error}</p>}
+      {result && <AssembleResultPanel result={result} persisted={persisted} />}
+    </div>
+  );
+}
+
+function AssembleResultPanel({ result, persisted }) {
+  const { record, quality_score, remaining_gaps, trace, provenance, chained_issuers } = result;
+  return (
+    <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", border: "1px solid var(--color-border, #d0d0d0)", borderRadius: 4 }}>
+      <p style={{ margin: 0, fontSize: "0.95rem" }}>
+        <strong>{record.longName || record.shortName || record.goldenId}</strong>{" "}
+        <span style={{ opacity: 0.7 }}>
+          (quality {(quality_score * 100).toFixed(0)}%)
+        </span>
+        {persisted && (
+          <span style={{ marginLeft: "0.5rem", color: "var(--color-positive, #2a7a2a)" }}>
+            ✓ saved to library
+          </span>
+        )}
+      </p>
+
+      <div style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
+        <p style={{ margin: "0.25rem 0" }}>
+          <strong>Sources called:</strong>{" "}
+          {(trace.invocations || [])
+            .map((inv) => `${inv.source} (${inv.outcome})`)
+            .join(" → ") || "—"}
+        </p>
+        {trace.stopped_reason && (
+          <p style={{ margin: "0.25rem 0", opacity: 0.7 }}>
+            Stopped: {trace.stopped_reason}
+          </p>
+        )}
+        {provenance && provenance.length > 0 && (
+          <p style={{ margin: "0.25rem 0" }}>
+            <strong>Provenance:</strong>{" "}
+            {provenance.map((p) => `${p.fieldGroup}←${p.source}`).join(", ")}
+          </p>
+        )}
+        {remaining_gaps && remaining_gaps.length > 0 && (
+          <p style={{ margin: "0.25rem 0", color: "var(--color-warn, #aa6600)" }}>
+            <strong>Remaining gaps:</strong> {remaining_gaps.join(", ")}
+          </p>
+        )}
+        {chained_issuers && chained_issuers.length > 0 && (
+          <p style={{ margin: "0.25rem 0" }}>
+            <strong>Chained issuer records:</strong>{" "}
+            {chained_issuers.map((c) => `${c.lei} (quality ${(c.quality_score * 100).toFixed(0)}%)`).join(", ")}
+          </p>
+        )}
+      </div>
+
+      <details style={{ marginTop: "0.5rem" }}>
+        <summary style={{ cursor: "pointer", fontSize: "0.85rem" }}>
+          Inspect assembled record
+        </summary>
+        <pre
+          style={{
+            background: "var(--color-code-bg, #f8f8f8)",
+            padding: "0.5rem",
+            fontSize: "0.75rem",
+            maxHeight: "300px",
+            overflow: "auto",
+          }}
+        >
+          {JSON.stringify(record, null, 2)}
+        </pre>
+      </details>
     </div>
   );
 }

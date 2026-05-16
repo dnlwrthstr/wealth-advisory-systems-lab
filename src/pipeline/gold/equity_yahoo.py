@@ -550,6 +550,61 @@ def fetch_one(
     return None
 
 
+def _find_equity_seed_by_isin(isin: str) -> Optional[Dict[str, Any]]:
+    """Linear-scan the parquet equity seeds for a matching ISIN."""
+    try:
+        from pipeline.silver import iter_equity_seeds
+    except ImportError:
+        return None
+    try:
+        target = isin.upper()
+        for seed in iter_equity_seeds():
+            if (seed.get("isin") or "").upper() == target:
+                return seed
+    except SystemExit:
+        return None
+    return None
+
+
+def fetch_by_identifier(
+    kind: str,
+    value: str,
+    *,
+    run_id: Optional[str] = None,
+    now: Optional[datetime] = None,
+) -> Optional[EquityGolden]:
+    """Identifier-agnostic equity fetch.
+
+    Resolves `kind` ∈ {"isin", "ticker"} to a Yahoo ticker and delegates to
+    `fetch_one`. For ISINs, prefers the parquet seed (gives a clean ticker +
+    currency baseline); falls back to handing the ISIN straight to yfinance.
+
+    Used by the agentic source adapter at
+    `pipeline.agentic.sources.equity_yahoo`. The CLI continues to use
+    `fetch_one` via `iter_equity_seeds`.
+    """
+    if kind not in ("isin", "ticker"):
+        raise ValueError(f"unsupported identifier kind {kind!r}; expected 'isin' or 'ticker'")
+    if not value:
+        raise ValueError("identifier value must be non-empty")
+    if run_id is None:
+        run_id = f"yahoo-{kind}-{uuid.uuid4().hex[:8]}"
+    if now is None:
+        now = datetime.now(timezone.utc)
+
+    if kind == "ticker":
+        return fetch_one(value, run_id, now)
+
+    seed = _find_equity_seed_by_isin(value)
+    if seed is not None and seed.get("ticker"):
+        from pipeline.silver import yahoo_ticker_for
+        ticker = yahoo_ticker_for(value, seed["ticker"])
+        if ticker:
+            return fetch_one(ticker, run_id, now, seed=seed)
+
+    return fetch_one(value, run_id, now)
+
+
 def write_ndjson(docs: List[EquityGolden], path: Path) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:

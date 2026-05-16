@@ -1,0 +1,18 @@
+id: issuer_gleif
+description: |
+  GLEIF public API lookup by LEI. Authoritative for legal-entity
+  attributes (legalName, domicileCountry, headquartersCountry,
+  ultimateParentLei). Disk-cached.
+module: pipeline.agentic.sources.issuer_gleif
+entrypoint: fetch
+covers: [issuer]
+requires_identifier:
+  any_of: [lei]
+produces_fields:
+  - legalName
+  - issuerType
+  - domicileCountry
+  - headquartersCountry
+  - ultimateParentLei
+confidence: high
+cost_class: web_fetch

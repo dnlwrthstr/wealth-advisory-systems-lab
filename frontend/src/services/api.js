@@ -129,6 +129,22 @@ export function fetchInstrument(instrumentId) {
   return request(`/instruments/${instrumentId}`);
 }
 
+// Agentic data engineering: assemble a golden record from an identifier.
+// When `persist` is true, the backend also writes the record to OpenSearch
+// and chains into IssuerGolden assembly for any embedded LEIs.
+export function assembleInstrument({ scope, kind, value, persist = false, budget }) {
+  const body = {
+    scope,
+    identifier: { kind, value },
+    persist,
+  };
+  if (budget) body.budget = budget;
+  return request("/instruments/assemble", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 // Order API
 export function submitOrder(payload) {
   return request("/orders", {

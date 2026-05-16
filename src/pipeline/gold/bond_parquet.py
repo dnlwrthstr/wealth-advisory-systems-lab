@@ -224,6 +224,33 @@ def row_to_golden(
         return None
 
 
+def fetch_by_isin(
+    isin: str,
+    *,
+    run_id: Optional[str] = None,
+    now: Optional[datetime] = None,
+    enrich_lei: bool = False,
+) -> Optional[BondGolden]:
+    """Load the parquet row for `isin` and build a BondGolden.
+
+    Returns None when the parquet master is unavailable or the ISIN isn't
+    in it. Used by the agentic source adapter at
+    `pipeline.agentic.sources.bond_parquet`.
+    """
+    try:
+        master = load_bond_master()
+    except SystemExit:
+        return None
+    rows = master[master["isin"].astype(str) == isin]
+    if rows.empty:
+        return None
+    row = rows.iloc[0].to_dict()
+    clean = {k: (v if v == v else None) for k, v in row.items()}  # NaN → None
+    run_id = run_id or f"parquet-bond-{uuid.uuid4().hex[:8]}"
+    now = now or datetime.now(timezone.utc)
+    return row_to_golden(clean, run_id, now, enrich_lei=enrich_lei)
+
+
 def write_ndjson(docs: list, path: Path) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:

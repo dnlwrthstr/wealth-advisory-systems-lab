@@ -46,6 +46,8 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "pipeline.gold" = ["data/*.yml"]
+"pipeline.agentic.registry" = ["*.yml"]
+"pipeline.agentic.annotations" = ["*.yml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

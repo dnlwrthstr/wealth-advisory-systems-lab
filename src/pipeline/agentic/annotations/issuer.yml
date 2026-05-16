@@ -1,0 +1,80 @@
+# Agentic-platform annotations for IssuerGolden.
+# Self-documenting: every top-level field of `universe.models.IssuerGolden`
+# is listed. See annotations/equity.yml for the schema.
+
+fields:
+
+  goldenId:
+    requirement: required
+    kind: assembled
+    description: Stable synthetic identifier for the issuer record.
+    notes: "Convention: ISS-{LEI} when a LEI is known."
+
+  issuerId:
+    requirement: required
+    kind: assembled
+    description: Stable internal issuer identifier (matches IssuerSnapshot.issuerId on instruments).
+    notes: "Convention: ISS-{LEI} when a LEI is known."
+
+  lei:
+    requirement: required
+    kind: assembled
+    description: ISO 17442 Legal Entity Identifier.
+    notes: Taken from the assembly identifier ({kind=lei, value=...}).
+
+  legalName:
+    requirement: required
+    kind: source
+    description: Official legal name of the issuer.
+    notes: GLEIF is authoritative; overlays the upstream pipeline's abbreviated name.
+
+  issuerType:
+    requirement: important
+    kind: source
+    description: Coarse-grained issuer type (corporate, government, bank, fund_company, …).
+
+  domicileCountry:
+    requirement: important
+    kind: source
+    description: ISO 3166-1 alpha-2 country of legal domicile.
+
+  headquartersCountry:
+    requirement: important
+    kind: source
+    description: ISO 3166-1 alpha-2 country of operational HQ.
+
+  ultimateParentLei:
+    requirement: important
+    kind: source
+    description: LEI of the ultimate parent / group head, when GLEIF reports one.
+
+  guarantorLei:
+    requirement: optional
+    kind: source
+    description: LEI of an explicit external guarantor.
+
+  creditProfile:
+    requirement: optional
+    kind: source
+    description: Aggregated credit ratings across agencies.
+
+  esgProfile:
+    requirement: optional
+    kind: source
+    description: Aggregated ESG ratings and labels.
+
+  instrumentsByClass:
+    requirement: optional
+    kind: assembled
+    description: Per-scope instrument counts.
+    notes: Set later by issuer_aggregate when scanning the per-instrument indices.
+
+  instrumentCount:
+    requirement: optional
+    kind: assembled
+    description: Total instrument count referencing this issuer.
+
+  recordMeta:
+    requirement: required
+    kind: assembled
+    description: Provenance + freshness metadata.

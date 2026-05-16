@@ -1,0 +1,16 @@
+id: fund_yahoo
+description: |
+  Yahoo Finance fund overlay — NAV / market price / OHLCV / AUM / TER /
+  trailing returns / asset allocation. Disk-cached. Runs after fund_firds
+  has established the umbrella + management company hierarchy.
+module: pipeline.agentic.sources.fund_yahoo
+entrypoint: fetch
+covers: [fund]
+requires_identifier:
+  any_of: [isin]
+produces_fields:
+  - marketData
+  - totalExpenseRatio
+  - assetAllocation
+confidence: medium
+cost_class: api_call

@@ -1,0 +1,34 @@
+id: fund_firds
+description: |
+  ESMA FIRDS Solr lookup by ISIN, joined against the curated umbrella LEI
+  map (pipeline/gold/data/fund_umbrellas.yml). Builds the FundGolden with
+  the full UCITS hierarchy (umbrella / managementCompany / promoter).
+  Network call (web_fetch).
+module: pipeline.agentic.sources.fund_firds
+entrypoint: fetch
+covers: [fund]
+requires_identifier:
+  any_of: [isin]
+produces_fields:
+  - identifierList
+  - longName
+  - shortName
+  - umbrella
+  - subFund
+  - shareClass
+  - assetClass
+  - assetClassId
+  - fundSubType
+  - primaryAssetClassExposure
+  - currencyOfDenomination
+  - domicile
+  - legalFramework
+  - legalStructure
+  - dividendPolicy
+  - cfiCode
+  - lifecycleStatus
+  - managementCompany
+  - promoter
+  - primaryListing
+confidence: high
+cost_class: web_fetch

@@ -53,4 +53,6 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-app.include_router(build_router(_service, search_store=_search_store))
+app.include_router(
+    build_router(_service, search_store=_search_store, opensearch_client=_client)
+)

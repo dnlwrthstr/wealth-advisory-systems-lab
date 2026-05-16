@@ -1,0 +1,27 @@
+id: equity_parquet_seed
+description: |
+  Build an EquityGolden baseline from the FINFOX parquet seed alone, no
+  network calls. High confidence on identifiers + currency; doesn't fill
+  live market data — equity_yahoo overlays the rest under the cost-first
+  planner.
+module: pipeline.agentic.sources.equity_parquet_seed
+entrypoint: fetch
+covers: [equity]
+requires_identifier:
+  any_of: [isin]
+produces_fields:
+  - identifierList
+  - longName
+  - shortName
+  - assetClass
+  - assetClassId
+  - equitySubType
+  - industrySector
+  - incorporationCountry
+  - currencyOfDenomination
+  - issuer
+  - primaryListing
+  - lifecycleStatus
+  - cfiCode
+confidence: high
+cost_class: file_read

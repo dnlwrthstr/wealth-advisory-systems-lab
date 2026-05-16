@@ -26,7 +26,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
-from opensearchpy import OpenSearch, helpers
+if False:  # type-check-only import — see iter_issuers_with_lei + main
+    from opensearchpy import OpenSearch  # noqa: F401
 
 log = logging.getLogger("issuer_gleif")
 
@@ -163,7 +164,9 @@ def apply_to_doc(doc: Dict[str, Any], gleif: Dict[str, Any]) -> Dict[str, Any]:
 # Driver
 # ---------------------------------------------------------------------------
 
-def iter_issuers_with_lei(client: OpenSearch) -> Iterable[Dict[str, Any]]:
+def iter_issuers_with_lei(client: "OpenSearch") -> Iterable[Dict[str, Any]]:
+    from opensearchpy import helpers
+
     query = {"query": {"exists": {"field": "lei"}}}
     yield from helpers.scan(client, index=INDEX, query=query)
 
@@ -189,6 +192,7 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+    from opensearchpy import OpenSearch
     client = OpenSearch(hosts=[args.url], verify_certs=False, ssl_show_warn=False)
     actions = []
     fetched = 0

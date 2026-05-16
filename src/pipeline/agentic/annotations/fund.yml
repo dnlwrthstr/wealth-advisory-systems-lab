@@ -1,0 +1,265 @@
+# Agentic-platform annotations for FundGolden.
+# Self-documenting: every top-level field of `universe.models.FundGolden`
+# is listed. See annotations/equity.yml for the schema.
+
+fields:
+
+  goldenId:
+    requirement: required
+    kind: assembled
+    description: Stable internal primary key.
+    notes: "Convention: FG-{ISIN}-001."
+
+  cfiCode:
+    requirement: important
+    kind: source
+    description: ISO 10962 CFI classification.
+
+  identifierList:
+    requirement: required
+    kind: source
+    description: All known identifiers.
+
+  longName:
+    requirement: required
+    kind: source
+    description: Full fund name including share class.
+
+  shortName:
+    requirement: optional
+    kind: source
+    description: Short fund name for grids.
+
+  umbrella:
+    requirement: required
+    kind: source
+    description: UCITS umbrella entity (legal issuer of the share class).
+    notes: Resolved against the curated fund_umbrellas.yml by LEI from FIRDS.
+
+  subFund:
+    requirement: important
+    kind: source
+    description: Sub-fund-level grouping inside the umbrella.
+
+  shareClass:
+    requirement: required
+    kind: source
+    description: Share-class grouping (ISIN + currency + dividend policy).
+
+  assetClass:
+    requirement: required
+    kind: derived
+    description: Resolved asset class label (Fund / Equity ETF / Fund / Fixed Income / …).
+
+  assetClassId:
+    requirement: important
+    kind: derived
+    description: Canonical AssetClass reference.
+
+  fundSubType:
+    requirement: important
+    kind: derived
+    description: Fund sub-type derived from CFI (etf / openEndedMutualFund / …).
+
+  fundStrategy:
+    requirement: optional
+    kind: source
+    description: Investment strategy classification.
+
+  primaryAssetClassExposure:
+    requirement: important
+    kind: derived
+    description: Dominant underlying asset class exposure, derived from CFI.
+
+  currencyOfDenomination:
+    requirement: required
+    kind: source
+    description: ISO 4217 currency of the share class.
+
+  domicile:
+    requirement: important
+    kind: source
+    description: Country where the fund is legally registered.
+
+  legalFramework:
+    requirement: important
+    kind: source
+    description: Regulatory framework (UCITS / AIFMD / 40-Act).
+
+  legalStructure:
+    requirement: optional
+    kind: source
+    description: Legal form (SICAV / ICAV / FCP / …).
+
+  dividendPolicy:
+    requirement: important
+    kind: derived
+    description: Income handling (distributing vs accumulating), derived from CFI.
+
+  isCurrencyHedged:
+    requirement: optional
+    kind: source
+    description: True if the share class employs FX hedging.
+
+  hedgingCurrency:
+    requirement: optional
+    kind: source
+    description: Target currency for FX hedging.
+
+  holdingsCount:
+    requirement: optional
+    kind: source
+    description: Number of underlying constituents.
+    notes: Needs the find-and-parse-factsheet skill or an issuer holdings page.
+
+  replicationMethod:
+    requirement: optional
+    kind: source
+    description: ETF replication method (physical / synthetic / sampling).
+
+  benchmarkName:
+    requirement: optional
+    kind: source
+    description: Name of the tracked benchmark.
+
+  benchmarkIdentifier:
+    requirement: optional
+    kind: source
+    description: Identifier of the tracked benchmark.
+
+  fiscalYearEnd:
+    requirement: optional
+    kind: source
+    description: Fund fiscal year end as MM-DD.
+
+  rebalanceFrequency:
+    requirement: optional
+    kind: source
+    description: Portfolio rebalance frequency.
+
+  riskRating:
+    requirement: important
+    kind: source
+    description: Regulatory KIID / PRIIPs KID risk ratings.
+    notes: Needs the find-and-parse-factsheet skill.
+
+  totalExpenseRatio:
+    requirement: important
+    kind: source
+    description: TER (annual %, decimal) hoisted from fees.ongoing for screens.
+
+  transactionCostsPRIIPs:
+    requirement: optional
+    kind: source
+    description: PRIIPs ex-post transaction cost ratio.
+
+  swingPricingApplied:
+    requirement: optional
+    kind: source
+    description: True if swing pricing is applied to NAV calculation.
+
+  fees:
+    requirement: important
+    kind: source
+    description: Full fee structure snapshot.
+
+  dealing:
+    requirement: important
+    kind: source
+    description: Subscription / redemption mechanics for the share class.
+
+  serviceProviders:
+    requirement: optional
+    kind: source
+    description: Depositary, administrator, transfer agent, auditor.
+
+  assetAllocation:
+    requirement: optional
+    kind: source
+    description: Sector / asset-class / region breakdowns.
+
+  holdingsAsOf:
+    requirement: optional
+    kind: source
+    description: Snapshot date of the holdings list.
+
+  portfolioTurnoverPctAnnual:
+    requirement: optional
+    kind: source
+    description: Annual portfolio turnover percentage.
+
+  currencyAllocation:
+    requirement: optional
+    kind: source
+    description: Currency exposure breakdown.
+
+  performance:
+    requirement: important
+    kind: source
+    description: Trailing period returns (1y / 3y / 5y / 10y / inception).
+
+  taxStatuses:
+    requirement: optional
+    kind: source
+    description: Tax statuses (e.g. UK reporting, German equity, US PFIC).
+
+  managementCompany:
+    requirement: required
+    kind: source
+    description: Regulated operator (own LEI, distinct from umbrella).
+
+  investmentManager:
+    requirement: optional
+    kind: source
+    description: Delegated investment manager, if distinct from the management company.
+
+  promoter:
+    requirement: important
+    kind: source
+    description: Group sponsor / brand owner.
+
+  primaryListing:
+    requirement: important
+    kind: source
+    description: Primary listing venue (often XOFF for non-ETF mutual funds).
+
+  secondaryListings:
+    requirement: optional
+    kind: source
+    description: Other listing venues, especially relevant for ETFs.
+
+  marketData:
+    requirement: important
+    kind: source
+    description: Last-known NAV / market price / AUM / OHLCV.
+    notes: yfinance covers this for ETFs and many mutual funds.
+
+  instrumentEsgProfile:
+    requirement: optional
+    kind: source
+    description: SFDR article classification, ESG labels.
+
+  inceptionDate:
+    requirement: optional
+    kind: source
+    description: Share-class inception date.
+
+  terminationDate:
+    requirement: optional
+    kind: source
+    description: Date of liquidation, if applicable.
+
+  lifecycleStatus:
+    requirement: important
+    kind: derived
+    description: Lifecycle status (active / liquidated / inactive).
+
+  compliance:
+    requirement: optional
+    kind: source
+    description: Pre-resolved compliance flags.
+
+  recordMeta:
+    requirement: required
+    kind: assembled
+    description: Provenance + freshness metadata.
