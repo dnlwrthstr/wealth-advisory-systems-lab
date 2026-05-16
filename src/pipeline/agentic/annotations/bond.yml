@@ -1,0 +1,176 @@
+# Agentic-platform annotations for BondGolden.
+# Self-documenting: every top-level field of `universe.models.BondGolden`
+# is listed. See annotations/equity.yml for the schema.
+
+fields:
+
+  goldenId:
+    requirement: required
+    kind: assembled
+    description: Stable internal primary key.
+    notes: "Convention: BG-{ISIN}-001."
+
+  cfiCode:
+    requirement: important
+    kind: source
+    description: ISO 10962 CFI classification.
+
+  identifierList:
+    requirement: required
+    kind: source
+    description: All known identifiers (ISIN, valor, …).
+
+  longName:
+    requirement: required
+    kind: source
+    description: Full instrument name.
+
+  shortName:
+    requirement: optional
+    kind: source
+    description: Short instrument name for grids.
+
+  assetClass:
+    requirement: required
+    kind: derived
+    description: Resolved asset class label (Corporate Bond / Government Bond / …).
+
+  assetClassId:
+    requirement: important
+    kind: derived
+    description: Canonical AssetClass reference.
+
+  bondSubType:
+    requirement: important
+    kind: source
+    description: Bond sub-type wrapper (e.g. senior_unsecured, covered, …).
+
+  seniority:
+    requirement: important
+    kind: source
+    description: Capital-structure seniority of the bond.
+
+  industrySector:
+    requirement: optional
+    kind: source
+    description: Issuer industry/sector classification.
+
+  countryOfRisk:
+    requirement: important
+    kind: source
+    description: Country of credit risk.
+
+  currencyOfDenomination:
+    requirement: required
+    kind: source
+    description: ISO 4217 currency of the bond.
+
+  issueDate:
+    requirement: optional
+    kind: source
+    description: Date the bond was issued.
+
+  maturityDate:
+    requirement: required
+    kind: source
+    description: Stated maturity date.
+
+  maturityBucket:
+    requirement: optional
+    kind: derived
+    description: Bucketed maturity (short / mid / long).
+
+  interestRate:
+    requirement: important
+    kind: source
+    description: Full InterestRate snapshot (rate + day-count + frequency).
+
+  couponType:
+    requirement: important
+    kind: source
+    description: Coupon type (fixed / floating / zero / …).
+
+  currentCouponRate:
+    requirement: important
+    kind: source
+    description: Current annual coupon as decimal fraction.
+
+  minimumDenomination:
+    requirement: optional
+    kind: source
+    description: Minimum tradeable face value.
+
+  minimumIncrement:
+    requirement: optional
+    kind: source
+    description: Lot-size increment above the minimum denomination.
+
+  isCallable:
+    requirement: optional
+    kind: source
+    description: True if the bond is callable.
+
+  isPuttable:
+    requirement: optional
+    kind: source
+    description: True if the bond is puttable.
+
+  isConvertible:
+    requirement: optional
+    kind: source
+    description: True if convertible into equity.
+
+  conversionPrice:
+    requirement: optional
+    kind: source
+    description: Conversion price if convertible.
+
+  underlyingIsin:
+    requirement: optional
+    kind: source
+    description: Underlying instrument ISIN for convertible / structured bonds.
+
+  lifecycleStatus:
+    requirement: important
+    kind: derived
+    description: Lifecycle status (active / matured / called / defaulted).
+
+  issuer:
+    requirement: required
+    kind: source
+    description: Issuer snapshot (legalName, LEI, ratings, …).
+
+  primaryListing:
+    requirement: important
+    kind: source
+    description: Primary trading venue listing.
+
+  secondaryListings:
+    requirement: optional
+    kind: source
+    description: Other listings, if any.
+
+  marketData:
+    requirement: important
+    kind: source
+    description: Last-known prices, yields, durations.
+
+  creditRisk:
+    requirement: optional
+    kind: source
+    description: Issue-level credit risk snapshot (where it differs from issuer).
+
+  instrumentEsgProfile:
+    requirement: optional
+    kind: source
+    description: Instrument-level ESG profile (green / social / SLB flags).
+
+  compliance:
+    requirement: optional
+    kind: source
+    description: Pre-resolved regulatory / compliance flags.
+
+  recordMeta:
+    requirement: required
+    kind: assembled
+    description: Provenance + freshness metadata.

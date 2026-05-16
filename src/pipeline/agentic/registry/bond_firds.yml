@@ -1,0 +1,30 @@
+id: bond_firds
+description: |
+  ESMA FIRDS Solr lookup by ISIN, joined against the curated bond issuer
+  LEI map (pipeline/gold/data/bond_issuers.yml). The primary path for
+  the bond scope. Network call (web_fetch).
+module: pipeline.agentic.sources.bond_firds
+entrypoint: fetch
+covers: [bond]
+requires_identifier:
+  any_of: [isin]
+produces_fields:
+  - identifierList
+  - longName
+  - shortName
+  - assetClass
+  - assetClassId
+  - bondSubType
+  - seniority
+  - countryOfRisk
+  - currencyOfDenomination
+  - maturityDate
+  - couponType
+  - currentCouponRate
+  - minimumDenomination
+  - cfiCode
+  - lifecycleStatus
+  - issuer
+  - primaryListing
+confidence: high
+cost_class: web_fetch

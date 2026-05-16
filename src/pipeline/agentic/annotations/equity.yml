@@ -1,0 +1,177 @@
+# Agentic-platform annotations for EquityGolden.
+#
+# Self-documenting: every top-level field of `universe.models.EquityGolden`
+# is listed below. Schema:
+#   fields:
+#     <field>:
+#       requirement: required | important | optional   # planner tier
+#       kind:        source   | derived   | assembled  # who fills it
+#       description: free text
+#       notes:       free text
+#
+# This file overlays ontology metadata with agent-platform metadata. The
+# ontology under `ontology/` stays purely descriptive; this file evolves
+# as we add sources and derivers. The pydantic model is the structural
+# authority — `manifest.py` raises if this YAML lists a different set of
+# fields than the model.
+
+fields:
+
+  goldenId:
+    requirement: required
+    kind: assembled
+    description: Stable internal primary key of the golden record.
+    notes: |
+      Built by the assembler after sources run. Convention:
+      EQG-{ISIN}-{MIC}-001 when both are present, EQG-{ISIN}-001 otherwise.
+
+  cfiCode:
+    requirement: important
+    kind: derived
+    description: ISO 10962 CFI classification (not an identifier).
+    notes: |
+      Derived from equitySubType via the CFI_BY_SUBTYPE table in
+      pipeline.gold.equity_yahoo. equity_yahoo currently writes this in
+      as part of its patch; a dedicated CFI-deriver would replace that.
+
+  identifierList:
+    requirement: required
+    kind: source
+    description: Every identifier known for this security (ISIN, ticker, valor, FIGI, …).
+
+  longName:
+    requirement: required
+    kind: source
+    description: Full instrument name, used for free-text search and display.
+
+  shortName:
+    requirement: important
+    kind: source
+    description: Short instrument name, for grids and compact UIs.
+
+  assetClass:
+    requirement: required
+    kind: derived
+    description: Resolved asset class label.
+    notes: |
+      For EquityGolden currently fixed at "Equity / Common Stock". A real
+      deriver would consult equitySubType + CFI.
+
+  assetClassId:
+    requirement: important
+    kind: derived
+    description: Reference to the canonical AssetClass record used for roll-ups.
+
+  equitySubType:
+    requirement: important
+    kind: source
+    description: Equity sub-type (Common, Preferred, ADR, GDR, REIT, …).
+
+  shareClass:
+    requirement: optional
+    kind: source
+    description: Share class (Class A, Class B, Preferred). No source today.
+
+  industrySector:
+    requirement: important
+    kind: source
+    description: Canonical industry/sector classification snapshot.
+
+  incorporationCountry:
+    requirement: important
+    kind: source
+    description: ISO 3166-1 alpha-2 country of incorporation of the issuing company.
+
+  currencyOfDenomination:
+    requirement: required
+    kind: source
+    description: ISO 4217 currency in which the equity is denominated.
+
+  parValue:
+    requirement: optional
+    kind: source
+    description: Nominal par value stated in the corporate charter. No source today.
+
+  votingRatio:
+    requirement: optional
+    kind: source
+    description: Number of votes per share. No source today.
+
+  hasVotingRights:
+    requirement: optional
+    kind: source
+    description: True if the equity carries voting rights. No source today.
+
+  sharesOutstanding:
+    requirement: important
+    kind: source
+    description: Total shares currently issued and outstanding.
+
+  issuer:
+    requirement: required
+    kind: source
+    description: Flattened snapshot of issuer attributes (legalName, LEI, domicile, ratings).
+    notes: |
+      yfinance fills legalName + countries; LEI needs a downstream
+      issuer_gleif enrichment pass (not registered for the equity slice yet).
+
+  primaryListing:
+    requirement: required
+    kind: source
+    description: Primary trading venue listing for the equity.
+
+  secondaryListings:
+    requirement: optional
+    kind: source
+    description: All other venues where the equity is listed. No source today.
+
+  marketData:
+    requirement: important
+    kind: source
+    description: Last-known market data snapshot (typically EOD).
+
+  dividendStatus:
+    requirement: important
+    kind: source
+    description: True if the equity currently pays dividends.
+
+  dividendPolicy:
+    requirement: important
+    kind: source
+    description: Dividend policy snapshot (yield, frequency, last payment date).
+
+  keyFigures:
+    requirement: important
+    kind: source
+    description: Key valuation figures (market cap, EPS, P/E, volatility).
+
+  compliance:
+    requirement: optional
+    kind: source
+    description: Pre-resolved compliance flags. No source today.
+
+  lifecycleStatus:
+    requirement: important
+    kind: derived
+    description: Lifecycle status (active / suspended / delisted / merged).
+    notes: |
+      Currently a constant "active" set by equity_yahoo. A future deriver
+      would honour Yahoo's quoteType + delistingDate.
+
+  firstTradingDate:
+    requirement: important
+    kind: source
+    description: Date the equity was first admitted to trading.
+
+  delistingDate:
+    requirement: optional
+    kind: source
+    description: Date of delisting, if applicable.
+
+  recordMeta:
+    requirement: required
+    kind: assembled
+    description: Provenance + freshness metadata.
+    notes: |
+      Built by the assembler from the accumulated SourceAttribution rows
+      contributed by each source that ran in the loop.

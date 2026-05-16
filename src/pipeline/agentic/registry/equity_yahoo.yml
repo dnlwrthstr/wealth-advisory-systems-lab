@@ -1,0 +1,32 @@
+id: equity_yahoo
+description: |
+  Yahoo Finance equity fetch via the existing pipeline.gold.equity_yahoo
+  module. Identifier-agnostic (ISIN or ticker) — ISIN routes through the
+  parquet seed lookup, ticker calls yfinance directly.
+module: pipeline.agentic.sources.equity_yahoo
+entrypoint: fetch
+covers: [equity]
+requires_identifier:
+  any_of: [isin, ticker]
+produces_fields:
+  - identifierList
+  - longName
+  - shortName
+  - assetClass
+  - assetClassId
+  - equitySubType
+  - industrySector
+  - incorporationCountry
+  - currencyOfDenomination
+  - sharesOutstanding
+  - issuer
+  - primaryListing
+  - marketData
+  - dividendStatus
+  - dividendPolicy
+  - keyFigures
+  - lifecycleStatus
+  - firstTradingDate
+  - cfiCode
+confidence: medium
+cost_class: api_call

@@ -21,8 +21,13 @@ dependencies = [
   "PyYAML>=6.0",
   "lxml>=5.0.0",
   "opensearch-py>=2.6.0",
+  "python-dotenv>=1.0.0",
   "uvicorn[standard]>=0.30.0",
   "yfinance>=0.2.40",
+  # Optional at runtime — the fund_factsheet_skill agentic source guards
+  # the import with try/except. Listed here so `pip install -e .` pulls
+  # it in for users who want the LLM-skill fallback path.
+  "claude-agent-sdk>=0.1.0",
 ]
 
 [project.scripts]
@@ -30,7 +35,6 @@ ontology_2_pydantic = "ontology_tools.ontology_2_pydantic.convert_to_pydantic:ma
 golden_record_2_opensearch = "ontology_tools.golden_record_2_opensearch.convert_to_opensearch:main"
 equity_golden_from_yahoo = "pipeline.gold.equity_yahoo:main"
 bond_golden_from_firds = "pipeline.gold.bond_firds:main"
-bond_golden_from_parquet = "pipeline.gold.bond_parquet:main"
 fund_golden_from_firds = "pipeline.gold.fund_firds:main"
 issuer_aggregate = "pipeline.gold.issuer_aggregate:main"
 issuer_gleif = "pipeline.gold.issuer_gleif:main"
@@ -46,6 +50,8 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "pipeline.gold" = ["data/*.yml"]
+"pipeline.agentic.registry" = ["*.yml"]
+"pipeline.agentic.annotations" = ["*.yml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

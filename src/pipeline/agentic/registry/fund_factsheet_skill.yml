@@ -1,0 +1,31 @@
+id: fund_factsheet_skill
+description: |
+  Invokes the find-and-parse-factsheet Claude Code skill via claude-agent-sdk
+  to locate + parse the fund's PRIIPS KID PDF and write a patch JSON. Runs
+  ONLY when ANTHROPIC_API_KEY is set, the SDK is installed, and no patch
+  exists yet on disk. Opt-in via assemble's invoke_llm_skills=true flag,
+  since LLM invocations are slow + cost money.
+module: pipeline.agentic.sources.fund_factsheet_skill
+entrypoint: fetch
+covers: [fund]
+requires_identifier:
+  any_of: [isin]
+produces_fields:
+  - fees
+  - totalExpenseRatio
+  - transactionCostsPRIIPs
+  - riskRating
+  - serviceProviders
+  - dealing
+  - benchmarkName
+  - benchmarkIdentifier
+  - replicationMethod
+  - rebalanceFrequency
+  - fiscalYearEnd
+  - swingPricingApplied
+  - taxStatuses
+  - holdingsCount
+  - holdingsAsOf
+  - portfolioTurnoverPctAnnual
+confidence: medium
+cost_class: llm_skill

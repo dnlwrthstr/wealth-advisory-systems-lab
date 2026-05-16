@@ -1,0 +1,32 @@
+id: fund_factsheet_patch
+description: |
+  Reads the output of the find-and-parse-factsheet Claude Code skill
+  from data/opensearch/golden/fund/patches/FG-{ISIN}-001.json and
+  surfaces it as a FundGolden patch. Covers the long tail of
+  prospectus-level fields (fees beyond TER, SRRI/SRI, dealing terms,
+  service providers, benchmark, replication method, …). Network-free —
+  the LLM work happened earlier; this is a cache read.
+module: pipeline.agentic.sources.fund_factsheet_patch
+entrypoint: fetch
+covers: [fund]
+requires_identifier:
+  any_of: [isin]
+produces_fields:
+  - fees
+  - totalExpenseRatio
+  - transactionCostsPRIIPs
+  - riskRating
+  - serviceProviders
+  - dealing
+  - benchmarkName
+  - benchmarkIdentifier
+  - replicationMethod
+  - rebalanceFrequency
+  - fiscalYearEnd
+  - swingPricingApplied
+  - taxStatuses
+  - holdingsCount
+  - holdingsAsOf
+  - portfolioTurnoverPctAnnual
+confidence: high
+cost_class: file_read

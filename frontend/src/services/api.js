@@ -129,6 +129,32 @@ export function fetchInstrument(instrumentId) {
   return request(`/instruments/${instrumentId}`);
 }
 
+// Agentic data engineering: assemble a golden record from an identifier.
+// When `persist` is true, the backend also writes the record to OpenSearch
+// and chains into IssuerGolden assembly for any embedded LEIs.
+// When `invokeLlmSkills` is true, the backend allows llm_skill sources
+// (e.g. fund_factsheet_skill) to run — slow and costs money.
+export function assembleInstrument({
+  scope,
+  kind,
+  value,
+  persist = false,
+  invokeLlmSkills = false,
+  budget,
+}) {
+  const body = {
+    scope,
+    identifier: { kind, value },
+    persist,
+    invoke_llm_skills: invokeLlmSkills,
+  };
+  if (budget) body.budget = budget;
+  return request("/instruments/assemble", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 // Order API
 export function submitOrder(payload) {
   return request("/orders", {
