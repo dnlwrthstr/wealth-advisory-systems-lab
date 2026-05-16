@@ -3,9 +3,7 @@ import { createRoot } from "react-dom/client";
 import CustodianApp from "./custodian";
 import InstrumentsApp from "./instruments";
 import OrdersApp from "./orders";
-import EquityUniversePage from "./universeEquity";
-import BondUniversePage from "./universeBond";
-import FundUniversePage from "./universeFund";
+import UniversePage from "./universePage";
 import {
   fetchQuestionnaire,
   listClientSegments,
@@ -37,20 +35,10 @@ const DEFAULT_PRODUCT = {
   daily_liquidity: true,
 };
 
-// Sidebar menu. Entries with `children` render as a group label with
-// indented sub-entries — used for Investment Universe to expose the
-// three per-type pages (equity / bond / fund).
 const MENU = [
   { key: "custodian", label: "Custodian" },
   { key: "instruments", label: "Instruments" },
-  {
-    label: "Investment Universe",
-    children: [
-      ["universe-equity", "Equity"],
-      ["universe-bond", "Bond"],
-      ["universe-fund", "Fund"],
-    ],
-  },
+  { key: "universe", label: "Investment Universe" },
   { key: "orders", label: "Orders" },
   { key: "questionnaires", label: "Questionnaires" },
   { key: "profile", label: "Profile" },
@@ -176,32 +164,16 @@ function App() {
           <h1>Systems Lab</h1>
         </div>
         <nav className="side-menu" aria-label="Main menu">
-          {MENU.map((entry) =>
-            entry.children ? (
-              <div key={entry.label} className="side-menu-group">
-                <p className="side-menu-group-label">{entry.label}</p>
-                {entry.children.map(([key, label]) => (
-                  <button
-                    key={key}
-                    className={`side-menu-child ${activeSection === key ? "active" : ""}`}
-                    type="button"
-                    onClick={() => setActiveSection(key)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <button
-                key={entry.key}
-                className={activeSection === entry.key ? "active" : ""}
-                type="button"
-                onClick={() => setActiveSection(entry.key)}
-              >
-                {entry.label}
-              </button>
-            ),
-          )}
+          {MENU.map((entry) => (
+            <button
+              key={entry.key}
+              className={activeSection === entry.key ? "active" : ""}
+              type="button"
+              onClick={() => setActiveSection(entry.key)}
+            >
+              {entry.label}
+            </button>
+          ))}
         </nav>
         <div className={`status ${status === "API online" ? "ok" : status === "API partial" ? "api-partial" : "error"}`}>
           {status}
@@ -212,9 +184,7 @@ function App() {
         {message ? <p className="message">{message}</p> : null}
         {activeSection === "custodian" && <CustodianApp />}
         {activeSection === "instruments" && <InstrumentsApp />}
-        {activeSection === "universe-equity" && <EquityUniversePage />}
-        {activeSection === "universe-bond" && <BondUniversePage />}
-        {activeSection === "universe-fund" && <FundUniversePage />}
+        {activeSection === "universe" && <UniversePage />}
         {activeSection === "orders" && <OrdersApp />}
         {activeSection === "questionnaires" && (
           <QuestionnairesView
