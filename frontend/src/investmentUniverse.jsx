@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addToUniverse,
   assembleInstrument,
@@ -7,10 +7,24 @@ import {
 } from "./services/api";
 
 const SCOPES = [
-  { id: "equity", label: "Equity" },
-  { id: "bond", label: "Bond" },
-  { id: "fund", label: "Fund" },
+  {
+    id: "equity",
+    label: "Equity",
+    placeholder: { isin: "e.g. CH0012221716", ticker: "e.g. ABBN.SW" },
+  },
+  {
+    id: "bond",
+    label: "Bond",
+    placeholder: { isin: "e.g. XS2434891219", ticker: "" },
+  },
+  {
+    id: "fund",
+    label: "Fund",
+    placeholder: { isin: "e.g. IE00B4L5Y983", ticker: "" },
+  },
 ];
+
+const SCOPE_BY_ID = Object.fromEntries(SCOPES.map((s) => [s.id, s]));
 
 const KINDS = [
   { id: "isin", label: "ISIN" },
@@ -26,12 +40,15 @@ const STATUSES = [
 const STATUS_LABEL = Object.fromEntries(STATUSES.map((s) => [s.id, s.label]));
 
 export default function InvestmentUniverseApp() {
-  // Add form state
-  const [scope, setScope] = useState("equity");
+  // Active tab = scope. Equity / Bond / Fund are distinct pipelines on
+  // the backend (separate agents) — the UI mirrors that split.
+  const [activeScope, setActiveScope] = useState("equity");
+
+  // Form state — reset on tab switch so each tab is a clean entry point.
   const [kind, setKind] = useState("isin");
   const [value, setValue] = useState("");
 
-  // Preview state (the assembled-but-not-yet-persisted record)
+  // Preview state (assembled-but-not-yet-persisted record)
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(null);
@@ -40,7 +57,7 @@ export default function InvestmentUniverseApp() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // Universe list
+  // Universe list (all scopes — filter per tab in render)
   const [members, setMembers] = useState([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState(null);
@@ -62,6 +79,28 @@ export default function InvestmentUniverseApp() {
     refreshList();
   }, [refreshList]);
 
+  const countsByScope = useMemo(() => {
+    const counts = { equity: 0, bond: 0, fund: 0 };
+    for (const m of members) {
+      if (counts[m.scope] !== undefined) counts[m.scope] += 1;
+    }
+    return counts;
+  }, [members]);
+
+  const visibleMembers = useMemo(
+    () => members.filter((m) => m.scope === activeScope),
+    [members, activeScope],
+  );
+
+  function switchScope(nextScope) {
+    if (nextScope === activeScope) return;
+    setActiveScope(nextScope);
+    setValue("");
+    setPreview(null);
+    setPreviewError(null);
+    setMessage(null);
+  }
+
   async function handleFetch(event) {
     event.preventDefault();
     if (!value.trim()) {
@@ -74,7 +113,7 @@ export default function InvestmentUniverseApp() {
     setMessage(null);
     try {
       const result = await assembleInstrument({
-        scope,
+        scope: activeScope,
         kind,
         value: value.trim(),
       });
@@ -124,40 +163,42 @@ export default function InvestmentUniverseApp() {
     }
   }
 
+  const activeScopeMeta = SCOPE_BY_ID[activeScope];
+
   return (
     <div className="finder">
       <header className="finder-header">
         <h2>Investment Universe</h2>
         <p className="finder-advanced-note">
-          Build your PMS universe one instrument at a time. Enter an identifier,
-          let the agentic platform assemble what it can find, then add the
-          result to the universe or to a watchlist.
+          Build your PMS universe one instrument at a time. Each tab runs a
+          dedicated assembly agent — Equity, Bond, and Fund use different
+          data sources and quality criteria.
         </p>
       </header>
 
+      <nav className="universe-tabs" role="tablist" aria-label="Instrument scope">
+        {SCOPES.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            role="tab"
+            aria-selected={activeScope === s.id}
+            className={`universe-tab ${activeScope === s.id ? "active" : ""}`}
+            onClick={() => switchScope(s.id)}
+          >
+            {s.label}
+            <span className="universe-tab-count">{countsByScope[s.id] ?? 0}</span>
+          </button>
+        ))}
+      </nav>
+
       <section className="finder-detail-section">
-        <h3>Add a new instrument</h3>
+        <h3>Add a new {activeScopeMeta.label.toLowerCase()}</h3>
         <form
           onSubmit={handleFetch}
           className="finder-fields finder-fields-2"
           style={{ alignItems: "end" }}
         >
-          <div className="finder-field">
-            <label className="finder-field-label" htmlFor="iu-scope">
-              Scope
-            </label>
-            <select
-              id="iu-scope"
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-            >
-              {SCOPES.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className="finder-field">
             <label className="finder-field-label" htmlFor="iu-kind">
               Identifier type
@@ -183,7 +224,7 @@ export default function InvestmentUniverseApp() {
               type="text"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={kind === "isin" ? "e.g. CH0012221716" : "e.g. ABBN.SW"}
+              placeholder={activeScopeMeta.placeholder[kind] || ""}
               autoComplete="off"
             />
           </div>
@@ -212,15 +253,19 @@ export default function InvestmentUniverseApp() {
       {message ? <p className="message">{message}</p> : null}
 
       <section className="finder-detail-section">
-        <h3>Universe members ({members.length})</h3>
+        <h3>
+          {activeScopeMeta.label} universe ({visibleMembers.length})
+        </h3>
         {listLoading ? <p>Loading…</p> : null}
         {listError ? <p className="finder-error">{listError}</p> : null}
-        {!listLoading && members.length === 0 ? (
-          <p className="finder-empty">No instruments yet. Add your first one above.</p>
+        {!listLoading && visibleMembers.length === 0 ? (
+          <p className="finder-empty">
+            No {activeScopeMeta.label.toLowerCase()} instruments yet. Add your first one above.
+          </p>
         ) : null}
-        {members.length > 0 ? (
+        {visibleMembers.length > 0 ? (
           <UniverseTable
-            members={members}
+            members={visibleMembers}
             onStatusChange={handleStatusChange}
           />
         ) : null}
@@ -364,7 +409,6 @@ function UniverseTable({ members, onStatusChange }) {
     <table className="universe-table">
       <thead>
         <tr>
-          <th>Scope</th>
           <th>Name</th>
           <th>ISIN</th>
           <th>Ticker</th>
@@ -376,7 +420,6 @@ function UniverseTable({ members, onStatusChange }) {
       <tbody>
         {members.map((m) => (
           <tr key={`${m.scope}:${m.goldenId}`}>
-            <td>{m.scope}</td>
             <td>{m.longName || <em style={{ opacity: 0.5 }}>—</em>}</td>
             <td className="mono">{m.isin || ""}</td>
             <td className="mono">{m.ticker || ""}</td>
