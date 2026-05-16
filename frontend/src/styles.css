@@ -2963,3 +2963,38 @@ pre {
   text-overflow: ellipsis;
   vertical-align: bottom;
 }
+
+/* ── Investment Universe ─────────────────────────────────────────────── */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6ece9;
+  color: #34423b;
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+.status-pill.ok { background: #dff4ea; color: #0f5f3c; }
+.status-pill.warn { background: #fef3c7; color: #92400e; }
+.status-pill.bad { background: #fae4e0; color: #8f291b; }
+
+.universe-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
+}
+.universe-table th,
+.universe-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e6ece9;
+}
+.universe-table th {
+  font-weight: 720;
+  color: #34423b;
+  background: #f5f8f6;
+}
+.universe-table tbody tr:hover { background: #fafcfb; }
+.universe-table select { font-size: 0.84rem; padding: 2px 4px; }

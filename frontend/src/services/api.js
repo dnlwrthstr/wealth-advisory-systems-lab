@@ -155,6 +155,33 @@ export function assembleInstrument({
   });
 }
 
+// Investment Universe API
+export function addToUniverse({ scope, kind, value, status = "in_universe" }) {
+  return request("/universe/add", {
+    method: "POST",
+    body: JSON.stringify({
+      scope,
+      identifier: { kind, value },
+      status,
+    }),
+  });
+}
+
+export function fetchUniverse({ scope = null, status = null } = {}) {
+  const params = new URLSearchParams();
+  if (scope) params.set("scope", scope);
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  return request(`/universe${qs ? "?" + qs : ""}`);
+}
+
+export function updateUniverseStatus({ scope, goldenId, status }) {
+  return request(`/universe/${scope}/${goldenId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
 // Order API
 export function submitOrder(payload) {
   return request("/orders", {

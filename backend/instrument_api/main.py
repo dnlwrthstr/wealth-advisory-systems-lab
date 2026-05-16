@@ -28,6 +28,7 @@ from instruments.service import InstrumentService
 from instruments.store import InstrumentStore
 
 from .router import build_router
+from .universe_router import build_universe_router
 
 log = logging.getLogger("instrument_api")
 
@@ -65,3 +66,4 @@ def health() -> dict[str, str]:
 app.include_router(
     build_router(_service, search_store=_search_store, opensearch_client=_client)
 )
+app.include_router(build_universe_router(opensearch_client=_client))

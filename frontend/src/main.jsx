@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import CustodianApp from "./custodian";
 import InstrumentsApp from "./instruments";
+import InvestmentUniverseApp from "./investmentUniverse";
 import OrdersApp from "./orders";
 import {
   fetchQuestionnaire,
@@ -157,6 +158,7 @@ function App() {
           {[
             ["custodian", "Custodian"],
             ["instruments", "Instruments"],
+            ["universe", "Investment Universe"],
             ["orders", "Orders"],
             ["questionnaires", "Questionnaires"],
             ["profile", "Profile"],
@@ -180,6 +182,7 @@ function App() {
         {message ? <p className="message">{message}</p> : null}
         {activeSection === "custodian" && <CustodianApp />}
         {activeSection === "instruments" && <InstrumentsApp />}
+        {activeSection === "universe" && <InvestmentUniverseApp />}
         {activeSection === "orders" && <OrdersApp />}
         {activeSection === "questionnaires" && (
           <QuestionnairesView
