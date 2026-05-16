@@ -26,6 +26,7 @@ from pipeline.agentic.persist import (
     ALLOWED_UNIVERSE_STATUSES,
     update_universe_status,
 )
+from pipeline.gold.search_index_build import index_search_hit
 
 log = logging.getLogger(__name__)
 
@@ -171,6 +172,23 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         primary = outcome["primary"]
+        # Mirror onto the Find-an-instrument helper index so the new
+        # record is searchable straight away. Failures are non-fatal:
+        # the universe write already succeeded; a stale search index
+        # is recoverable, a lost universe write is not.
+        try:
+            index_search_hit(
+                opensearch_client,
+                primary.scope,
+                primary.record,
+                universe_status=body.status,
+            )
+        except Exception as exc:  # noqa: BLE001 — broad: opensearchpy can raise diverse errors
+            log.warning(
+                "search-index mirror failed for %s: %s",
+                primary.record.get("goldenId"),
+                exc,
+            )
         return UniverseAddResponse(
             scope=primary.scope,
             goldenId=primary.record["goldenId"],
@@ -293,6 +311,19 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
             if exc.__class__.__name__ == "NotFoundError":
                 raise HTTPException(status_code=404, detail=f"{scope}/{golden_id} not found") from exc
             raise
+        # Keep the search-index copy's universeStatus aligned. Partial
+        # update on the same id; if the search hit doesn't exist yet
+        # (e.g. status changed on a pre-existing record), this is a no-op.
+        try:
+            opensearch_client.update(
+                index="pms_golden_instrumentsearch",
+                id=f"{scope}:{golden_id}",
+                body={"doc": {"universeStatus": body.status}},
+                refresh="wait_for",
+            )
+        except Exception as exc:  # noqa: BLE001 — NotFoundError is acceptable here
+            if exc.__class__.__name__ != "NotFoundError":
+                log.warning("search-index status mirror failed: %s", exc)
         return {"scope": scope, "goldenId": golden_id, "universeStatus": body.status}
 
     return router
