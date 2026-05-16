@@ -156,14 +156,16 @@ export function assembleInstrument({
 }
 
 // Investment Universe API
-export function addToUniverse({ scope, kind, value, status = "in_universe" }) {
-  return request("/universe/add", {
+// Per-type routes: POST /universe/{equity|bond|fund}. The scope is in the
+// path so the body carries identifier + status (+ optional cost-cap flag).
+// `invokeLlmSkills` overrides the agent default — null/undefined lets the
+// backend pick (fund: llm_skill, equity/bond: web_fetch).
+export function addToUniverse({ scope, kind, value, status = "in_universe", invokeLlmSkills }) {
+  const body = { identifier: { kind, value }, status };
+  if (typeof invokeLlmSkills === "boolean") body.invoke_llm_skills = invokeLlmSkills;
+  return request(`/universe/${scope}`, {
     method: "POST",
-    body: JSON.stringify({
-      scope,
-      identifier: { kind, value },
-      status,
-    }),
+    body: JSON.stringify(body),
   });
 }
 

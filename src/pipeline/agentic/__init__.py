@@ -11,6 +11,7 @@ Public entrypoint: `assemble_golden(scope, identifier)` from
 ontology-derived field expectations under `annotations/`, source adapters
 under `sources/`.
 """
+from pipeline.agentic.agents import AGENTS, BaseAgent, BondAgent, EquityAgent, FundAgent
 from pipeline.agentic.assemble import assemble_golden, AssembleResult
 from pipeline.agentic.persist import (
     assemble_and_persist,
@@ -24,4 +25,9 @@ __all__ = [
     "assemble_and_persist",
     "extract_leis",
     "persist_record",
+    "AGENTS",
+    "BaseAgent",
+    "EquityAgent",
+    "BondAgent",
+    "FundAgent",
 ]
