@@ -1225,7 +1225,7 @@ function BondDetail({ source }) {
   );
 }
 
-function DetailSection({ hit, source, loading, onClose, onTrade }) {
+export function DetailSection({ hit, source, loading, onClose, onTrade }) {
   return (
     <section className="finder-detail-section" aria-label="Instrument detail">
       <header className="finder-detail-header">
