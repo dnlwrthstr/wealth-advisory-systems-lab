@@ -6,25 +6,12 @@ import {
   updateUniverseStatus,
 } from "./services/api";
 
-const SCOPES = [
-  {
-    id: "equity",
-    label: "Equity",
-    placeholder: { isin: "e.g. CH0012221716", ticker: "e.g. ABBN.SW" },
-  },
-  {
-    id: "bond",
-    label: "Bond",
-    placeholder: { isin: "e.g. XS2434891219", ticker: "" },
-  },
-  {
-    id: "fund",
-    label: "Fund",
-    placeholder: { isin: "e.g. IE00B4L5Y983", ticker: "" },
-  },
-];
-
-const SCOPE_BY_ID = Object.fromEntries(SCOPES.map((s) => [s.id, s]));
+// Shared base for the per-type Universe pages. The three wrapper
+// components (universeEquity.jsx, universeBond.jsx, universeFund.jsx)
+// supply scope plus a `columns` spec describing the per-type list
+// columns. Equity / Bond / Fund have materially different attributes
+// (sector vs maturity/coupon vs TER/AUM) — driving the table from a
+// per-type config keeps the rendering logic in one place.
 
 const KINDS = [
   { id: "isin", label: "ISIN" },
@@ -39,25 +26,38 @@ const STATUSES = [
 
 const STATUS_LABEL = Object.fromEntries(STATUSES.map((s) => [s.id, s.label]));
 
-export default function InvestmentUniverseApp() {
-  // Active tab = scope. Equity / Bond / Fund are distinct pipelines on
-  // the backend (separate agents) — the UI mirrors that split.
-  const [activeScope, setActiveScope] = useState("equity");
-
-  // Form state — reset on tab switch so each tab is a clean entry point.
+/**
+ * @param {object} props
+ * @param {"equity"|"bond"|"fund"} props.scope
+ * @param {string} props.title       — page header, e.g. "Equity Universe"
+ * @param {string} props.subtitle    — one-line explainer under the header
+ * @param {{ kind: "isin"|"ticker", value: string }} props.placeholders
+ *                                   — per-identifier-kind placeholders
+ * @param {Array<{ key: string, label: string, render: (member) => any }>}
+ *                  props.columns    — list-table column spec
+ * @param {Array<{ label: string, render: (record) => any, mono?: boolean }>}
+ *                  props.previewExtras
+ *                                   — extra preview-panel rows (after the
+ *                                     four shared ones)
+ */
+export default function UniverseTypePage({
+  scope,
+  title,
+  subtitle,
+  placeholders,
+  columns,
+  previewExtras = [],
+}) {
   const [kind, setKind] = useState("isin");
   const [value, setValue] = useState("");
 
-  // Preview state (assembled-but-not-yet-persisted record)
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(null);
 
-  // Save state
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // Universe list (all scopes — filter per tab in render)
   const [members, setMembers] = useState([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState(null);
@@ -66,40 +66,23 @@ export default function InvestmentUniverseApp() {
     setListLoading(true);
     setListError(null);
     try {
-      const data = await fetchUniverse({});
+      const data = await fetchUniverse({ scope });
       setMembers(data.items || []);
     } catch (err) {
       setListError(err.message);
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
-    refreshList();
-  }, [refreshList]);
-
-  const countsByScope = useMemo(() => {
-    const counts = { equity: 0, bond: 0, fund: 0 };
-    for (const m of members) {
-      if (counts[m.scope] !== undefined) counts[m.scope] += 1;
-    }
-    return counts;
-  }, [members]);
-
-  const visibleMembers = useMemo(
-    () => members.filter((m) => m.scope === activeScope),
-    [members, activeScope],
-  );
-
-  function switchScope(nextScope) {
-    if (nextScope === activeScope) return;
-    setActiveScope(nextScope);
+    setKind("isin");
     setValue("");
     setPreview(null);
     setPreviewError(null);
     setMessage(null);
-  }
+    refreshList();
+  }, [refreshList]);
 
   async function handleFetch(event) {
     event.preventDefault();
@@ -113,7 +96,7 @@ export default function InvestmentUniverseApp() {
     setMessage(null);
     try {
       const result = await assembleInstrument({
-        scope: activeScope,
+        scope,
         kind,
         value: value.trim(),
       });
@@ -163,37 +146,15 @@ export default function InvestmentUniverseApp() {
     }
   }
 
-  const activeScopeMeta = SCOPE_BY_ID[activeScope];
-
   return (
     <div className="finder">
       <header className="finder-header">
-        <h2>Investment Universe</h2>
-        <p className="finder-advanced-note">
-          Build your PMS universe one instrument at a time. Each tab runs a
-          dedicated assembly agent — Equity, Bond, and Fund use different
-          data sources and quality criteria.
-        </p>
+        <h2>{title}</h2>
+        <p className="finder-advanced-note">{subtitle}</p>
       </header>
 
-      <nav className="universe-tabs" role="tablist" aria-label="Instrument scope">
-        {SCOPES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            role="tab"
-            aria-selected={activeScope === s.id}
-            className={`universe-tab ${activeScope === s.id ? "active" : ""}`}
-            onClick={() => switchScope(s.id)}
-          >
-            {s.label}
-            <span className="universe-tab-count">{countsByScope[s.id] ?? 0}</span>
-          </button>
-        ))}
-      </nav>
-
       <section className="finder-detail-section">
-        <h3>Add a new {activeScopeMeta.label.toLowerCase()}</h3>
+        <h3>Add a new {scope}</h3>
         <form
           onSubmit={handleFetch}
           className="finder-fields finder-fields-2"
@@ -224,7 +185,7 @@ export default function InvestmentUniverseApp() {
               type="text"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={activeScopeMeta.placeholder[kind] || ""}
+              placeholder={placeholders[kind] || ""}
               autoComplete="off"
             />
           </div>
@@ -244,6 +205,7 @@ export default function InvestmentUniverseApp() {
       {preview ? (
         <PreviewPanel
           preview={preview}
+          extras={previewExtras}
           saving={saving}
           onSave={handleSave}
           onCancel={() => setPreview(null)}
@@ -254,18 +216,19 @@ export default function InvestmentUniverseApp() {
 
       <section className="finder-detail-section">
         <h3>
-          {activeScopeMeta.label} universe ({visibleMembers.length})
+          {title} ({members.length})
         </h3>
         {listLoading ? <p>Loading…</p> : null}
         {listError ? <p className="finder-error">{listError}</p> : null}
-        {!listLoading && visibleMembers.length === 0 ? (
+        {!listLoading && members.length === 0 ? (
           <p className="finder-empty">
-            No {activeScopeMeta.label.toLowerCase()} instruments yet. Add your first one above.
+            No {scope} instruments yet. Add your first one above.
           </p>
         ) : null}
-        {visibleMembers.length > 0 ? (
+        {members.length > 0 ? (
           <UniverseTable
-            members={visibleMembers}
+            columns={columns}
+            members={members}
             onStatusChange={handleStatusChange}
           />
         ) : null}
@@ -274,7 +237,7 @@ export default function InvestmentUniverseApp() {
   );
 }
 
-function PreviewPanel({ preview, saving, onSave, onCancel }) {
+function PreviewPanel({ preview, extras, saving, onSave, onCancel }) {
   const [showRaw, setShowRaw] = useState(false);
   const record = preview.record || {};
   const quality = preview.quality_score;
@@ -294,29 +257,16 @@ function PreviewPanel({ preview, saving, onSave, onCancel }) {
       </div>
 
       <dl className="finder-fields finder-fields-2" style={{ marginTop: "0.5rem" }}>
-        <PreviewField label="Scope" value={preview.scope} />
         <PreviewField label="Golden ID" value={record.goldenId} mono />
         <PreviewField label="Currency" value={record.currencyOfDenomination} />
-        <PreviewField
-          label="Primary listing"
-          value={
-            record.primaryListing
-              ? `${record.primaryListing.mic || "?"} · ${record.primaryListing.ticker || "?"}`
-              : null
-          }
-        />
-        <PreviewField
-          label="Issuer"
-          value={(record.issuer || {}).legalName}
-        />
-        <PreviewField
-          label="Industry"
-          value={
-            (record.industrySector || {}).sectorLabel
-              ? `${record.industrySector.sectorLabel} · ${record.industrySector.industryLabel || ""}`.trim()
-              : null
-          }
-        />
+        {extras.map((spec) => (
+          <PreviewField
+            key={spec.label}
+            label={spec.label}
+            value={spec.render(record)}
+            mono={spec.mono}
+          />
+        ))}
       </dl>
 
       <details
@@ -404,27 +354,25 @@ function PreviewField({ label, value, mono = false }) {
   );
 }
 
-function UniverseTable({ members, onStatusChange }) {
+function UniverseTable({ columns, members, onStatusChange }) {
   return (
     <table className="universe-table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>ISIN</th>
-          <th>Ticker</th>
-          <th>CCY</th>
-          <th>Quality</th>
+          {columns.map((col) => (
+            <th key={col.key}>{col.label}</th>
+          ))}
           <th>Status</th>
         </tr>
       </thead>
       <tbody>
         {members.map((m) => (
           <tr key={`${m.scope}:${m.goldenId}`}>
-            <td>{m.longName || <em style={{ opacity: 0.5 }}>—</em>}</td>
-            <td className="mono">{m.isin || ""}</td>
-            <td className="mono">{m.ticker || ""}</td>
-            <td>{m.currency || ""}</td>
-            <td className="mono">{m.qualityScore?.toFixed(2) || ""}</td>
+            {columns.map((col) => (
+              <td key={col.key} className={col.mono ? "mono" : ""}>
+                {renderCell(col.render(m))}
+              </td>
+            ))}
             <td>
               <select
                 value={m.universeStatus}
@@ -444,8 +392,25 @@ function UniverseTable({ members, onStatusChange }) {
   );
 }
 
+function renderCell(value) {
+  if (value === null || value === undefined || value === "") {
+    return <em style={{ opacity: 0.4 }}>—</em>;
+  }
+  return value;
+}
+
 function qualityClass(q) {
   if (q >= 0.85) return "ok";
   if (q >= 0.5) return "warn";
   return "bad";
+}
+
+export function formatPercent(decimal) {
+  if (decimal === null || decimal === undefined) return null;
+  return `${(decimal * 100).toFixed(2)} %`;
+}
+
+export function formatQuality(q) {
+  if (q === null || q === undefined) return null;
+  return q.toFixed(2);
 }

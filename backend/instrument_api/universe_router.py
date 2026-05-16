@@ -101,6 +101,15 @@ class UniverseMember(BaseModel):
     currency: Optional[str] = None
     qualityScore: Optional[float] = None
     goldenAsOf: Optional[str] = None
+    # Type-specific projections — populated for the relevant scope only,
+    # null on the others. The per-type frontend pages render the subset
+    # that's meaningful for their scope.
+    sector: Optional[str] = None                # equity
+    maturityDate: Optional[str] = None          # bond
+    couponRate: Optional[float] = None          # bond
+    seniority: Optional[str] = None             # bond
+    totalExpenseRatio: Optional[float] = None   # fund
+    managementCompany: Optional[str] = None     # fund
 
 
 class UniverseListResponse(BaseModel):
@@ -207,6 +216,15 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
                 "currencyOfDenomination",
                 "recordMeta.qualityScore",
                 "recordMeta.goldenAsOf",
+                # equity
+                "industrySector",
+                # bond
+                "maturityDate",
+                "currentCouponRate",
+                "seniority",
+                # fund
+                "totalExpenseRatio",
+                "managementCompany",
             ],
             "sort": [{"recordMeta.goldenAsOf": {"order": "desc", "unmapped_type": "date"}}],
         }
@@ -223,6 +241,8 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
             hit_scope = idx.removeprefix("pms_golden_") if idx else ""
             isin, ticker = _split_identifiers(src.get("identifierList") or [])
             record_meta = src.get("recordMeta") or {}
+            industry = src.get("industrySector") or {}
+            management = src.get("managementCompany") or {}
             items.append(
                 UniverseMember(
                     scope=hit_scope,
@@ -234,6 +254,12 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
                     currency=src.get("currencyOfDenomination"),
                     qualityScore=record_meta.get("qualityScore"),
                     goldenAsOf=record_meta.get("goldenAsOf"),
+                    sector=industry.get("sectorLabel") if isinstance(industry, dict) else None,
+                    maturityDate=src.get("maturityDate"),
+                    couponRate=src.get("currentCouponRate"),
+                    seniority=src.get("seniority"),
+                    totalExpenseRatio=src.get("totalExpenseRatio"),
+                    managementCompany=management.get("legalName") if isinstance(management, dict) else None,
                 )
             )
         return UniverseListResponse(items=items, total=len(items))

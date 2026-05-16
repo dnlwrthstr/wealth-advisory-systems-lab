@@ -133,6 +133,42 @@ h3 {
   color: #ffffff;
 }
 
+/* Grouped menu entries (e.g. Investment Universe → equity/bond/fund) */
+.side-menu-group {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.side-menu-group-label {
+  margin: 6px 0 2px;
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #54655d;
+}
+
+.side-menu button.side-menu-child {
+  min-height: 38px;
+  padding-left: 22px;
+  font-size: 0.95rem;
+  border-radius: 8px;
+}
+
+.side-menu button.side-menu-child::before {
+  content: "·";
+  display: inline-block;
+  width: 1ch;
+  margin-right: 6px;
+  color: #91a89c;
+}
+
+.side-menu button.side-menu-child.active::before {
+  color: #ffffff;
+}
+
 .content-shell {
   width: min(1280px, 100%);
   padding: 28px;
@@ -2999,45 +3035,3 @@ pre {
 .universe-table tbody tr:hover { background: #fafcfb; }
 .universe-table select { font-size: 0.84rem; padding: 2px 4px; }
 
-.universe-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin: 1rem 0 1.25rem;
-  flex-wrap: wrap;
-}
-
-.universe-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 32px;
-  height: 32px;
-  padding: 0 1rem;
-  border-radius: 999px;
-  border: 1px solid #d5dbd6;
-  background: #fff;
-  color: #1a2823;
-  cursor: pointer;
-  font-size: 0.88rem;
-  transition: background 120ms, color 120ms, border-color 120ms;
-}
-
-.universe-tab:hover { border-color: #91a89c; }
-.universe-tab.active {
-  background: #14241e;
-  color: #fff;
-  border-color: #14241e;
-}
-
-.universe-tab-count {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: #e6ece9;
-  color: #34423b;
-}
-.universe-tab.active .universe-tab-count {
-  background: #2c3d34;
-  color: #e6ece9;
-}

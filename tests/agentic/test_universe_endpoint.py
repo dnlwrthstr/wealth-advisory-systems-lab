@@ -280,7 +280,8 @@ def test_invoke_llm_skills_false_pins_cost_cap_to_web_fetch(monkeypatch):
     assert seen["max_cost_class"] == "web_fetch"
 
 
-def test_list_universe_projects_search_hits():
+def test_list_universe_projects_type_specific_fields():
+    """Each scope projects its own subset of UniverseMember fields."""
     client = _StubClient()
     client.search_response = {
         "hits": {
@@ -297,25 +298,66 @@ def test_list_universe_projects_search_hits():
                             {"identifier": "US0378331005", "type": "isin"},
                             {"identifier": "AAPL", "type": "tickerSymbol"},
                         ],
-                        "recordMeta": {
-                            "qualityScore": 0.95,
-                            "goldenAsOf": "2026-05-16T10:00:00Z",
-                        },
+                        "industrySector": {"sectorLabel": "Technology"},
+                        "recordMeta": {"qualityScore": 0.95, "goldenAsOf": "2026-05-16T10:00:00Z"},
                     },
-                }
+                },
+                {
+                    "_index": "pms_golden_bond",
+                    "_id": "BG-XS1234567890-001",
+                    "_source": {
+                        "goldenId": "BG-XS1234567890-001",
+                        "universeStatus": "watchlist",
+                        "longName": "Acme 4.5% 2030",
+                        "currencyOfDenomination": "EUR",
+                        "identifierList": [{"identifier": "XS1234567890", "type": "isin"}],
+                        "maturityDate": "2030-06-15",
+                        "currentCouponRate": 0.045,
+                        "seniority": "senior_unsecured",
+                        "recordMeta": {"qualityScore": 0.78, "goldenAsOf": "2026-05-16T09:00:00Z"},
+                    },
+                },
+                {
+                    "_index": "pms_golden_fund",
+                    "_id": "FG-IE00B4L5Y983-001",
+                    "_source": {
+                        "goldenId": "FG-IE00B4L5Y983-001",
+                        "universeStatus": "in_universe",
+                        "longName": "iShares Core MSCI World",
+                        "currencyOfDenomination": "USD",
+                        "identifierList": [{"identifier": "IE00B4L5Y983", "type": "isin"}],
+                        "totalExpenseRatio": 0.002,
+                        "managementCompany": {"legalName": "BlackRock Asset Management Ireland Ltd"},
+                        "recordMeta": {"qualityScore": 0.82, "goldenAsOf": "2026-05-16T08:00:00Z"},
+                    },
+                },
             ]
         }
     }
-    resp = _app_with_client(client).get("/universe")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["total"] == 1
-    item = body["items"][0]
-    assert item["scope"] == "equity"
-    assert item["isin"] == "US0378331005"
-    assert item["ticker"] == "AAPL"
-    assert item["universeStatus"] == "in_universe"
-    assert item["qualityScore"] == 0.95
+    body = _app_with_client(client).get("/universe").json()
+    assert body["total"] == 3
+    by_scope = {item["scope"]: item for item in body["items"]}
+
+    # Equity gets sector; bond/fund-only fields stay null
+    eq = by_scope["equity"]
+    assert eq["isin"] == "US0378331005"
+    assert eq["ticker"] == "AAPL"
+    assert eq["sector"] == "Technology"
+    assert eq["maturityDate"] is None
+    assert eq["totalExpenseRatio"] is None
+
+    # Bond gets coupon/maturity/seniority
+    bond = by_scope["bond"]
+    assert bond["maturityDate"] == "2030-06-15"
+    assert bond["couponRate"] == 0.045
+    assert bond["seniority"] == "senior_unsecured"
+    assert bond["sector"] is None
+
+    # Fund gets TER + management company name
+    fund = by_scope["fund"]
+    assert fund["totalExpenseRatio"] == 0.002
+    assert fund["managementCompany"] == "BlackRock Asset Management Ireland Ltd"
+    assert fund["sector"] is None
 
 
 def test_list_universe_by_scope_filters_to_single_index():
