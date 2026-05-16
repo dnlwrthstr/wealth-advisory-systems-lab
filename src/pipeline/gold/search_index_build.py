@@ -103,7 +103,20 @@ def _issuer_rating(src: Dict[str, Any]) -> Optional[str]:
     return first.get("rating") if isinstance(first, dict) else None
 
 
-def _project(src: Dict[str, Any], scope: str) -> Dict[str, Any]:
+def project_search_doc(
+    src: Dict[str, Any],
+    scope: str,
+    *,
+    universe_status: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build the pms_golden_instrumentsearch document for one record.
+
+    Exposed publicly so the universe router can index a single doc after
+    `POST /universe/{scope}` instead of relying on a periodic full
+    rebuild. When `universe_status` is set, it's carried through onto
+    the search hit (the front-end's Find-an-instrument can then prefer
+    or filter by it).
+    """
     primary = src.get("primaryListing") or {}
     idents = _identifiers(src)
     issuer_name, issuer_lei = _issuer_display(src, scope)
@@ -134,6 +147,7 @@ def _project(src: Dict[str, Any], scope: str) -> Dict[str, Any]:
         "lifecycleStatus": src.get("lifecycleStatus"),
         "qualityScore": record_meta.get("qualityScore"),
         "goldenAsOf": record_meta.get("goldenAsOf"),
+        "universeStatus": universe_status,
         # Type-specific
         "sector": _sector(src) if scope == "equity" else None,
         "couponRate": src.get("currentCouponRate") if scope == "bond" else None,
@@ -149,6 +163,34 @@ def _project(src: Dict[str, Any], scope: str) -> Dict[str, Any]:
         "primaryAssetClassExposure": src.get("primaryAssetClassExposure") if scope == "fund" else None,
     }
     return {k: v for k, v in doc.items() if v is not None}
+
+
+# Backwards-compatible alias for the in-module callers (iter_search_docs).
+_project = project_search_doc
+
+
+def index_search_hit(
+    client: Any,
+    scope: str,
+    record: Dict[str, Any],
+    *,
+    universe_status: Optional[str] = None,
+) -> None:
+    """Index one record into `pms_golden_instrumentsearch`.
+
+    Called from the universe router right after `assemble_and_persist`
+    so additions show up in the Find-an-instrument search immediately —
+    no separate rebuild needed.
+    """
+    doc = project_search_doc(record, scope, universe_status=universe_status)
+    if not doc.get("documentId"):
+        return  # nothing to key on; skip silently
+    client.index(
+        index=TARGET_INDEX,
+        id=f"{scope}:{doc['documentId']}",
+        body=doc,
+        refresh="wait_for",
+    )
 
 
 def iter_search_docs(client: OpenSearch) -> Iterator[Dict[str, Any]]:

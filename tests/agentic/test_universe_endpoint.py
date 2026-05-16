@@ -54,9 +54,12 @@ def _app_with_client(client: _StubClient) -> TestClient:
 
 
 def _stub_equity_sources(monkeypatch):
+    from pipeline.agentic.sources import equity_firds as adapter_firds
     from pipeline.agentic.sources import equity_yahoo as adapter_yahoo
+    from pipeline.agentic.sources import finnhub as adapter_finnhub
     from pipeline.agentic.sources import issuer_gleif as adapter_gleif
     from pipeline.agentic.sources import openfigi as adapter_openfigi
+    from pipeline.agentic.sources import six_ticker_isin as adapter_six
 
     def yahoo_fetch(kind, value, current):
         return SourceFetchResult(
@@ -83,6 +86,9 @@ def _stub_equity_sources(monkeypatch):
         )
 
     monkeypatch.setattr(adapter_openfigi, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_firds, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_six, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_finnhub, "fetch", lambda k, v, c: None)
     monkeypatch.setattr(adapter_yahoo, "fetch", yahoo_fetch)
     monkeypatch.setattr(adapter_gleif, "fetch", gleif_fetch)
 
@@ -107,6 +113,31 @@ def test_add_equity_persists_with_status(monkeypatch):
     assert equity_doc["universeStatus"] == "in_universe"
     # Chained issuer doc was also persisted (without status)
     assert any(idx == "pms_golden_issuer" for (idx, _) in client.docs)
+    # And the search-helper index got a mirror so /instruments/search finds it.
+    search_docs = [(idx, key, d) for (idx, key), d in client.docs.items() if idx == "pms_golden_instrumentsearch"]
+    assert len(search_docs) == 1, "expected one search-helper mirror"
+    _, search_id, search_doc = search_docs[0]
+    assert search_id.startswith("equity:EQG-US0378331005")
+    assert search_doc["scope"] == "equity"
+    assert search_doc["ow_type"] == "equity"
+    assert search_doc["universeStatus"] == "in_universe"
+    assert search_doc["longName"] == "Apple Inc."
+
+
+def test_update_status_mirrors_to_search_index():
+    """PATCH /universe/{scope}/{goldenId}/status keeps the search hit aligned."""
+    client = _StubClient()
+    resp = _app_with_client(client).patch(
+        "/universe/equity/EQG-X-001/status",
+        json={"status": "excluded"},
+    )
+    assert resp.status_code == 200
+    # Both indices got a partial update with the new status.
+    indices_updated = {call["index"] for call in client.update_calls}
+    assert indices_updated == {"pms_golden_equity", "pms_golden_instrumentsearch"}
+    search_update = next(c for c in client.update_calls if c["index"] == "pms_golden_instrumentsearch")
+    assert search_update["id"] == "equity:EQG-X-001"
+    assert search_update["body"] == {"doc": {"universeStatus": "excluded"}}
 
 
 def test_add_equity_defaults_to_in_universe(monkeypatch):
@@ -386,13 +417,13 @@ def test_update_status_calls_partial_update():
         "goldenId": "EQG-X-001",
         "universeStatus": "excluded",
     }
-    assert client.update_calls == [
-        {
-            "index": "pms_golden_equity",
-            "id": "EQG-X-001",
-            "body": {"doc": {"universeStatus": "excluded"}},
-        }
-    ]
+    # Per-scope golden index gets the partial update for the new status.
+    eq_update = next(c for c in client.update_calls if c["index"] == "pms_golden_equity")
+    assert eq_update == {
+        "index": "pms_golden_equity",
+        "id": "EQG-X-001",
+        "body": {"doc": {"universeStatus": "excluded"}},
+    }
 
 
 def test_update_status_returns_404_when_doc_missing():
