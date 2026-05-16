@@ -115,33 +115,13 @@ COUNTRY_NAME_TO_ISO2: Dict[str, str] = {
 }
 
 
-# SMI tickers map to CH-prefixed ISINs that yfinance refuses to return
-# (`Ticker(NESN.SW).isin` → "-"). With no ISIN we can't derive the valor;
-# the column would always be "—" for the headline Swiss index. Curating
-# them here is a one-off cost — 20 names that don't change often. Verify
-# against GLEIF / SIX when a constituent rotates.
-SMI_ISIN_MAP: Dict[str, str] = {
-    "NESN.SW": "CH0038863350",   # Nestlé S.A.
-    "ROG.SW":  "CH0012032048",   # Roche Holding AG
-    "NOVN.SW": "CH0012005267",   # Novartis AG
-    "CFR.SW":  "CH0210483332",   # Compagnie Financière Richemont SA
-    "ZURN.SW": "CH0011075394",   # Zurich Insurance Group AG
-    "UBSG.SW": "CH0244767585",   # UBS Group AG
-    "ABBN.SW": "CH0012221716",   # ABB Ltd
-    "LONN.SW": "CH0013841017",   # Lonza Group AG
-    "SIKA.SW": "CH0418792922",   # Sika AG
-    "ALC.SW":  "CH0432492467",   # Alcon Inc.
-    "GIVN.SW": "CH0010645932",   # Givaudan SA
-    "HOLN.SW": "CH0012214059",   # Holcim AG
-    "SCMN.SW": "CH0008742519",   # Swisscom AG
-    "PGHN.SW": "CH0024608827",   # Partners Group Holding AG
-    "SREN.SW": "CH0126881561",   # Swiss Re AG
-    "SOON.SW": "CH0049497724",   # Sonova Holding AG
-    "GEBN.SW": "CH0030170408",   # Geberit AG
-    "SLHN.SW": "CH0014852781",   # Swiss Life Holding AG
-    "LOGN.SW": "CH0025751329",   # Logitech International SA
-    "KNIN.SW": "CH0023405456",   # Kuehne + Nagel International AG
-}
+# SIX tickers (Yahoo .SW suffix) where yfinance's `Ticker.isin` returns
+# "-". The curated table lives in `data/six_ticker_isin.yml` and is shared
+# with the agentic `six_ticker_isin` source so both paths see the same
+# names. Imported here for backward compatibility with anything that
+# already references SMI_ISIN_MAP.
+from pipeline.gold.six_ticker_isin import _load as _load_six_ticker_isin
+SMI_ISIN_MAP: Dict[str, str] = _load_six_ticker_isin()
 
 
 # Wikipedia universe sources. Same shape as pms-ontology so the schema

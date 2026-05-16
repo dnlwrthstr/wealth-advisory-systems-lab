@@ -22,10 +22,12 @@ class _FakeTicker:
 
 
 @pytest.fixture(autouse=True)
-def _disable_openfigi(monkeypatch):
-    """Stop the openfigi source from hitting the live API during equity tests."""
+def _disable_network_sources(monkeypatch):
+    """Stop network-hitting equity sources from running during these tests."""
     from pipeline.agentic.sources import openfigi as openfigi_adapter
+    from pipeline.agentic.sources import equity_firds as firds_adapter
     monkeypatch.setattr(openfigi_adapter, "fetch_openfigi_by_isin", lambda isin, **kw: None)
+    monkeypatch.setattr(firds_adapter, "fetch_by_isin", lambda isin: None)
 
 
 @pytest.fixture

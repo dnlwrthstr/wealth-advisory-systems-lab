@@ -1,0 +1,17 @@
+id: six_ticker_isin
+description: |
+  Curated YAML map of SIX Swiss Exchange Yahoo-suffixed tickers (e.g.
+  LISN.SW, NESN.SW) to their ISINs. Fills the gap that yfinance leaves
+  open (Ticker.isin returns "-" for Swiss tickers) and that ESMA FIRDS
+  can't fill (SIX listings of CH issuers aren't in FIRDS). file_read
+  cost — runs first for ticker inputs so the rest of the planner has
+  an ISIN to work with.
+module: pipeline.agentic.sources.six_ticker_isin
+entrypoint: fetch
+covers: [equity]
+requires_identifier:
+  any_of: [ticker]
+produces_fields:
+  - identifierList
+confidence: high
+cost_class: file_read

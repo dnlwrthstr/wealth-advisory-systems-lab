@@ -79,3 +79,24 @@ def test_adapter_builds_identifier_patch(monkeypatch):
 def test_adapter_returns_none_for_non_isin(monkeypatch):
     monkeypatch.setattr(adapter, "fetch_openfigi_by_isin", lambda isin: {"figi": "X"})
     assert adapter.fetch("ticker", "AAPL", current={}) is None
+
+
+def test_adapter_derives_valor_for_swiss_isin(monkeypatch):
+    """CH ISINs encode the valor in digits 3..11; openfigi should surface it
+    alongside the ISIN/FIGI/ticker so downstream SIX-focused UIs have both."""
+    monkeypatch.setattr(adapter, "fetch_openfigi_by_isin", lambda isin: {
+        "figi": "BBG000BXQHQ0", "compositeFIGI": "BBG000BXQHQ0",
+        "ticker": "ABJ", "name": "ABB LTD-REG", "securityType": "Common Stock",
+    })
+    result = adapter.fetch("isin", "CH0012221716", current={})
+    valor_entries = [e for e in result.patch["identifierList"] if e["type"] == "valor"]
+    assert valor_entries == [{"identifier": "1222171", "type": "valor"}]
+
+
+def test_adapter_omits_valor_for_non_swiss_isin(monkeypatch):
+    monkeypatch.setattr(adapter, "fetch_openfigi_by_isin", lambda isin: {
+        "figi": "X", "ticker": "AAPL", "name": "APPLE INC",
+    })
+    result = adapter.fetch("isin", "US0378331005", current={})
+    types_seen = [e["type"] for e in result.patch["identifierList"]]
+    assert "valor" not in types_seen
