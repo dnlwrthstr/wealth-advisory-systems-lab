@@ -41,7 +41,7 @@ from universe.models import (
     SourceFingerprint,
 )
 
-from ._firds import iter_issuer_records
+from ._firds import iter_issuer_records, solr_get
 
 log = logging.getLogger("bond_firds")
 
@@ -279,6 +279,49 @@ def firds_to_golden(
     except ValidationError as exc:
         log.warning("validation failed for %s: %s", isin, exc.errors()[0]["msg"])
         return None
+
+
+def _solr_query_by_isin(isin: str) -> List[Dict[str, Any]]:
+    """Query FIRDS Solr for a single ISIN, return the (small) doc list."""
+    params = {
+        "q": f"isin:{isin}+AND+latest_received_flag:1",
+        "wt": "json",
+        "rows": "50",
+        "start": "0",
+        "fl": ",".join(FIRDS_FL),
+        "sort": "valid_from_date desc",
+    }
+    data = solr_get(params)
+    return list((data.get("response") or {}).get("docs", []))
+
+
+def fetch_by_isin(
+    isin: str,
+    *,
+    run_id: Optional[str] = None,
+    now: Optional[datetime] = None,
+    issuers_path: Optional[Path] = None,
+) -> Optional[BondGolden]:
+    """Query FIRDS for `isin`, join against the curated issuer LEI map.
+
+    The issuer's LEI must exist in `data/bond_issuers.yml` — that's the
+    lab's curated source of issuer name + type + asset-class metadata
+    that FIRDS doesn't carry per-instrument. Without an entry the build
+    fails (returns None). Mirrors `fund_firds.fetch_by_isin`.
+    """
+    docs = [d for d in _solr_query_by_isin(isin) if (d.get("gnr_cfi_code") or "").upper().startswith("D")]
+    if not docs:
+        return None
+    doc = max(docs, key=_record_quality)
+    issuers = load_issuers(issuers_path)
+    lei = doc.get("lei")
+    issuer = next((i for i in issuers if i.get("lei") == lei), None)
+    if issuer is None:
+        log.info("isin %s: bond issuer LEI %s not in curated yaml — skipping", isin, lei)
+        return None
+    run_id = run_id or f"firds-bond-{uuid.uuid4().hex[:8]}"
+    now = now or datetime.now(timezone.utc)
+    return firds_to_golden(doc, issuer, run_id, now)
 
 
 def write_ndjson(docs: List[BondGolden], path: Path) -> int:

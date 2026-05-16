@@ -19,11 +19,14 @@ def fetch(
     identifier_value: str,
     current: Dict[str, Any],
 ) -> Optional[SourceFetchResult]:
-    # If an earlier source (e.g. equity_parquet_seed) already resolved a
+    # If an earlier source (parquet_seed or openfigi) already resolved a
     # ticker, prefer it — saves a redundant ISIN → ticker round-trip and
-    # avoids the parquet lookup yfinance can't do.
+    # avoids parquet/OpenFIGI lookups yfinance can't do.
     if identifier_kind == "isin":
-        existing_ticker = (current.get("primaryListing") or {}).get("ticker")
+        existing_ticker = (
+            (current.get("primaryListing") or {}).get("ticker")
+            or _ticker_from_identifier_list(current.get("identifierList") or [])
+        )
         if existing_ticker:
             golden = fetch_by_identifier("ticker", existing_ticker)
         else:
@@ -39,3 +42,11 @@ def fetch(
     patch = {k: v for k, v in dumped.items() if k not in _ASSEMBLER_OWNED_FIELDS}
 
     return SourceFetchResult(patch=patch, source_of_truth_rows=sot_rows)
+
+
+def _ticker_from_identifier_list(identifiers: list) -> Optional[str]:
+    """Pick a tickerSymbol entry from a partial identifierList, if any."""
+    for entry in identifiers:
+        if (entry.get("type") or "").lower() == "tickersymbol" and entry.get("identifier"):
+            return entry["identifier"]
+    return None

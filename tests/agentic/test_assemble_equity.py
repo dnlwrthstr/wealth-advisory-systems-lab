@@ -21,6 +21,13 @@ class _FakeTicker:
         return self._info
 
 
+@pytest.fixture(autouse=True)
+def _disable_openfigi(monkeypatch):
+    """Stop the openfigi source from hitting the live API during equity tests."""
+    from pipeline.agentic.sources import openfigi as openfigi_adapter
+    monkeypatch.setattr(openfigi_adapter, "fetch_openfigi_by_isin", lambda isin, **kw: None)
+
+
 @pytest.fixture
 def fake_yfinance(monkeypatch):
     """Patch yfinance so equity_yahoo never hits the network."""

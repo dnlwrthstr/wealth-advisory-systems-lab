@@ -15,6 +15,14 @@ from pipeline.agentic.assemble import assemble_golden
 from pipeline.agentic.merger import SourceFetchResult
 
 
+@pytest.fixture(autouse=True)
+def _disable_openfigi(monkeypatch):
+    """Stop openfigi from hitting the live API — these tests focus on
+    the parquet_seed ↔ yahoo interaction."""
+    from pipeline.agentic.sources import openfigi as openfigi_adapter
+    monkeypatch.setattr(openfigi_adapter, "fetch_openfigi_by_isin", lambda isin, **kw: None)
+
+
 def _now() -> datetime:
     return datetime(2026, 5, 16, tzinfo=timezone.utc)
 
@@ -63,8 +71,12 @@ def test_parquet_seed_runs_before_yahoo_when_both_have_data(monkeypatch):
     )
 
     sources = [inv["source"] for inv in result.trace.invocations]
+    # parquet_seed (file_read, cheapest) before equity_yahoo (api_call). With
+    # openfigi disabled this turn the loop sees them adjacent or with
+    # openfigi as a no-data fill in between — either is fine.
     assert sources[0] == "equity_parquet_seed"
-    assert sources[1] == "equity_yahoo"
+    assert "equity_yahoo" in sources
+    assert sources.index("equity_yahoo") > sources.index("equity_parquet_seed")
 
     # Parquet's value survives fill-empty-only merge.
     assert result.record["longName"] == "Apple Inc. (from parquet)"
