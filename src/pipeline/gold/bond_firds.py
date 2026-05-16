@@ -139,7 +139,7 @@ def _fingerprint(doc: Dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Issuer YAML
+# Issuer resolution
 # ---------------------------------------------------------------------------
 
 def load_issuers(path: Optional[Path]) -> List[Dict[str, Any]]:
@@ -157,7 +157,54 @@ def load_issuers(path: Optional[Path]) -> List[Dict[str, Any]]:
         entry.setdefault("issuerType", "corporate")
         entry.setdefault("assetClass", "Fixed Income / Corporate Bond")
         entry.setdefault("assetClassId", "AC-FI-CORP-IG")
+        entry.setdefault("_source", "curated-issuers.yml")
     return issuers
+
+
+def _asset_class_defaults(issuer_type: str) -> Tuple[str, str]:
+    if issuer_type == "government":
+        return "Fixed Income / Government Bond", "AC-FI-GOVT"
+    if issuer_type == "supranational":
+        return "Fixed Income / Supranational Bond", "AC-FI-SUPRA"
+    return "Fixed Income / Corporate Bond", "AC-FI-CORP-IG"
+
+
+def _gleif_to_issuer(lei: str) -> Optional[Dict[str, Any]]:
+    """Build an issuer dict for `lei` from GLEIF. None when GLEIF has nothing."""
+    from pipeline.gold.issuer_gleif import fetch_gleif, gleif_fields
+
+    record = fetch_gleif(lei)
+    fields = gleif_fields(record) if record else {}
+    if not fields.get("legalName"):
+        return None
+    issuer_type = fields.get("issuerTypeFromGleif") or "corporate"
+    asset_class, asset_class_id = _asset_class_defaults(issuer_type)
+    return {
+        "lei": lei,
+        "name": fields["legalName"],
+        "issuerType": issuer_type,
+        "country": fields.get("domicileCountry"),
+        "assetClass": asset_class,
+        "assetClassId": asset_class_id,
+        "_source": "gleif",
+    }
+
+
+def _resolve_issuer(lei: str, issuers_path: Optional[Path]) -> Optional[Dict[str, Any]]:
+    """Resolve issuer metadata for `lei`. Curated YAML overrides GLEIF.
+
+    Falls back to GLEIF when the LEI isn't in the curated YAML — bonds whose
+    issuers haven't been curated still assemble, with legal-entity attributes
+    sourced from the same authority used by the issuer scope.
+    """
+    try:
+        issuers = load_issuers(issuers_path)
+    except SystemExit:
+        issuers = []
+    yaml_entry = next((i for i in issuers if i.get("lei") == lei), None)
+    if yaml_entry is not None:
+        return yaml_entry
+    return _gleif_to_issuer(lei)
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +276,7 @@ def firds_to_golden(
 
     identifier_list = [FinancialInstrumentIdentification(identifier=isin, type="isin")]
 
+    issuer_source = issuer.get("_source", "curated-issuers.yml")
     meta = GoldenRecordMeta(
         schemaVersion=SCHEMA_VERSION,
         goldenAsOf=now_iso,
@@ -236,7 +284,7 @@ def firds_to_golden(
         sourceOfTruth=[
             SourceAttribution(fieldGroup="identifiers", source="esma-firds"),
             SourceAttribution(fieldGroup="classification", source="esma-firds"),
-            SourceAttribution(fieldGroup="issuer", source="curated-issuers.yml"),
+            SourceAttribution(fieldGroup="issuer", source=issuer_source),
             SourceAttribution(fieldGroup="primaryListing", source="esma-firds"),
         ],
         sourceFingerprints=[
@@ -302,22 +350,26 @@ def fetch_by_isin(
     now: Optional[datetime] = None,
     issuers_path: Optional[Path] = None,
 ) -> Optional[BondGolden]:
-    """Query FIRDS for `isin`, join against the curated issuer LEI map.
+    """Query FIRDS for `isin`, resolve the issuer, build a BondGolden.
 
-    The issuer's LEI must exist in `data/bond_issuers.yml` — that's the
-    lab's curated source of issuer name + type + asset-class metadata
-    that FIRDS doesn't carry per-instrument. Without an entry the build
-    fails (returns None). Mirrors `fund_firds.fetch_by_isin`.
+    Issuer resolution prefers the curated `data/bond_issuers.yml` (where it
+    can carry custom assetClass labels) and falls back to GLEIF when the LEI
+    is absent — so an arbitrary FIRDS-listed bond assembles end-to-end
+    without manual curation. Returns None only if FIRDS has no debt record
+    for the ISIN, or the FIRDS record carries no LEI, or neither the YAML
+    nor GLEIF can identify the issuer.
     """
     docs = [d for d in _solr_query_by_isin(isin) if (d.get("gnr_cfi_code") or "").upper().startswith("D")]
     if not docs:
         return None
     doc = max(docs, key=_record_quality)
-    issuers = load_issuers(issuers_path)
     lei = doc.get("lei")
-    issuer = next((i for i in issuers if i.get("lei") == lei), None)
+    if not lei:
+        log.info("isin %s: FIRDS record has no LEI — skipping", isin)
+        return None
+    issuer = _resolve_issuer(lei, issuers_path)
     if issuer is None:
-        log.info("isin %s: bond issuer LEI %s not in curated yaml — skipping", isin, lei)
+        log.info("isin %s: issuer LEI %s not in curated yaml and not in GLEIF — skipping", isin, lei)
         return None
     run_id = run_id or f"firds-bond-{uuid.uuid4().hex[:8]}"
     now = now or datetime.now(timezone.utc)
