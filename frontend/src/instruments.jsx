@@ -676,10 +676,65 @@ function FundDetail({ source }) {
         </KV>
       </Subpanel>
 
+      <PerformancePanel performance={source.performance} marketData={md} />
+
       <AllocationPanel allocation={source.assetAllocation} />
       <HoldingsPanel source={source} allocation={source.assetAllocation} />
       <ProvenancePanel recordMeta={source.recordMeta} />
     </>
+  );
+}
+
+function PerformancePanel({ performance, marketData }) {
+  // PerformanceSnapshot is the structured, regulated home for returns +
+  // risk-adjusted metrics. yfinance only fills `returns` + a coarse
+  // `volatility1y` (from beta3Year) — Sharpe / Sortino / info ratio /
+  // tracking error / drawdown need a returns series the lab doesn't
+  // pull yet, so those render as em-dashes until a fact-sheet patch
+  // or a real performance feed lands. We fall back to the equivalent
+  // marketData fields when performance is silent so a fund that has
+  // only been through the legacy enrichment path still shows numbers.
+  const p = performance || {};
+  const md = marketData || {};
+  const r = p.returns || {};
+  const br = p.benchmarkReturns || {};
+  const ytd = r.ytd ?? md.ytdReturn;
+  const one = r.oneYear ?? md.oneYearReturn;
+  const three = r.threeYearAnn ?? md.threeYearReturn;
+  const five = r.fiveYearAnn ?? md.fiveYearReturn;
+  const ten = r.tenYearAnn;
+  const sinceIncep = r.sinceInceptionAnn;
+  const vol1 = p.volatility1y ?? md.volatility1y;
+  const vol3 = p.volatility3y;
+  const allEmpty = [ytd, one, three, five, ten, sinceIncep, vol1, vol3,
+    p.trackingError1y, p.informationRatio1y, p.sharpeRatio1y, p.sortinoRatio1y, p.maxDrawdown3y]
+    .every((v) => v == null);
+  return (
+    <Subpanel icon="📊" title="Performance">
+      {allEmpty ? (
+        <p className="muted">{EM_DASH}</p>
+      ) : (
+        <KV>
+          <Row label="As-of" value={<span className="mono">{val(p.asOf)}</span>} />
+          <Row label="YTD" value={fmtPctVal(ytd)} />
+          <Row label="1-year" value={fmtPctVal(one)} />
+          <Row label="3-year (ann.)" value={fmtPctVal(three)} />
+          <Row label="5-year (ann.)" value={fmtPctVal(five)} />
+          <Row label="10-year (ann.)" value={fmtPctVal(ten)} />
+          <Row label="Since inception (ann.)" value={fmtPctVal(sinceIncep)} />
+          <Row label="Volatility 1y" value={fmtPctVal(vol1)} />
+          <Row label="Volatility 3y" value={fmtPctVal(vol3)} />
+          <Row label="Tracking error 1y" value={fmtPctVal(p.trackingError1y)} />
+          <Row label="Information ratio 1y" value={p.informationRatio1y != null ? Number(p.informationRatio1y).toFixed(2) : EM_DASH} />
+          <Row label="Sharpe 1y" value={p.sharpeRatio1y != null ? Number(p.sharpeRatio1y).toFixed(2) : EM_DASH} />
+          <Row label="Sortino 1y" value={p.sortinoRatio1y != null ? Number(p.sortinoRatio1y).toFixed(2) : EM_DASH} />
+          <Row label="Max drawdown 3y" value={fmtPctVal(p.maxDrawdown3y)} />
+          {br.oneYear != null && (
+            <Row label="Benchmark 1y" value={fmtPctVal(br.oneYear)} />
+          )}
+        </KV>
+      )}
+    </Subpanel>
   );
 }
 

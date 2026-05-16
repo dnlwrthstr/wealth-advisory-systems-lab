@@ -4,12 +4,16 @@ For every fund document in the input file we look up the share-class
 ISIN via yfinance (`Ticker(isin)`), then fill the fields that FIRDS
 doesn't carry: NAV, market price, AUM, OHLCV, the resolved Yahoo
 symbol (back into `primaryListing.ticker` plus `identifierList`), TER,
-and trailing-period returns. Results are cached on disk so repeat runs
-are free.
+trailing-period returns (both `marketData.{ytdReturn,…}` headline
+fields and the structured `performance.returns` block on the
+PerformanceSnapshot), and a coarse `performance.volatility1y` proxy
+from beta3Year. Results are cached on disk so repeat runs are free.
 
 What this does NOT cover: fees beyond TER, dealing terms, SRRI / SRI,
-service providers, prospectus-level static data — those need fact-sheet
-parsing (see the `find-and-parse-factsheet` skill).
+service providers, Sharpe / Sortino / information ratios, tracking
+error, max drawdown, prospectus-level static data — those need
+fact-sheet parsing (see the `find-and-parse-factsheet` skill) or a
+returns time-series we don't pull here.
 """
 
 from __future__ import annotations
@@ -84,6 +88,24 @@ _ASSET_CLASS_LABEL = {
 }
 
 
+def _normalize_return(value: Optional[float]) -> Optional[float]:
+    """Coerce a yfinance return value to a decimal fraction.
+
+    yfinance is internally inconsistent: `threeYearAverageReturn` and
+    `fiveYearAverageReturn` come back as decimals (0.21 = 21 %), but
+    `ytdReturn` comes back as a percent-form value (5.68 = 5.68 %) for
+    funds / ETFs. The ontology declares all of these as decimals
+    (`ReturnsBreakdown` and `MarketDataSnapshot` both use `type: number`
+    described as "decimal"), so we normalise here. Any value strictly
+    greater than 1.0 is assumed to be the percent form and divided by
+    100; a real annual return above 100 % would be extraordinary for a
+    diversified fund and out of scope.
+    """
+    if value is None:
+        return None
+    return value / 100.0 if value > 1.0 else value
+
+
 def _project_yahoo_info(info: Dict[str, Any]) -> Dict[str, Any]:
     """Keep the fields we'll actually use. Smaller cache + easier debugging."""
     return {
@@ -98,10 +120,12 @@ def _project_yahoo_info(info: Dict[str, Any]) -> Dict[str, Any]:
             or info.get("expenseRatio")
         ),
         "yield": info.get("yield"),
-        "ytdReturn": info.get("ytdReturn"),
-        "oneYearReturn": info.get("oneYearReturn") or info.get("annualizedReturn"),
-        "threeYearAverageReturn": info.get("threeYearAverageReturn"),
-        "fiveYearAverageReturn": info.get("fiveYearAverageReturn"),
+        "ytdReturn": _normalize_return(info.get("ytdReturn")),
+        "oneYearReturn": _normalize_return(
+            info.get("oneYearReturn") or info.get("annualizedReturn")
+        ),
+        "threeYearAverageReturn": _normalize_return(info.get("threeYearAverageReturn")),
+        "fiveYearAverageReturn": _normalize_return(info.get("fiveYearAverageReturn")),
         "beta3Year": info.get("beta3Year"),
         # OHLCV (driving the Market Data sub-panel)
         "open": info.get("regularMarketOpen") or info.get("open"),
@@ -273,8 +297,12 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
         ("fiveYearAverageReturn", "fiveYearReturn"),
     ):
         value = yhoo.get(src_key)
-        if value is not None and md.get(dst_key) is None:
-            md[dst_key] = value
+        if value is not None:
+            existing = md.get(dst_key)
+            # Overwrite a stale percent-form value (> 1.0 — legacy pre-
+            # normalisation runs wrote ytdReturn = 5.68 instead of 0.0568).
+            if existing is None or (isinstance(existing, (int, float)) and existing > 1.0):
+                md[dst_key] = value
     if yhoo.get("beta3Year") is not None and md.get("volatility1y") is None:
         md["volatility1y"] = yhoo["beta3Year"]
     md.setdefault("asOf", now_iso)
@@ -286,6 +314,45 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
             "ytdReturn", "oneYearReturn",
             "threeYearAverageReturn", "fiveYearAverageReturn", "beta3Year")):
         touched_groups.append("marketData")
+
+    # ── Performance snapshot ────────────────────────────────────────────
+    # FundGolden.performance is a structured PerformanceSnapshot
+    # (`returns: ReturnsBreakdown`, plus tracking error, info / Sharpe /
+    # Sortino ratios, volatility, drawdown). yfinance gives us trailing
+    # total returns and a 3-year beta only — Sharpe/Sortino/tracking error
+    # need a benchmark series we don't pull here. So we populate just
+    # what we honestly have:
+    #
+    #   returns.ytd, oneYear, threeYearAnn, fiveYearAnn  ← yfinance trailing
+    #   volatility1y                                      ← beta3Year as a
+    #                                                       coarse risk proxy
+    #                                                       (same approximation
+    #                                                       marketData.volatility1y
+    #                                                       already uses — beta
+    #                                                       is not realised vol,
+    #                                                       it's the slope vs
+    #                                                       market; we keep it
+    #                                                       until a real vol
+    #                                                       feed is wired)
+    perf_returns: Dict[str, float] = {}
+    for src_key, dst_key in (
+        ("ytdReturn", "ytd"),
+        ("oneYearReturn", "oneYear"),
+        ("threeYearAverageReturn", "threeYearAnn"),
+        ("fiveYearAverageReturn", "fiveYearAnn"),
+    ):
+        value = yhoo.get(src_key)
+        if value is not None:
+            perf_returns[dst_key] = value
+    if perf_returns or yhoo.get("beta3Year") is not None:
+        perf = doc.get("performance") or {}
+        if perf_returns and not perf.get("returns"):
+            perf["returns"] = perf_returns
+        if yhoo.get("beta3Year") is not None and perf.get("volatility1y") is None:
+            perf["volatility1y"] = yhoo["beta3Year"]
+        perf.setdefault("asOf", now_iso[:10])  # PerformanceSnapshot.asOf is a date
+        doc["performance"] = perf
+        touched_groups.append("performance")
 
     # ── Identifiers + primary-listing ticker ────────────────────────────
     yhoo_symbol = yhoo.get("yahooSymbol")
