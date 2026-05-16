@@ -1,11 +1,32 @@
 {
   "doc": {
-    "totalExpenseRatio": 0.002,
-    "riskRating": { "srri": 6, "sri": 4 },
-    "holdingsCount": 1418
+    "fees": {
+      "ongoing": {
+        "totalExpenseRatio": 0.002,
+        "managementFee": 0.002
+      },
+      "transactional": {
+        "entryLoad": 0.0,
+        "exitLoad": 0.0
+      },
+      "incentive": {
+        "performanceFee": 0.0
+      }
+    },
+    "transactionCostsPRIIPs": 0.0,
+    "riskRating": {
+      "sri": 4
+    },
+    "serviceProviders": {
+      "depositary": {
+        "legalName": "State Street Custodial Services (Ireland) Limited"
+      }
+    },
+    "benchmarkName": "MSCI World Index",
+    "replicationMethod": "physicalSampling"
   },
   "_meta": {
-    "source": "BlackRock iShares product page + PRIIPS KID",
-    "sourceTimestamp": "2026-05-15T17:30:00Z"
+    "source": "BlackRock PRIIPS KID (eu-priips-ishares-core-msci-world-ucits-etf-ie00b4l5y983-en.pdf, dated 2026-04-09)",
+    "sourceTimestamp": "2026-04-09T00:00:00Z"
   }
 }
