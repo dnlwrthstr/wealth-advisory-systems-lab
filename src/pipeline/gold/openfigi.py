@@ -2,7 +2,7 @@
 
 Bloomberg's OpenFIGI API is the free, key-optional path to resolve a
 12-digit ISIN into the FIGI + venue-specific ticker. The lab uses it as
-the non-FINFOX bootstrap for the equity scope: given just an ISIN, this
+the identifier bootstrap for the equity scope: given just an ISIN, this
 source supplies enough identifiers and naming for `equity_yahoo` to
 overlay live market data on top.
 

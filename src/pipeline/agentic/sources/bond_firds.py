@@ -1,9 +1,8 @@
 """Agentic adapter for `pipeline.gold.bond_firds`.
 
 Queries ESMA FIRDS for a single ISIN, joins against the curated issuer
-LEI map (`pipeline/gold/data/bond_issuers.yml`). The non-FINFOX path
-for the bond scope; runs in parallel with bond_parquet (the cheaper but
-FINFOX-dependent baseline) and overlays whatever bond_parquet didn't fill.
+LEI map (`pipeline/gold/data/bond_issuers.yml`). Primary path for the
+bond scope.
 """
 from __future__ import annotations
 

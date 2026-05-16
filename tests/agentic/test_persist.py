@@ -42,11 +42,11 @@ def test_extract_leis_handles_lists():
 
 def test_assemble_and_persist_writes_primary_and_chains_issuer(monkeypatch):
     """Equity assembly writes 1 equity doc + 1 chained issuer doc."""
-    from pipeline.agentic.sources import equity_parquet_seed as adapter_seed
     from pipeline.agentic.sources import equity_yahoo as adapter_yahoo
     from pipeline.agentic.sources import issuer_gleif as adapter_gleif
+    from pipeline.agentic.sources import openfigi as adapter_openfigi
 
-    def seed_fetch(kind, value, current):
+    def yahoo_fetch(kind, value, current):
         return SourceFetchResult(
             patch={
                 "longName": "Apple Inc.",
@@ -61,7 +61,7 @@ def test_assemble_and_persist_writes_primary_and_chains_issuer(monkeypatch):
                 "identifierList": [{"identifier": value, "type": "isin"}],
                 "lifecycleStatus": "active",
             },
-            source_of_truth_rows=[{"fieldGroup": "identifiers", "source": "finfox-parquet"}],
+            source_of_truth_rows=[{"fieldGroup": "identifiers", "source": "yfinance"}],
         )
 
     def gleif_fetch(kind, value, current):
@@ -75,8 +75,8 @@ def test_assemble_and_persist_writes_primary_and_chains_issuer(monkeypatch):
             source_of_truth_rows=[{"fieldGroup": "legalEntity", "source": "gleif"}],
         )
 
-    monkeypatch.setattr(adapter_seed, "fetch", seed_fetch)
-    monkeypatch.setattr(adapter_yahoo, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_openfigi, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_yahoo, "fetch", yahoo_fetch)
     monkeypatch.setattr(adapter_gleif, "fetch", gleif_fetch)
 
     client = _RecordingClient()

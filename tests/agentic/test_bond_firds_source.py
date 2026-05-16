@@ -41,11 +41,6 @@ def test_bond_firds_end_to_end(monkeypatch):
     monkeypatch.setattr(gold, "solr_get", fake_solr_get)
     monkeypatch.setattr(gold, "load_issuers", lambda _path: fake_issuers)
 
-    # bond_parquet must NOT fire (no parquet master in this env) so the test
-    # actually exercises bond_firds end-to-end.
-    from pipeline.agentic.sources import bond_parquet as parquet_adapter
-    monkeypatch.setattr(parquet_adapter, "fetch", lambda k, v, c: None)
-
     result = assemble_golden(
         scope="bond",
         identifier={"kind": "isin", "value": "DE0001102309"},

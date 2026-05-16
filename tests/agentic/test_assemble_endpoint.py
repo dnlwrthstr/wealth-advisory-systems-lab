@@ -24,11 +24,11 @@ def _client():
 
 
 def test_assemble_endpoint_happy_path(monkeypatch):
-    """Mock both equity sources and verify the endpoint returns the composed record."""
-    from pipeline.agentic.sources import equity_parquet_seed as adapter_seed
+    """Mock the equity sources and verify the endpoint returns the composed record."""
     from pipeline.agentic.sources import equity_yahoo as adapter_yahoo
+    from pipeline.agentic.sources import openfigi as adapter_openfigi
 
-    def seed_fetch(kind, value, current):
+    def yahoo_fetch(kind, value, current):
         return SourceFetchResult(
             patch={
                 "longName": "Apple Inc.",
@@ -39,11 +39,11 @@ def test_assemble_endpoint_happy_path(monkeypatch):
                 "identifierList": [{"identifier": value, "type": "isin"}],
                 "lifecycleStatus": "active",
             },
-            source_of_truth_rows=[{"fieldGroup": "identifiers", "source": "finfox-parquet"}],
+            source_of_truth_rows=[{"fieldGroup": "identifiers", "source": "yfinance"}],
         )
 
-    monkeypatch.setattr(adapter_seed, "fetch", seed_fetch)
-    monkeypatch.setattr(adapter_yahoo, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_openfigi, "fetch", lambda k, v, c: None)
+    monkeypatch.setattr(adapter_yahoo, "fetch", yahoo_fetch)
 
     resp = _client().post(
         "/instruments/assemble",

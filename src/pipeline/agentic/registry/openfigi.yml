@@ -1,7 +1,7 @@
 id: openfigi
 description: |
   Bloomberg OpenFIGI mapping API — ISIN → FIGI / ticker / long name /
-  security type. The non-FINFOX bootstrap path for equity: given just an
+  security type. The identifier bootstrap path for equity: given just an
   ISIN, produces enough identifier + naming material for equity_yahoo to
   overlay live market data. 25 req/min (free, no key) or 250 req/min
   (free key in OPENFIGI_API_KEY).

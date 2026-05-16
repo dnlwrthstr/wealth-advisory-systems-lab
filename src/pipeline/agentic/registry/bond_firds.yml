@@ -1,7 +1,7 @@
 id: bond_firds
 description: |
   ESMA FIRDS Solr lookup by ISIN, joined against the curated bond issuer
-  LEI map (pipeline/gold/data/bond_issuers.yml). The non-FINFOX path for
+  LEI map (pipeline/gold/data/bond_issuers.yml). The primary path for
   the bond scope. Network call (web_fetch).
 module: pipeline.agentic.sources.bond_firds
 entrypoint: fetch

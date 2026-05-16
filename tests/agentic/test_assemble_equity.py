@@ -100,22 +100,16 @@ def test_assemble_records_provenance_and_quality(fake_yfinance):
     result = _assemble()
     assert result.provenance, "expected at least one SourceAttribution row"
     assert 0.0 < result.quality_score <= 1.0
-    sources_called = [inv["source"] for inv in result.trace.invocations]
-    # equity_parquet_seed runs first (cost-first ranking) — it has no data in
-    # this test env (no parquet seeds installed) → outcome no_data — then
-    # equity_yahoo runs and succeeds.
-    assert sources_called[0] == "equity_parquet_seed"
     yahoo_inv = next(inv for inv in result.trace.invocations if inv["source"] == "equity_yahoo")
     assert yahoo_inv["outcome"] == "ok"
 
 
 def test_assemble_returns_remaining_gaps_when_source_underdelivers(monkeypatch):
-    """If both sources return nothing, the assembled record reports the gaps."""
+    """If both registered equity sources return nothing, the assembled record
+    reports the gaps."""
     from pipeline.agentic.sources import equity_yahoo as adapter_yahoo
-    from pipeline.agentic.sources import equity_parquet_seed as adapter_seed
 
     monkeypatch.setattr(adapter_yahoo, "fetch", lambda k, v, c: None)
-    monkeypatch.setattr(adapter_seed, "fetch", lambda k, v, c: None)
     result = assemble_golden(
         scope="equity",
         identifier={"kind": "isin", "value": "ZZ0000000000"},
