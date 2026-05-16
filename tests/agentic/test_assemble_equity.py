@@ -104,6 +104,26 @@ def test_assemble_records_provenance_and_quality(fake_yfinance):
     assert yahoo_inv["outcome"] == "ok"
 
 
+def test_equity_yahoo_falls_back_to_isin_when_existing_ticker_yields_nothing(monkeypatch):
+    """Regression: OpenFIGI may set a non-Yahoo ticker (e.g. CH ISIN → "ABJ").
+    yfinance returns sparse `.info` for it and fetch_by_identifier yields
+    None — the adapter must retry by ISIN so Yahoo's own ISIN resolver runs."""
+    from pipeline.agentic.sources import equity_yahoo as adapter
+
+    seen: list[tuple[str, str]] = []
+
+    def fake_fetch(kind: str, value: str):
+        seen.append((kind, value))
+        return None
+
+    monkeypatch.setattr(adapter, "fetch_by_identifier", fake_fetch)
+    state = {"identifierList": [{"identifier": "ABJ", "type": "tickerSymbol"}]}
+    result = adapter.fetch("isin", "CH0012221716", state)
+
+    assert result is None
+    assert seen == [("ticker", "ABJ"), ("isin", "CH0012221716")]
+
+
 def test_assemble_returns_remaining_gaps_when_source_underdelivers(monkeypatch):
     """If both registered equity sources return nothing, the assembled record
     reports the gaps."""

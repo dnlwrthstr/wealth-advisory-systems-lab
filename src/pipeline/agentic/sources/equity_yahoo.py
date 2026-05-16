@@ -21,7 +21,14 @@ def fetch(
 ) -> Optional[SourceFetchResult]:
     # If an earlier source (parquet_seed or openfigi) already resolved a
     # ticker, prefer it — saves a redundant ISIN → ticker round-trip and
-    # avoids parquet/OpenFIGI lookups yfinance can't do.
+    # avoids parquet/OpenFIGI lookups yfinance can't do. But OpenFIGI's
+    # free ISIN endpoint may hand us a non-Yahoo-compatible venue ticker
+    # (e.g. CH0012221716 / ABB → "ABJ" Frankfurt stub instead of
+    # "ABBN.SW"); yfinance returns sparse `.info` for those and
+    # `fetch_by_identifier` yields None. When that happens — and we
+    # still have the original ISIN — retry by ISIN so Yahoo's own
+    # ISIN→ticker resolver gets a shot.
+    golden = None
     if identifier_kind == "isin":
         existing_ticker = (
             (current.get("primaryListing") or {}).get("ticker")
@@ -29,7 +36,7 @@ def fetch(
         )
         if existing_ticker:
             golden = fetch_by_identifier("ticker", existing_ticker)
-        else:
+        if golden is None:
             golden = fetch_by_identifier("isin", identifier_value)
     else:
         golden = fetch_by_identifier(identifier_kind, identifier_value)
