@@ -93,7 +93,7 @@ The universe is built one instrument at a time via the agentic platform under `s
 Per scope:
 
 - **equity** — `openfigi` (ISIN → FIGI / ticker / name via Bloomberg's free mapping API; pass `OPENFIGI_API_KEY` for 250 req/min instead of 25) then `equity_yahoo` (yfinance overlay; reads ticker from `identifierList.tickerSymbol` when openfigi set one).
-- **bond** — `bond_firds` (ESMA FIRDS Solr by ISIN, joined against the curated issuer LEI map at `src/pipeline/gold/data/bond_issuers.yml`).
+- **bond** — `bond_firds` (ESMA FIRDS Solr by ISIN; issuer metadata comes from the curated LEI map at `src/pipeline/gold/data/bond_issuers.yml` when it has the LEI, otherwise from GLEIF — so any FIRDS-listed bond assembles without manual curation, and the chained issuer assembly downstream still resolves the full IssuerGolden from GLEIF).
 - **fund** — `fund_firds` (FIRDS by ISIN + umbrella LEI map at `src/pipeline/gold/data/fund_umbrellas.yml`) → `fund_yahoo` (NAV / market price / OHLCV / AUM / TER / asset allocation) → `fund_factsheet_patch` (reads pre-curated output of the `find-and-parse-factsheet` Claude Code skill from `data/opensearch/golden/fund/patches/FG-{ISIN}-001.json`).
 - **issuer** — `issuer_gleif` (GLEIF public API by LEI; authoritative for legal-entity attributes).
 
