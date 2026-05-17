@@ -79,12 +79,12 @@ _SECTOR_LABEL = {
 }
 
 _ASSET_CLASS_LABEL = {
-    "stockPosition": "EQUITY",
-    "bondPosition": "FIXED_INCOME",
-    "cashPosition": "CASH",
-    "preferredPosition": "EQUITY",
-    "convertiblePosition": "FIXED_INCOME",
-    "otherPosition": "OTHER",
+    "stock_position": "EQUITY",
+    "bond_position": "FIXED_INCOME",
+    "cash_position": "CASH",
+    "preferred_position": "EQUITY",
+    "convertible_position": "FIXED_INCOME",
+    "other_position": "OTHER",
 }
 
 
@@ -364,10 +364,10 @@ def _apply(doc: Dict[str, Any], yhoo: Dict[str, Any], now_iso: str) -> Dict[str,
     if yhoo_symbol:
         ids: List[Dict[str, str]] = doc.setdefault("identifierList", [])
         if not any(
-            (e.get("type") or "").lower() == "tickersymbol" and e.get("identifier") == yhoo_symbol
+            (e.get("type") or "").lower() == "ticker_symbol" and e.get("identifier") == yhoo_symbol
             for e in ids
         ):
-            ids.append({"identifier": yhoo_symbol, "type": "tickerSymbol"})
+            ids.append({"identifier": yhoo_symbol, "type": "ticker_symbol"})
             touched_groups.append("identifiers")
 
     # ── Asset allocation + look-through ────────────────────────────────

@@ -57,7 +57,7 @@ ontology:
       properties:
         constraintType:
           type: string
-          enum: [hedgeRatio, trackingErrorLimit, marginThreshold]
+          enum: [hedge_ratio, tracking_error_limit, margin_threshold]
           description: The category of the constraint.
         limitValue:
           type: number

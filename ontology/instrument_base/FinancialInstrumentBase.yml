@@ -36,8 +36,8 @@ ontology:
       kind: value_object
       type: string
       enum:
-        - csaAgreement
-        - marginAgreement
+        - csa_agreement
+        - margin_agreement
         - other
 
     # Date and DateTime are now handled as basic types (string with format date/date-time)
@@ -135,16 +135,16 @@ ontology:
       enum:
         - act_360
         - act_365
-        - act_actIcma
-        - act_actIsda
-        - act_actAfb
-        - act_365L
+        - act_act_icma
+        - act_act_isda
+        - act_act_afb
+        - act_365l
         - bus_252
         - u30_360
-        - u30E_360Icma
-        - u30E_360Isda
-        - u30E_360
-        - u30U_360
+        - u30e_360_icma
+        - u30e_360_isda
+        - u30e_360
+        - u30u_360
 
     InterestRate:
       description: >
@@ -185,9 +185,9 @@ ontology:
             - annual
             - monthly
             - quarterly
-            - semiAnnual
+            - semi_annual
             - weekly
-            - atMaturity
+            - at_maturity
             - other
           example: quarterly
         basis:
@@ -226,7 +226,7 @@ ontology:
             - sedol
             - cusip
             - ric
-            - tickerSymbol
+            - ticker_symbol
             - bloomberg
             - cta
             - quick
@@ -237,7 +237,7 @@ ontology:
             - belgian
             - common
             - iso3
-            - otherProprietaryIdentification
+            - other_proprietary_identification
           example: isin
 
 
@@ -272,9 +272,9 @@ ontology:
           type: string
           enum:
             - unit
-            - faceAmount
-            - amortisedValue
-            - digitalTokenUnit
+            - face_amount
+            - amortised_value
+            - digital_token_unit
           example: unit
         value:
           description: Signed decimal amount.

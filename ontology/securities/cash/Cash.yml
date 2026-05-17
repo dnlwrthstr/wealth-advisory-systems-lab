@@ -41,8 +41,8 @@ ontology:
           type: string
           enum:
             - cash
-            - cashEquivalent
-            - marginAccount
+            - cash_equivalent
+            - margin_account
           example: cash
         isCollateral:
           description: Indicates whether the cash raw_data is used as collateral.

@@ -25,10 +25,10 @@ ontology:
         classificationType:
           type: string
           enum:
-            - IndustryClassification
-            - SectorClassification
-            - ThematicClassification
-            - CustomClassification
+            - industry_classification
+            - sector_classification
+            - thematic_classification
+            - custom_classification
         jurisdictionScope:
           type: string
           description: Primary geographic or regulatory scope (e.g. CH, EU, Global)
@@ -111,10 +111,10 @@ ontology:
           entityType:
             type: string
             enum:
-              - Issuer
-              - Instrument
-              - Listing
-              - Portfolio
+              - issuer
+              - instrument
+              - listing
+              - portfolio
             required: true
           entityId:
             type: string

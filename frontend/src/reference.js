@@ -3,7 +3,7 @@
  *
  * Usage:
  *   await loadReferenceData();          // call once at app startup
- *   labelFor("customerSegment", "highNetWorth")  // → "High Net Worth"
+ *   labelFor("customerSegment", "high_net_worth")  // → "High Net Worth"
  *   optionsFor("investmentStrategy")             // → [{value, label}, ...]
  */
 

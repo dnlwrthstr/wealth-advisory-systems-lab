@@ -56,23 +56,23 @@ FIRDS_FL = [
 
 CFI_SUBTYPE_TO_FUND_SUBTYPE: Dict[str, str] = {
     "E": "etf",
-    "O": "openEndedMutualFund",
-    "C": "closeEndedFund",
-    "I": "openEndedMutualFund",
-    "R": "realEstateFund",
-    "S": "structuredFund",
-    "U": "hedgeFund",
+    "O": "open_ended_mutual_fund",
+    "C": "close_ended_fund",
+    "I": "open_ended_mutual_fund",
+    "R": "real_estate_fund",
+    "S": "structured_fund",
+    "U": "hedge_fund",
 }
 
 CFI_DIVIDEND_POLICY: Dict[str, str] = {
-    "I": "DISTRIBUTING",
-    "G": "ACCUMULATING",
-    "M": "ACCUMULATING",
+    "I": "distributing",
+    "G": "accumulating",
+    "M": "accumulating",
 }
 
 CFI_EXPOSURE: Dict[str, str] = {
-    "E": "equity", "B": "fixedIncome", "M": "mixed_balanced",
-    "C": "moneyMarket", "R": "realEstate", "T": "commodity",
+    "E": "equity", "B": "fixed_income", "M": "mixed_balanced",
+    "C": "money_market", "R": "real_estate", "T": "commodity",
     "F": "alternative", "D": "alternative", "H": "alternative", "S": "alternative",
 }
 
@@ -190,7 +190,7 @@ def firds_to_golden(
     asset_class_id = "AC-FUND"
     if primary_exposure == "equity":
         asset_class_label, asset_class_id = "Fund / Equity", "AC-FUND-EQ"
-    elif primary_exposure == "fixedIncome":
+    elif primary_exposure == "fixed_income":
         asset_class_label, asset_class_id = "Fund / Fixed Income", "AC-FUND-FI"
     elif primary_exposure == "mixed_balanced":
         asset_class_label, asset_class_id = "Fund / Multi-Asset", "AC-FUND-MA"
@@ -262,9 +262,9 @@ def firds_to_golden(
 
     # ── Level 5: Share class (tradable instrument) ──────────────────────────
     share_class_type: Optional[str] = None
-    if dividend_policy == "ACCUMULATING":
+    if dividend_policy == "accumulating":
         share_class_type = "accumulating"
-    elif dividend_policy == "DISTRIBUTING":
+    elif dividend_policy == "distributing":
         share_class_type = "distributing"
     share_class = ShareClass(
         name=doc.get("gnr_short_name") or doc.get("gnr_full_name") or isin,

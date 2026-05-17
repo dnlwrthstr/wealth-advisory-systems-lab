@@ -33,7 +33,7 @@ TARGET_INDEX = "pms_golden_instrumentsearch"
 # OpenWealth FinancialInstrumentType the frontend type tabs filter on.
 _SCOPE_TO_OW_TYPE = {
     "equity": "equity",
-    "bond": "simpleBond",
+    "bond": "simple_bond",
     "fund": "fund",
 }
 

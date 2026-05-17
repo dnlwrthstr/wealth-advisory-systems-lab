@@ -17,10 +17,10 @@ def test_yahoo_uses_ticker_from_identifierList_when_no_primary_listing(monkeypat
             "identifierList": [
                 {"identifier": v, "type": "isin"},
                 {"identifier": "BBG000B9XRY4", "type": "figi"},
-                {"identifier": "AAPL", "type": "tickerSymbol"},
+                {"identifier": "AAPL", "type": "ticker_symbol"},
             ],
             "longName": "APPLE INC",
-            "equitySubType": "commonStock",
+            "equitySubType": "common_stock",
         },
         source_of_truth_rows=[{"fieldGroup": "identifiers", "source": "openfigi"}],
     ))

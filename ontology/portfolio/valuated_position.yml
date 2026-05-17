@@ -60,9 +60,9 @@ ontology:
           type: string
           enum:
             - unit
-            - faceAmount
-            - amortisedValue
-            - digitalTokenUnit
+            - face_amount
+            - amortised_value
+            - digital_token_unit
           example: unit
 
         value:
@@ -115,12 +115,12 @@ ontology:
           description: Indicates which type of price is used.
           type: string
           enum:
-            - closingPrice
-            - meanPrice
-            - bidPrice
-            - askPrice
+            - closing_price
+            - mean_price
+            - bid_price
+            - ask_price
             - other
-          example: closingPrice
+          example: closing_price
 
     ForeignExchangeRate:
       description: Foreign exchange rate between two currencies.

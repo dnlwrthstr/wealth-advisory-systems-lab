@@ -30,7 +30,7 @@ def fetch(
         return None
     identifiers = [
         {"identifier": isin, "type": "isin"},
-        {"identifier": identifier_value, "type": "tickerSymbol"},
+        {"identifier": identifier_value, "type": "ticker_symbol"},
     ]
     valor = valor_from_isin(isin)
     if valor:

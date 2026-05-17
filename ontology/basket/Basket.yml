@@ -18,7 +18,7 @@ ontology:
           description: Unique identifier for the basket definition.
         basketType:
           type: string
-          enum: [worstOf, bestOf, weightedAverage, equalWeighted]
+          enum: [worst_of, best_of, weighted_average, equal_weighted]
           description: The mathematical logic used to calculate the basket's performance.
         currency:
           common_ontology: "../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/Currency"

@@ -42,7 +42,7 @@ def test_adapter_emits_isin_ticker_and_valor_for_known_ticker():
     assert result is not None
     ids = {(e["type"], e["identifier"]) for e in result.patch["identifierList"]}
     assert ("isin", "CH0010570767") in ids
-    assert ("tickerSymbol", "LISN.SW") in ids
+    assert ("ticker_symbol", "LISN.SW") in ids
     # Valor 1057076 derived from CH0010570767 (digits 2..11, strip leading zeros).
     assert ("valor", "1057076") in ids
 

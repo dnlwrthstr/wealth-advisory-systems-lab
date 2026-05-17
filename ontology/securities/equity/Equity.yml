@@ -46,15 +46,15 @@ ontology:
             (Common, Preferred, ADR/GDR, REIT, MLP, Convertible Preferred, etc.).
           type: string
           enum:
-            - commonStock
-            - preferredStock
+            - common_stock
+            - preferred_stock
             - adr
             - gdr
             - reit
             - mlp
-            - convertiblePreferred
+            - convertible_preferred
             - other
-          example: commonStock
+          example: common_stock
 
         sharesOutstanding:
           description: Total shares currently issued and outstanding.

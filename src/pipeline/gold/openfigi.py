@@ -35,11 +35,11 @@ CACHE_DIR = Path.home() / ".cache" / "wealth-advisory-systems-lab" / "openfigi"
 # OpenFIGI securityType → ontology equitySubType. The free text on the API
 # is somewhat noisy; map only the cases we've seen recurring.
 SECURITY_TYPE_TO_SUBTYPE: Dict[str, str] = {
-    "Common Stock": "commonStock",
+    "Common Stock": "common_stock",
     "ADR": "adr",
     "GDR": "gdr",
     "REIT": "reit",
-    "Preferred Stock": "preferredStock",
+    "Preferred Stock": "preferred_stock",
 }
 
 

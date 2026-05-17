@@ -142,7 +142,7 @@ def _to_dict(o) -> dict:
                 "tradeDate": f.trade_date,
                 "settlementDate": f.settlement_date,
                 "fee": f.fee,
-                "netAmount": f.net_amount,
+                "net_amount": f.net_amount,
                 "fxRate": f.fx_rate,
                 "realizedPnl": f.realized_pnl,
             }

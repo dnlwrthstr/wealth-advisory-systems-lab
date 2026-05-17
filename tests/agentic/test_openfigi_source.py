@@ -71,9 +71,9 @@ def test_adapter_builds_identifier_patch(monkeypatch):
     types_seen = [e["type"] for e in result.patch["identifierList"]]
     assert "isin" in types_seen
     assert "figi" in types_seen
-    assert "tickerSymbol" in types_seen
+    assert "ticker_symbol" in types_seen
     assert result.patch["longName"] == "APPLE INC"
-    assert result.patch["equitySubType"] == "commonStock"
+    assert result.patch["equitySubType"] == "common_stock"
 
 
 def test_adapter_returns_none_for_non_isin(monkeypatch):

@@ -17,7 +17,7 @@ import pandas as pd
 from .schemas import BondMaster, EquityMaster, InstrumentSeed, MarketSnapshot
 
 _EQUITY_TYPES = {"equity"}
-_BOND_TYPES = {"simpleBond", "floater", "convertibleBond", "moneyMarket"}
+_BOND_TYPES = {"simple_bond", "floater", "convertible_bond", "money_market"}
 
 
 class ParquetUniverseStore:

@@ -17,7 +17,7 @@ def test_loads_patch_and_lifts_meta_into_provenance(tmp_path, monkeypatch):
             "totalExpenseRatio": 0.002,
             "riskRating": {"sri": 4},
             "benchmarkName": "MSCI World Index",
-            "replicationMethod": "physicalSampling",
+            "replicationMethod": "physical_sampling",
         },
         "_meta": {
             "source": "BlackRock PRIIPS KID (ie00b4l5y983-en.pdf)",

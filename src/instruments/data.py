@@ -979,7 +979,7 @@ INSTRUMENTS: list[dict] = [
     # -------------------------------------------------------------------------
     {
         "id": "RE-001", "isin": "US9229085538", "name": "Vanguard Real Estate Index Fund ETF",
-        "short_name": "VNQ", "type": "realEstate", "currency": "USD",
+        "short_name": "VNQ", "type": "real_estate", "currency": "USD",
         "exchange": "NYSE", "country": "US", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 88.40,
         "yield_pct": 4.30,
@@ -987,7 +987,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-002", "isin": "IE00B1FZS350", "name": "iShares Developed Markets Property Yield UCITS ETF",
-        "short_name": "IWDP", "type": "realEstate", "currency": "USD",
+        "short_name": "IWDP", "type": "real_estate", "currency": "USD",
         "exchange": "LSE", "country": "IE", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 22.80,
         "yield_pct": 3.86,
@@ -995,7 +995,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-003", "isin": "CH0012410517", "name": "CS REF Siat Swiss Real Estate Fund",
-        "short_name": "CSREFSIAT", "type": "realEstate", "currency": "CHF",
+        "short_name": "CSREFSIAT", "type": "real_estate", "currency": "CHF",
         "exchange": "SIX", "country": "CH", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 218.40,
         "yield_pct": 2.84,
@@ -1003,7 +1003,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-004", "isin": "CH0024608827", "name": "UBS (CH) Property Fund – Swiss Residential",
-        "short_name": "UBSRESI", "type": "realEstate", "currency": "CHF",
+        "short_name": "UBSRESI", "type": "real_estate", "currency": "CHF",
         "exchange": "SIX", "country": "CH", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 62.80,
         "yield_pct": 2.60,
@@ -1011,7 +1011,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-005", "isin": "LU0274210672", "name": "Xtrackers FTSE Developed Europe Real Estate UCITS ETF",
-        "short_name": "XDER", "type": "realEstate", "currency": "EUR",
+        "short_name": "XDER", "type": "real_estate", "currency": "EUR",
         "exchange": "XETRA", "country": "LU", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 18.60,
         "yield_pct": 3.42,
@@ -1019,7 +1019,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-006", "isin": "CH0419041497", "name": "Baloise Swiss Property Fund",
-        "short_name": "BALPROP", "type": "realEstate", "currency": "CHF",
+        "short_name": "BALPROP", "type": "real_estate", "currency": "CHF",
         "exchange": "SIX", "country": "CH", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 172.20,
         "yield_pct": 3.10,
@@ -1027,7 +1027,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-007", "isin": "IE00B5BFJG71", "name": "iShares Asia Property Yield UCITS ETF",
-        "short_name": "IASP", "type": "realEstate", "currency": "USD",
+        "short_name": "IASP", "type": "real_estate", "currency": "USD",
         "exchange": "LSE", "country": "IE", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 28.40,
         "yield_pct": 4.10,
@@ -1035,7 +1035,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-008", "isin": "LU0192223062", "name": "Pictet-Real Estate Securities P EUR",
-        "short_name": "PICT-RE", "type": "realEstate", "currency": "EUR",
+        "short_name": "PICT-RE", "type": "real_estate", "currency": "EUR",
         "exchange": None, "country": "LU", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 148.60,
         "yield_pct": 3.28,
@@ -1043,7 +1043,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-009", "isin": "CH0354251993", "name": "Helvetia Swiss Real Estate Fund",
-        "short_name": "HELVRE", "type": "realEstate", "currency": "CHF",
+        "short_name": "HELVRE", "type": "real_estate", "currency": "CHF",
         "exchange": "SIX", "country": "CH", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 114.40,
         "yield_pct": 2.92,
@@ -1051,7 +1051,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "RE-010", "isin": "US70604L1098", "name": "Prologis Inc.",
-        "short_name": "PLD", "type": "realEstate", "currency": "USD",
+        "short_name": "PLD", "type": "real_estate", "currency": "USD",
         "exchange": "NYSE", "country": "US", "sector": "real_estate",
         "coupon_pct": None, "maturity_date": None, "price": 114.80,
         "yield_pct": 3.44,
@@ -1129,7 +1129,7 @@ INSTRUMENTS: list[dict] = [
     # -------------------------------------------------------------------------
     {
         "id": "CR-001", "isin": "CH0454664001", "name": "Bitcoin (BTC)",
-        "short_name": "BTC", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "BTC", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 62480.00,
         "yield_pct": None,
@@ -1137,7 +1137,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "CR-002", "isin": "CH0454664019", "name": "Ethereum (ETH)",
-        "short_name": "ETH", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "ETH", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 3248.00,
         "yield_pct": None,
@@ -1145,7 +1145,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "CR-003", "isin": "CH0454664027", "name": "BNB (Binance Coin)",
-        "short_name": "BNB", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "BNB", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 412.00,
         "yield_pct": None,
@@ -1153,7 +1153,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "CR-004", "isin": "CH0454664035", "name": "Solana (SOL)",
-        "short_name": "SOL", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "SOL", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 168.40,
         "yield_pct": None,
@@ -1161,7 +1161,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "CR-005", "isin": "CH0454664043", "name": "Cardano (ADA)",
-        "short_name": "ADA", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "ADA", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 0.48,
         "yield_pct": None,
@@ -1169,7 +1169,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "CR-006", "isin": "CH0454664051", "name": "XRP (Ripple)",
-        "short_name": "XRP", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "XRP", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 0.624,
         "yield_pct": None,
@@ -1177,7 +1177,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "CR-007", "isin": "CH0454664069", "name": "Polkadot (DOT)",
-        "short_name": "DOT", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "DOT", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 7.82,
         "yield_pct": None,
@@ -1185,7 +1185,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "CR-008", "isin": "CH0454664077", "name": "Polygon (MATIC)",
-        "short_name": "MATIC", "type": "cryptoAsset", "currency": "USD",
+        "short_name": "MATIC", "type": "crypto_asset", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 0.724,
         "yield_pct": None,
@@ -1196,7 +1196,7 @@ INSTRUMENTS: list[dict] = [
     # -------------------------------------------------------------------------
     {
         "id": "PM-001", "isin": "CH0047533523", "name": "Gold Spot (XAU/USD)",
-        "short_name": "GOLD", "type": "preciousMetal", "currency": "USD",
+        "short_name": "GOLD", "type": "precious_metal", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 2348.00,
         "yield_pct": None,
@@ -1204,7 +1204,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "PM-002", "isin": "CH0047533531", "name": "Silver Spot (XAG/USD)",
-        "short_name": "SILVER", "type": "preciousMetal", "currency": "USD",
+        "short_name": "SILVER", "type": "precious_metal", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 28.42,
         "yield_pct": None,
@@ -1212,7 +1212,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "PM-003", "isin": "CH0047533549", "name": "Platinum Spot (XPT/USD)",
-        "short_name": "PLAT", "type": "preciousMetal", "currency": "USD",
+        "short_name": "PLAT", "type": "precious_metal", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 1048.00,
         "yield_pct": None,
@@ -1220,7 +1220,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "PM-004", "isin": "CH0047533556", "name": "Palladium Spot (XPD/USD)",
-        "short_name": "PALL", "type": "preciousMetal", "currency": "USD",
+        "short_name": "PALL", "type": "precious_metal", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 1028.00,
         "yield_pct": None,
@@ -1228,7 +1228,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "PM-005", "isin": "US4642851053", "name": "iShares Gold Trust ETF",
-        "short_name": "IAU", "type": "preciousMetal", "currency": "USD",
+        "short_name": "IAU", "type": "precious_metal", "currency": "USD",
         "exchange": "NYSE", "country": "US", "sector": None,
         "coupon_pct": None, "maturity_date": None, "price": 46.84,
         "yield_pct": None,
@@ -1368,7 +1368,7 @@ INSTRUMENTS: list[dict] = [
     # -------------------------------------------------------------------------
     {
         "id": "FXF-001", "isin": None, "name": "EUR/CHF Forward 3M",
-        "short_name": "EURCHFF", "type": "fxForward", "currency": "CHF",
+        "short_name": "EURCHFF", "type": "fx_forward", "currency": "CHF",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-02-14", "price": 0.9524,
         "yield_pct": None,
@@ -1376,7 +1376,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "FXF-002", "isin": None, "name": "USD/CHF Forward 3M",
-        "short_name": "USDCHFF", "type": "fxForward", "currency": "CHF",
+        "short_name": "USDCHFF", "type": "fx_forward", "currency": "CHF",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-02-14", "price": 0.8842,
         "yield_pct": None,
@@ -1384,7 +1384,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "FXF-003", "isin": None, "name": "GBP/USD Forward 6M",
-        "short_name": "GBPUSDF", "type": "fxForward", "currency": "USD",
+        "short_name": "GBPUSDF", "type": "fx_forward", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-05-14", "price": 1.2680,
         "yield_pct": None,
@@ -1392,7 +1392,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "FXF-004", "isin": None, "name": "EUR/USD Forward 6M",
-        "short_name": "EURUSDF", "type": "fxForward", "currency": "USD",
+        "short_name": "EURUSDF", "type": "fx_forward", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-05-14", "price": 1.0842,
         "yield_pct": None,
@@ -1403,7 +1403,7 @@ INSTRUMENTS: list[dict] = [
     # -------------------------------------------------------------------------
     {
         "id": "FXS-001", "isin": None, "name": "EUR/USD FX Swap 1Y",
-        "short_name": "EURUSD1Y", "type": "fxSwap", "currency": "USD",
+        "short_name": "EURUSD1Y", "type": "fx_swap", "currency": "USD",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-11-14", "price": 1.0810,
         "yield_pct": None,
@@ -1411,7 +1411,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "FXS-002", "isin": None, "name": "EUR/CHF FX Swap 1Y",
-        "short_name": "EURCHF1Y", "type": "fxSwap", "currency": "CHF",
+        "short_name": "EURCHF1Y", "type": "fx_swap", "currency": "CHF",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-11-14", "price": 0.9490,
         "yield_pct": None,
@@ -1422,7 +1422,7 @@ INSTRUMENTS: list[dict] = [
     # -------------------------------------------------------------------------
     {
         "id": "FXO-001", "isin": None, "name": "EUR/CHF Call Option 0.97 Mar-2025",
-        "short_name": "EURCHFC", "type": "fxOption", "currency": "CHF",
+        "short_name": "EURCHFC", "type": "fx_option", "currency": "CHF",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-03-14", "price": 0.0124,
         "yield_pct": None,
@@ -1430,7 +1430,7 @@ INSTRUMENTS: list[dict] = [
     },
     {
         "id": "FXO-002", "isin": None, "name": "USD/CHF Put Option 0.88 Mar-2025",
-        "short_name": "USDCHFP", "type": "fxOption", "currency": "CHF",
+        "short_name": "USDCHFP", "type": "fx_option", "currency": "CHF",
         "exchange": None, "country": None, "sector": None,
         "coupon_pct": None, "maturity_date": "2025-03-14", "price": 0.0098,
         "yield_pct": None,

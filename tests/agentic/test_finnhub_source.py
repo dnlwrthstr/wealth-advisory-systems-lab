@@ -73,7 +73,7 @@ def test_adapter_resolves_ticker_from_current_identifierList(monkeypatch):
         current={
             "identifierList": [
                 {"identifier": "US0378331005", "type": "isin"},
-                {"identifier": "AAPL", "type": "tickerSymbol"},
+                {"identifier": "AAPL", "type": "ticker_symbol"},
             ],
         },
     )

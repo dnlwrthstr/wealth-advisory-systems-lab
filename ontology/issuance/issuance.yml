@@ -39,7 +39,7 @@ ontology:
       type: string
       enum:
         - proposed      # The issuance is in the "roadshow" or underwriting phase.
-        - bookBuilding  # Active phase of gathering investor interest.
+        - book_building  # Active phase of gathering investor interest.
         - active        # The security is trading in the secondary market.
         - matured       # The issuance has reached its end of life (e.g., bonds).
         - redeemed      # The security has been bought back by the issuer.

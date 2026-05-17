@@ -38,5 +38,5 @@ def fetch(
             patch[dst_key] = v
     if not patch:
         return None
-    sot_rows = [{"fieldGroup": "legalEntity", "source": "gleif"}]
+    sot_rows = [{"fieldGroup": "legal_entity", "source": "gleif"}]
     return SourceFetchResult(patch=patch, source_of_truth_rows=sot_rows)

@@ -23,7 +23,7 @@
       }
     },
     "benchmarkName": "MSCI World Index",
-    "replicationMethod": "physicalSampling"
+    "replicationMethod": "physical_sampling"
   },
   "_meta": {
     "source": "BlackRock PRIIPS KID (eu-priips-ishares-core-msci-world-ucits-etf-ie00b4l5y983-en.pdf, dated 2026-04-09)",

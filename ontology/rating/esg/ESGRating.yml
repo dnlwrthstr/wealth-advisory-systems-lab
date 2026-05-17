@@ -33,7 +33,7 @@ ontology:
       properties:
         pillar:
           type: string
-          enum: [E, S, G]
+          enum: [e, s, g]
           description: The ESG pillar being scored.
         scoreValue:
           type: string
@@ -162,7 +162,7 @@ ontology:
       properties:
         framework:
           type: string
-          enum: [ICMA_GreenBondPrinciples, ICMA_SocialBondPrinciples, EU_GreenBondStandard]
+          enum: [icma_green_bond_principles, icma_social_bond_principles, eu_green_bond_standard]
           description: The framework or standard being followed.
 
     ESGUseOfProceeds:

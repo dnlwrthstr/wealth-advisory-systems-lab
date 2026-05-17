@@ -11,21 +11,21 @@ ontology:
       description: Error Types for CommonErrorResponse.
       type: string
       enum:
-        - /problems/INVALID_PAYLOAD
-        - /problems/MALFORMED_PAYLOAD
-        - /problems/INVALID_TOKEN
-        - /problems/EXPIRED_TOKEN
-        - /problems/INSUFFICIENT_PRIVILEGES
-        - /problems/NO_ACCESS_TO_RESOURCE
-        - /problems/RESOURCE_DOES_NOT_EXIST
-        - /problems/RESOURCE_NOT_READY
-        - /problems/RESOURCE_TOO_LARGE
-        - /problems/WRONG_METHOD
-        - /problems/OPERATION_NOT_ALLOWED
-        - /problems/TECHNICAL_ERROR
-        - /problems/NOT_IMPLEMENTED
-        - /problems/SERVICE_UNAVAILABLE
-      example: /problems/TECHNICAL_ERROR
+        - /problems/invalid_payload
+        - /problems/malformed_payload
+        - /problems/invalid_token
+        - /problems/expired_token
+        - /problems/insufficient_privileges
+        - /problems/no_access_to_resource
+        - /problems/resource_does_not_exist
+        - /problems/resource_not_ready
+        - /problems/resource_too_large
+        - /problems/wrong_method
+        - /problems/operation_not_allowed
+        - /problems/technical_error
+        - /problems/not_implemented
+        - /problems/service_unavailable
+      example: /problems/technical_error
 
     CommonErrorResponse:
       description: Common error response.

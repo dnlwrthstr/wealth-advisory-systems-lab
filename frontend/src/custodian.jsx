@@ -14,15 +14,15 @@ const ASSET_CLASS_META = {
   equity:      { color: "#16a34a" },
   fund:        { color: "#9333ea" },
   commodity:   { color: "#d97706" },
-  realEstate:  { color: "#0891b2" },
+  real_estate:  { color: "#0891b2" },
   alternative: { color: "#dc2626" },
-  cryptoAsset: { color: "#f59e0b" },
+  crypto_asset: { color: "#f59e0b" },
   index:       { color: "#6366f1" },
   other:       { color: "#6b7280" },
 };
 const ASSET_CLASS_ORDER = [
   "cash", "bond", "equity", "fund", "commodity",
-  "realEstate", "alternative", "cryptoAsset", "index", "other",
+  "real_estate", "alternative", "crypto_asset", "index", "other",
 ];
 
 // Profile pipeline label maps (snake_case from profiling API)
@@ -135,10 +135,10 @@ function movementSummary(movements) {
 // ---------------------------------------------------------------------------
 
 function txChipClass(type) {
-  if (["buy", "subscription", "inflowCash"].includes(type)) return "tx-chip buy";
-  if (["sell", "redemption", "redemptionPartial", "outflowCash"].includes(type)) return "tx-chip sell";
-  if (["dividendCash", "dividendReinvestment", "coupon", "interestPayment", "bonus"].includes(type)) return "tx-chip income";
-  if (["fees", "taxes", "taxCorrections", "managementFee", "custodyFee"].includes(type)) return "tx-chip fee";
+  if (["buy", "subscription", "inflow_cash"].includes(type)) return "tx-chip buy";
+  if (["sell", "redemption", "redemption_partial", "outflow_cash"].includes(type)) return "tx-chip sell";
+  if (["dividend_cash", "dividend_reinvestment", "coupon", "interest_payment", "bonus"].includes(type)) return "tx-chip income";
+  if (["fees", "taxes", "tax_corrections", "management_fee", "custody_fee"].includes(type)) return "tx-chip fee";
   return "tx-chip neutral";
 }
 
