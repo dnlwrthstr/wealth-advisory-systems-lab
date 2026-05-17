@@ -62,6 +62,7 @@ FIRDS_FL = [
 SENIORITY_MAP: Dict[str, str] = {
     "SNDB": "senior_unsecured", "SNDS": "senior_unsecured", "SNDU": "senior_unsecured",
     "SNSB": "senior_secured",
+    "SNNP": "senior_non_preferred",
     "SBOD": "subordinated", "JUND": "junior_subordinated",
     "MZZD": "other",
 }

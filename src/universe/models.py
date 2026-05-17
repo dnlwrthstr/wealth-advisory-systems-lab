@@ -2508,6 +2508,7 @@ class Bond(FinancialInstrument):
     instrumentEsgProfile: Optional[ESGInstrumentProfile] = Field(None, description="ESG profile of the bond, allowing instrument-specific overlays.")
     creditRisk: Optional[CreditRisk] = Field(None, description="Credit risk profile of the bond instrument.")
     interestRate: Optional[InterestRate] = Field(None, description="Interest rate definition.")
+    seniority: Optional[str] = Field(None, description="Seniority of the bond in the issuer's capital structure (default order of recovery on default / liquidation). Drives credit risk and recovery analytics independently of the issuer's overall creditworthiness. ")
     maturityDate: Optional[date] = Field(None, description="Bond maturity date.")
     issueDate: Optional[date] = Field(None, description="Issue date of the bond.")
     conversionPrice: Optional[Price] = Field(None, description="Conversion price if bond is convertible.")

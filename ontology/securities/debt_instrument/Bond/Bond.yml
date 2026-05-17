@@ -40,6 +40,24 @@ ontology:
           description: Interest rate definition.
           common_ontology: "../../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRate"
 
+        seniority:
+          description: >
+            Seniority of the bond in the issuer's capital structure (default
+            order of recovery on default / liquidation). Drives credit risk
+            and recovery analytics independently of the issuer's overall
+            creditworthiness.
+          type: string
+          enum:
+            - senior_secured
+            - senior_unsecured
+            - senior_non_preferred
+            - subordinated
+            - junior_subordinated
+            - tier1
+            - tier2
+            - other
+          example: senior_unsecured
+
         maturityDate:
           description: Bond maturity date.
           type: string
