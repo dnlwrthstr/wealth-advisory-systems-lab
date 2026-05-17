@@ -74,7 +74,7 @@ def _resolve_ticker(kind: str, value: str, current: Dict[str, Any]) -> Optional[
     if ticker:
         return ticker
     for entry in current.get("identifierList") or []:
-        if (entry.get("type") or "").lower() == "tickersymbol" and entry.get("identifier"):
+        if (entry.get("type") or "").lower() == "ticker_symbol" and entry.get("identifier"):
             return entry["identifier"]
     return None
 

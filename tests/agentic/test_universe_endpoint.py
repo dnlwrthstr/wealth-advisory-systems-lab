@@ -82,7 +82,7 @@ def _stub_equity_sources(monkeypatch):
     def gleif_fetch(kind, value, current):
         return SourceFetchResult(
             patch={"legalName": "Apple Inc.", "domicileCountry": "US", "issuerType": "corporate"},
-            source_of_truth_rows=[{"fieldGroup": "legalEntity", "source": "gleif"}],
+            source_of_truth_rows=[{"fieldGroup": "legal_entity", "source": "gleif"}],
         )
 
     monkeypatch.setattr(adapter_openfigi, "fetch", lambda k, v, c: None)
@@ -327,7 +327,7 @@ def test_list_universe_projects_type_specific_fields():
                         "currencyOfDenomination": "USD",
                         "identifierList": [
                             {"identifier": "US0378331005", "type": "isin"},
-                            {"identifier": "AAPL", "type": "tickerSymbol"},
+                            {"identifier": "AAPL", "type": "ticker_symbol"},
                         ],
                         "industrySector": {"sectorLabel": "Technology"},
                         "recordMeta": {"qualityScore": 0.95, "goldenAsOf": "2026-05-16T10:00:00Z"},

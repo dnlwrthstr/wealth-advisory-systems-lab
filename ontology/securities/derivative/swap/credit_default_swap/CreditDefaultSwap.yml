@@ -44,7 +44,7 @@ ontology:
           enum:
             - senior
             - subordinated
-            - juniorSubordinated
+            - junior_subordinated
           required: false
         cdsSpreadBps:
           description: CDS spread quoted in basis points per year.
@@ -70,9 +70,9 @@ ontology:
             - annual
             - monthly
             - quarterly
-            - semiAnnual
+            - semi_annual
             - weekly
-            - atMaturity
+            - at_maturity
             - other
           required: false
         settlementMethod:
@@ -87,9 +87,9 @@ ontology:
           type: string
           enum:
             - following
-            - modifiedFollowing
+            - modified_following
             - preceding
-            - modifiedPreceding
+            - modified_preceding
             - unadjusted
           required: false
         fixedCoupon:
@@ -109,10 +109,10 @@ ontology:
           description: Restructuring type that qualifies as a credit event.
           type: string
           enum:
-            - noRestructuring
-            - oldRestructuring
-            - modifiedRestructuring
-            - modifiedModified
+            - no_restructuring
+            - old_restructuring
+            - modified_restructuring
+            - modified_modified
           required: false
         creditEventFailureToPay:
           description: Indicates whether failure to pay triggers a credit event.

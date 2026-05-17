@@ -56,14 +56,14 @@ ontology:
             - sedol
             - cusip
             - ric
-            - bloombergTicker
-            - bloombergComposite
+            - bloomberg_ticker
+            - bloomberg_composite
             - wkn
             - valoren
-            - tickerSymbol
+            - ticker_symbol
             - mic
             - lei
-            - otherProprietaryIdentification
+            - other_proprietary_identification
           example: isin
 
         scope:

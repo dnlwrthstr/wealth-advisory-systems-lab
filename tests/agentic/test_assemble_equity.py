@@ -119,7 +119,7 @@ def test_equity_yahoo_falls_back_to_isin_when_existing_ticker_yields_nothing(mon
         return None
 
     monkeypatch.setattr(adapter, "fetch_by_identifier", fake_fetch)
-    state = {"identifierList": [{"identifier": "ABJ", "type": "tickerSymbol"}]}
+    state = {"identifierList": [{"identifier": "ABJ", "type": "ticker_symbol"}]}
     result = adapter.fetch("isin", "CH0012221716", state)
 
     assert result is None

@@ -42,8 +42,8 @@ class CreditSupport(str, Enum):
     """
     Credit support or collateral agreement governing the FX forward.
     """
-    csaAgreement = "csaAgreement"
-    marginAgreement = "marginAgreement"
+    csaAgreement = "csa_agreement"
+    marginAgreement = "margin_agreement"
     other = "other"
 
 class ContractSize(RootModel):
@@ -102,16 +102,16 @@ class DayCountBasis(str, Enum):
     """
     act_360 = "act_360"
     act_365 = "act_365"
-    act_actIcma = "act_actIcma"
-    act_actIsda = "act_actIsda"
-    act_actAfb = "act_actAfb"
-    act_365L = "act_365L"
+    act_actIcma = "act_act_icma"
+    act_actIsda = "act_act_isda"
+    act_actAfb = "act_act_afb"
+    act_365L = "act_365l"
     bus_252 = "bus_252"
     u30_360 = "u30_360"
-    u30E_360Icma = "u30E_360Icma"
-    u30E_360Isda = "u30E_360Isda"
-    u30E_360 = "u30E_360"
-    u30U_360 = "u30U_360"
+    u30E_360Icma = "u30e_360_icma"
+    u30E_360Isda = "u30e_360_isda"
+    u30E_360 = "u30e_360"
+    u30U_360 = "u30u_360"
 
 class InterestRate(BaseModel):
     """
@@ -377,9 +377,9 @@ class PartnerType(str, Enum):
     """
     Type of the partner (e.g., natural person, legal entity).
     """
-    naturalPerson = "naturalPerson"
-    legalEntity = "legalEntity"
-    advisoryUnit = "advisoryUnit"
+    naturalPerson = "natural_person"
+    legalEntity = "legal_entity"
+    advisoryUnit = "advisory_unit"
 
 class PartnerStatus(str, Enum):
     """
@@ -653,7 +653,7 @@ class IssuanceStatus(str, Enum):
     The lifecycle state of a security issuance.
     """
     proposed = "proposed"
-    bookBuilding = "bookBuilding"
+    bookBuilding = "book_building"
     active = "active"
     matured = "matured"
     redeemed = "redeemed"
@@ -692,20 +692,20 @@ class CommonErrorType(str, Enum):
     """
     Error Types for CommonErrorResponse.
     """
-    problems_INVALID_PAYLOAD = "/problems/INVALID_PAYLOAD"
-    problems_MALFORMED_PAYLOAD = "/problems/MALFORMED_PAYLOAD"
-    problems_INVALID_TOKEN = "/problems/INVALID_TOKEN"
-    problems_EXPIRED_TOKEN = "/problems/EXPIRED_TOKEN"
-    problems_INSUFFICIENT_PRIVILEGES = "/problems/INSUFFICIENT_PRIVILEGES"
-    problems_NO_ACCESS_TO_RESOURCE = "/problems/NO_ACCESS_TO_RESOURCE"
-    problems_RESOURCE_DOES_NOT_EXIST = "/problems/RESOURCE_DOES_NOT_EXIST"
-    problems_RESOURCE_NOT_READY = "/problems/RESOURCE_NOT_READY"
-    problems_RESOURCE_TOO_LARGE = "/problems/RESOURCE_TOO_LARGE"
-    problems_WRONG_METHOD = "/problems/WRONG_METHOD"
-    problems_OPERATION_NOT_ALLOWED = "/problems/OPERATION_NOT_ALLOWED"
-    problems_TECHNICAL_ERROR = "/problems/TECHNICAL_ERROR"
-    problems_NOT_IMPLEMENTED = "/problems/NOT_IMPLEMENTED"
-    problems_SERVICE_UNAVAILABLE = "/problems/SERVICE_UNAVAILABLE"
+    problems_INVALID_PAYLOAD = "/problems/invalid_payload"
+    problems_MALFORMED_PAYLOAD = "/problems/malformed_payload"
+    problems_INVALID_TOKEN = "/problems/invalid_token"
+    problems_EXPIRED_TOKEN = "/problems/expired_token"
+    problems_INSUFFICIENT_PRIVILEGES = "/problems/insufficient_privileges"
+    problems_NO_ACCESS_TO_RESOURCE = "/problems/no_access_to_resource"
+    problems_RESOURCE_DOES_NOT_EXIST = "/problems/resource_does_not_exist"
+    problems_RESOURCE_NOT_READY = "/problems/resource_not_ready"
+    problems_RESOURCE_TOO_LARGE = "/problems/resource_too_large"
+    problems_WRONG_METHOD = "/problems/wrong_method"
+    problems_OPERATION_NOT_ALLOWED = "/problems/operation_not_allowed"
+    problems_TECHNICAL_ERROR = "/problems/technical_error"
+    problems_NOT_IMPLEMENTED = "/problems/not_implemented"
+    problems_SERVICE_UNAVAILABLE = "/problems/service_unavailable"
 
 class CommonErrorResponse(BaseModel):
     """
@@ -818,9 +818,9 @@ class TransactionType(str, Enum):
     interest = "interest"
     fee = "fee"
     tax = "tax"
-    transferIn = "transferIn"
-    transferOut = "transferOut"
-    corporateAction = "corporateAction"
+    transferIn = "transfer_in"
+    transferOut = "transfer_out"
+    corporateAction = "corporate_action"
     other = "other"
 
 class PlaceOfTrade(BaseModel):
@@ -1567,7 +1567,7 @@ class InstrumentSearch(BaseModel):
     """
     documentId: str = Field(..., description="goldenId of the source per-security record.")
     scope: str = Field(..., description="Which per-security index holds the canonical record.")
-    ow_type: Optional[str] = Field(None, description="OpenWealth FinancialInstrumentType (`equity`, `simpleBond`, `fund`) — what the frontend type tabs filter on. ")
+    ow_type: Optional[str] = Field(None, description="OpenWealth FinancialInstrumentType (`equity`, `simple_bond`, `fund`) — what the frontend type tabs filter on. ")
     longName: str = Field(..., description="Full instrument name.")
     shortName: Optional[str] = Field(None, description="Short display name.")
     assetClass: str = Field(..., description="Resolved asset-class label.")

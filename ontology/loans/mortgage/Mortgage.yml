@@ -63,9 +63,9 @@ ontology:
             - annual
             - monthly
             - quarterly
-            - semiAnnual
+            - semi_annual
             - weekly
-            - atMaturity
+            - at_maturity
             - other
           required: true
 

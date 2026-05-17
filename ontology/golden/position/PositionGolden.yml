@@ -237,7 +237,7 @@ ontology:
             - equity
             - bond
             - fund
-            - structuredProduct
+            - structured_product
             - derivative
             - cash
             - crypto
@@ -305,12 +305,12 @@ ontology:
           description: Indicates which type of price is used.
           type: string
           enum:
-            - closingPrice
-            - meanPrice
-            - bidPrice
-            - askPrice
+            - closing_price
+            - mean_price
+            - bid_price
+            - ask_price
             - other
-          example: closingPrice
+          example: closing_price
         valueInPositionCurrency:
           description: Market value of the position in its denomination currency.
           common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/CurrencyAmount"

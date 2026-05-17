@@ -25,7 +25,7 @@ ontology:
           description: Standard settlement or liquidity horizon in days.
         valuationFrequency:
           type: string
-          enum: [daily, monthly, quarterly, adHoc]
+          enum: [daily, monthly, quarterly, ad_hoc]
           description: Frequency at which the asset class is valued.
         baseCurrency:
           description: Base currency used for risk and performance calculations.

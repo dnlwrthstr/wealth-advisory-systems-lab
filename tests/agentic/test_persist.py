@@ -72,7 +72,7 @@ def test_assemble_and_persist_writes_primary_and_chains_issuer(monkeypatch):
                 "headquartersCountry": "US",
                 "issuerType": "corporate",
             },
-            source_of_truth_rows=[{"fieldGroup": "legalEntity", "source": "gleif"}],
+            source_of_truth_rows=[{"fieldGroup": "legal_entity", "source": "gleif"}],
         )
 
     monkeypatch.setattr(adapter_openfigi, "fetch", lambda k, v, c: None)

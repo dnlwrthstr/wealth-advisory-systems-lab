@@ -11,9 +11,9 @@ ontology:
       kind: value_object
       type: string
       enum:
-        - naturalPerson
-        - legalEntity
-        - advisoryUnit
+        - natural_person
+        - legal_entity
+        - advisory_unit
 
     PartnerStatus:
       description: Status of the partner in the system.

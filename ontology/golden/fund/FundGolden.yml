@@ -5,7 +5,7 @@ ontology:
     Tier-3 (golden) read-model for a Fund instrument (mutual fund, ETF, SICAV
     sub-fund, etc.), denormalized for OpenSearch within a PMS.
 
-    Composes data from silver `Fund.yml`, Issuer, Listing, MarketData and
+    Composes data from silver `Fund.yml`, issuer, listing, MarketData and
     classifications into a single, search-optimised document. Field selection
     follows PMS access patterns: identifier lookups, screen filters (legal
     framework, domicile, fee bands), look-through holdings and NAV history.
@@ -146,39 +146,39 @@ ontology:
           description: Fund sub-type / wrapper.
           type: string
           enum:
-            - openEndedMutualFund
-            - closeEndedFund
+            - open_ended_mutual_fund
+            - close_ended_fund
             - etf
-            - moneyMarketFund
-            - hedgeFund
-            - privateEquity
-            - realEstateFund
-            - structuredFund
-            - fundOfFunds
+            - money_market_fund
+            - hedge_fund
+            - private_equity
+            - real_estate_fund
+            - structured_fund
+            - fund_of_funds
             - other
           example: etf
         fundStrategy:
           description: Investment strategy classification.
           type: string
           enum:
-            - passive_indexTracking
+            - passive_index_tracking
             - active
-            - smartBeta
-            - longShort
-            - marketNeutral
+            - smart_beta
+            - long_short
+            - market_neutral
             - thematic
             - other
-          example: passive_indexTracking
+          example: passive_index_tracking
         primaryAssetClassExposure:
           description: Dominant underlying asset class exposure.
           type: string
           enum:
             - equity
-            - fixedIncome
+            - fixed_income
             - mixed_balanced
-            - moneyMarket
+            - money_market
             - alternative
-            - realEstate
+            - real_estate
             - commodity
             - other
           example: equity
@@ -205,9 +205,9 @@ ontology:
           description: Income handling (distributing vs accumulating).
           type: string
           enum:
-            - DISTRIBUTING
-            - ACCUMULATING
-          example: ACCUMULATING
+            - distributing
+            - accumulating
+          example: accumulating
         isCurrencyHedged:
           description: True if the share class employs FX hedging.
           type: boolean
@@ -222,11 +222,11 @@ ontology:
           description: How the fund replicates its strategy (ETF specific, optional).
           type: string
           enum:
-            - physicalFull
-            - physicalSampling
-            - syntheticSwap
+            - physical_full
+            - physical_sampling
+            - synthetic_swap
             - other
-          example: physicalFull
+          example: physical_full
         benchmarkName:
           description: Name of the tracked benchmark (e.g., MSCI World Net TR).
           type: string
@@ -246,7 +246,7 @@ ontology:
             - biweekly
             - monthly
             - quarterly
-            - semiAnnual
+            - semi_annual
             - annual
             - irregular
           example: quarterly
@@ -393,8 +393,8 @@ ontology:
           type: string
           enum:
             - active
-            - softClosed
-            - hardClosed
+            - soft_closed
+            - hard_closed
             - liquidated
             - merged
             - suspended
@@ -628,14 +628,14 @@ ontology:
             - article6
             - article8
             - article9
-            - notApplicable
+            - not_applicable
         mifid2TargetMarket:
           description: MiFID II target-market category.
           type: string
           enum:
             - retail
             - professional
-            - eligibleCounterparty
+            - eligible_counterparty
         finsaCategory:
           description: Swiss FinSA client-category classification.
           type: string
@@ -643,7 +643,7 @@ ontology:
             - retail
             - professional
             - institutional
-            - notApplicable
+            - not_applicable
         registeredForSale:
           description: Countries where the fund is registered for sale (ISO 3166-1 alpha-2).
           type: array
@@ -779,7 +779,7 @@ ontology:
             - biweekly
             - monthly
             - quarterly
-            - semiAnnual
+            - semi_annual
             - annual
             - irregular
           example: daily

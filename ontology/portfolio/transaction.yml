@@ -17,9 +17,9 @@ ontology:
         - interest
         - fee
         - tax
-        - transferIn
-        - transferOut
-        - corporateAction
+        - transfer_in
+        - transfer_out
+        - corporate_action
         - other
       example: buy
 
@@ -74,13 +74,13 @@ ontology:
           description: Type of the posting amount.
           type: string
           enum:
-            - netAmount
-            - grossAmount
+            - net_amount
+            - gross_amount
             - tax
             - fee
-            - accruedInterest
+            - accrued_interest
             - other
-          example: netAmount
+          example: net_amount
 
         amount:
           description: Amount of the posting.

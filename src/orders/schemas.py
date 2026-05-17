@@ -15,7 +15,7 @@ class OrderType(str, Enum):
     MARKET = "market"
     LIMIT = "limit"
     STOP = "stop"
-    STOP_LIMIT = "stopLimit"
+    STOP_LIMIT = "stop_limit"
 
 
 class TimeInForce(str, Enum):

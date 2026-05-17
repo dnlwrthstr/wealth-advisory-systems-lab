@@ -37,7 +37,7 @@ function hitToInstrument(hit) {
 const TYPE_TABS = [
   { id: "all", label: "All" },
   { id: "equity", label: "Equity" },
-  { id: "simpleBond", label: "Bond" },
+  { id: "simple_bond", label: "Bond" },
   { id: "fund", label: "Fund" },
 ];
 
@@ -278,7 +278,7 @@ const ISIN_RE = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/i;
 
 // Frontend "all" tab maps to a scope hint we have to disambiguate manually.
 // OpenWealth typeTab → agentic scope: simpleBond is OW's name for plain bonds.
-const TYPETAB_TO_SCOPE = { equity: "equity", simpleBond: "bond", fund: "fund" };
+const TYPETAB_TO_SCOPE = { equity: "equity", simple_bond: "bond", fund: "fund" };
 
 function AssembleEmptyState({ identifier, name, typeTab, onAssembled }) {
   // Default scope: derive from the active type tab, fall back to equity.
@@ -451,7 +451,7 @@ function isinFor(hit) {
 }
 
 function labelForType(t) {
-  return ({ equity: "Equity", simpleBond: "Bond", fund: "Fund" })[t] || t;
+  return ({ equity: "Equity", simple_bond: "Bond", fund: "Fund" })[t] || t;
 }
 
 function fmtPct(decimal) {
@@ -479,25 +479,25 @@ const _KEEP_UPPER = new Set([
 // Pretty labels for camelCase enums coming out of the projection.
 const STRATEGY_LABEL = {
   equity:          "Equity",
-  fixedIncome:     "Fixed Income",
+  fixed_income:     "Fixed Income",
   mixed_balanced:  "Multi-Asset",
-  moneyMarket:     "Money Market",
+  money_market:     "Money Market",
   alternative:     "Alternative",
-  realEstate:      "Real Estate",
+  real_estate:      "Real Estate",
   commodity:       "Commodities",
   other:           "Other",
 };
 
 const FUND_TYPE_LABEL = {
   etf:                  "ETF",
-  openEndedMutualFund:  "Mutual",
-  closeEndedFund:       "Closed-End",
-  moneyMarketFund:      "MMF",
-  hedgeFund:            "Hedge",
-  privateEquity:        "PE",
-  realEstateFund:       "REIF",
-  structuredFund:       "Structured",
-  fundOfFunds:          "FoF",
+  open_ended_mutual_fund:  "Mutual",
+  close_ended_fund:       "Closed-End",
+  money_market_fund:      "MMF",
+  hedge_fund:            "Hedge",
+  private_equity:        "PE",
+  real_estate_fund:       "REIF",
+  structured_fund:       "Structured",
+  fund_of_funds:          "FoF",
   other:                "Other",
 };
 
@@ -539,7 +539,7 @@ const COLUMNS = {
     { key: "mic",    label: "Venue",       render: (h) => <span className="mono">{h.venue_mic || "—"}</span> },
     { key: "country",label: "Country",     render: (h) => <span className="mono">{h.country || "—"}</span> },
   ],
-  simpleBond: [
+  simple_bond: [
     { key: "isin",   label: "ISIN",        render: (h) => <span className="mono">{isinFor(h) || "—"}</span> },
     { key: "valor",  label: "Valor",       render: (h) => <span className="mono">{h.valor || "—"}</span> },
     { key: "name",   label: "Name",        render: (h) => <span className="finder-row-name">{h.long_name}</span>, wide: true },
@@ -558,7 +558,7 @@ const COLUMNS = {
     { key: "strat",  label: "Strategy", render: (h) => STRATEGY_LABEL[h.primary_asset_class_exposure] || h.primary_asset_class_exposure || "—" },
     { key: "ter",    label: "TER",      render: (h) => <span className="mono">{fmtPctShort(h.total_expense_ratio)}</span> },
     { key: "ccy",    label: "CCY",      render: (h) => <span className="mono">{h.currency || "—"}</span> },
-    { key: "policy", label: "Policy",   render: (h) => h.dividend_policy ? <span className="finder-row-chip">{h.dividend_policy === "ACCUMULATING" ? "Acc" : "Dist"}</span> : "—" },
+    { key: "policy", label: "Policy",   render: (h) => h.dividend_policy ? <span className="finder-row-chip">{h.dividend_policy === "accumulating" ? "Acc" : "Dist"}</span> : "—" },
     { key: "country",label: "Domicile", render: (h) => <span className="mono">{h.country || "—"}</span> },
   ],
 };
@@ -1347,7 +1347,7 @@ function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, posit
       if (suggestedPrice != null) {
         payload.reference_price = suggestedPrice;
       }
-      if (orderType === "limit" || orderType === "stopLimit") {
+      if (orderType === "limit" || orderType === "stop_limit") {
         payload.limit_price = parseFloat(limitPrice);
       }
       const result = await submitOrder(payload);
@@ -1419,7 +1419,7 @@ function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, posit
                   <option value="market">Market</option>
                   <option value="limit">Limit</option>
                   <option value="stop">Stop</option>
-                  <option value="stopLimit">Stop-Limit</option>
+                  <option value="stop_limit">Stop-Limit</option>
                 </select>
               </label>
               <label>Time in Force
@@ -1444,7 +1444,7 @@ function OrderDialogBase({ isin, instrumentName, currency, suggestedPrice, posit
                   required
                 />
               </label>
-              {(orderType === "limit" || orderType === "stopLimit") && (
+              {(orderType === "limit" || orderType === "stop_limit") && (
                 <label>Limit Price ({currency})
                   <input
                     type="number"
@@ -1658,12 +1658,12 @@ const TYPE_LABELS = {
   commodity: "Commodity",
   option: "Option",
   future: "Future",
-  fxForward: "FX Forward",
-  fxSwap: "FX Swap",
-  fxOption: "FX Option",
-  preciousMetal: "Precious Metal",
-  realEstate: "Real Estate",
-  cryptoAsset: "Crypto",
+  fx_forward: "FX Forward",
+  fx_swap: "FX Swap",
+  fx_option: "FX Option",
+  precious_metal: "Precious Metal",
+  real_estate: "Real Estate",
+  crypto_asset: "Crypto",
   alternative: "Alternative",
   cash: "Cash",
   other: "Other",

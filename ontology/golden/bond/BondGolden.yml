@@ -6,7 +6,7 @@ ontology:
     and retrieval in OpenSearch within a Portfolio Management System (PMS).
 
     The golden record composes data from the canonical (tier-2) ontology
-    entities — Bond, Issuer, Listing, MarketDataSnapshot, industry/sector
+    entities — Bond, issuer, listing, MarketDataSnapshot, industry/sector
     classifications and ratings — into a single, search-optimised document.
 
     v0.2.0 — identifier index migration:
@@ -99,14 +99,14 @@ ontology:
           type: string
           enum:
             - government
-            - sovereignSupranational
+            - sovereign_supranational
             - municipal
-            - corporateInvestmentGrade
-            - corporateHighYield
+            - corporate_investment_grade
+            - corporate_high_yield
             - covered
             - convertible
-            - inflationLinked
-            - zeroCoupon
+            - inflation_linked
+            - zero_coupon
             - perpetual
             - subordinated
             - securitised
@@ -151,14 +151,14 @@ ontology:
           description: Derived maturity bucket used by screens.
           type: string
           enum:
-            - shortTerm_lt1y
-            - shortTerm_1y_3y
-            - intermediate_3y_5y
-            - intermediate_5y_10y
-            - longTerm_10y_30y
-            - veryLongTerm_gt30y
+            - short_term_less_than_1y
+            - short_term_1y_to_3y
+            - intermediate_3y_to_5y
+            - intermediate_5y_to_10y
+            - long_term_10y_to_30y
+            - very_long_term_greater_than_30y
             - perpetual
-          example: longTerm_10y_30y
+          example: long_term_10y_to_30y
         interestRate:
           description: Interest-rate definition (fixed / floating / staggered, day-count, payment cadence).
           common_ontology: "../../instrument_base/FinancialInstrumentBase.yml#/ontology/entities/InterestRate"
@@ -451,7 +451,7 @@ ontology:
           enum:
             - retail
             - professional
-            - eligibleCounterparty
+            - eligible_counterparty
 
     GoldenRecordMeta:
       description: Provenance, freshness and lineage metadata for the golden record.

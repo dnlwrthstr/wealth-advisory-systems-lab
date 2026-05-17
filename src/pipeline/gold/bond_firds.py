@@ -81,16 +81,16 @@ def derive_bond_sub_type(cfi: Optional[str], issuer_type: str) -> str:
     if issuer_type == "government":
         return "government"
     if issuer_type == "supranational":
-        return "sovereignSupranational"
+        return "sovereign_supranational"
     if issuer_type == "insurance_company":
-        return "corporateInvestmentGrade"
+        return "corporate_investment_grade"
     sub = cfi[1]
     if sub == "C":
         return "convertible"
     if sub == "Y":
         return "securitised"
     if sub in ("T", "B"):
-        return "corporateInvestmentGrade"
+        return "corporate_investment_grade"
     return "other"
 
 

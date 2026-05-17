@@ -20,10 +20,10 @@ ontology:
           description: Indicates the type of the account.
           type: string
           enum:
-            - cashAccount
-            - safekeepingAccount
+            - cash_account
+            - safekeeping_account
             - other
-          example: cashAccount
+          example: cash_account
 
         name:
           description: Name of the account. It provides an additional means of identification, and is designated by the account servicer in agreement with the account owner.

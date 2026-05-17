@@ -455,7 +455,7 @@ class PostgresCustodianStore:
                     ),
                     account=AccountReference(
                         id=r["account_id"],
-                        type=AccountType(r.get("account_type", "safekeepingAccount")),
+                        type=AccountType(r.get("account_type", "safekeeping_account")),
                     ),
                     quantity=Quantity(value=float(r["quantity"])),
                     valuation=Valuation(

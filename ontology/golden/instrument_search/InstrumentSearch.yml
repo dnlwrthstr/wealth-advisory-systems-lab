@@ -133,7 +133,7 @@ ontology:
           description: Fund — umbrella legal name (issuer of the share class).
           type: string
         fundSubType:
-          description: Fund — sub-type (etf, openEndedMutualFund, …).
+          description: Fund — sub-type (etf, open_ended_mutual_fund, …).
           type: string
         dividendPolicy:
           description: Fund — DISTRIBUTING / ACCUMULATING.

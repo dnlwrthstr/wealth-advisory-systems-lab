@@ -53,9 +53,9 @@ ontology:
             ACCUMULATING: reinvests income back into the fund.
           type: string
           enum:
-            - DISTRIBUTING
-            - ACCUMULATING
-          example: ACCUMULATING
+            - distributing
+            - accumulating
+          example: accumulating
 
         fees:
           ref: FundFeeStructure

@@ -35,7 +35,7 @@ def fetch(
     if rec.get("compositeFIGI") and rec["compositeFIGI"] != rec.get("figi"):
         identifiers.append({"identifier": rec["compositeFIGI"], "type": "figi"})
     if rec.get("ticker"):
-        identifiers.append({"identifier": rec["ticker"], "type": "tickerSymbol"})
+        identifiers.append({"identifier": rec["ticker"], "type": "ticker_symbol"})
 
     patch: Dict[str, Any] = {"identifierList": identifiers}
     if rec.get("name"):

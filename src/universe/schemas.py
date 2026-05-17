@@ -67,7 +67,7 @@ class BondMaster:
     """Instrument master for bonds (simpleBond, floater, convertibleBond, moneyMarket)."""
     isin: str
     valor_nr: str
-    instrument_type: str = "simpleBond"
+    instrument_type: str = "simple_bond"
 
     # Identity
     name: str = ""

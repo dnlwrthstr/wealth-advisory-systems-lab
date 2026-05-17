@@ -54,6 +54,6 @@ def fetch(
 def _ticker_from_identifier_list(identifiers: list) -> Optional[str]:
     """Pick a tickerSymbol entry from a partial identifierList, if any."""
     for entry in identifiers:
-        if (entry.get("type") or "").lower() == "tickersymbol" and entry.get("identifier"):
+        if (entry.get("type") or "").lower() == "ticker_symbol" and entry.get("identifier"):
             return entry["identifier"]
     return None

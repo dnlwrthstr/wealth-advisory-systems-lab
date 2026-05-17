@@ -116,7 +116,7 @@ def test_assemble_and_persist_stamps_universe_status_on_primary_only(monkeypatch
                 "headquartersCountry": "US",
                 "issuerType": "corporate",
             },
-            source_of_truth_rows=[{"fieldGroup": "legalEntity", "source": "gleif"}],
+            source_of_truth_rows=[{"fieldGroup": "legal_entity", "source": "gleif"}],
         )
 
     monkeypatch.setattr(adapter_openfigi, "fetch", lambda k, v, c: None)

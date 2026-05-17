@@ -106,7 +106,7 @@ def test_adapter_reads_isin_from_current_state_for_ticker_input(monkeypatch):
     monkeypatch.setattr(adapter, "fetch_by_isin", fake)
     state = {
         "identifierList": [
-            {"identifier": "LISN.SW", "type": "tickerSymbol"},
+            {"identifier": "LISN.SW", "type": "ticker_symbol"},
             {"identifier": "CH0010570767", "type": "isin"},
         ],
     }

@@ -75,7 +75,7 @@ YAHOO_EXCHANGE_TO_MIC: Dict[str, str] = {
 }
 
 YAHOO_QUOTE_TYPE_TO_SUBTYPE: Dict[str, str] = {
-    "EQUITY": "commonStock",
+    "EQUITY": "common_stock",
     "ADR": "adr",
     "GDR": "gdr",
     "REIT": "reit",
@@ -91,7 +91,7 @@ YAHOO_QUOTE_TYPE_TO_SUBTYPE: Dict[str, str] = {
 # These are the conservative defaults; the real CFI for a specific share
 # class can override via the find-and-parse-factsheet skill.
 CFI_BY_SUBTYPE: Dict[str, str] = {
-    "commonStock": "ESVUFR",
+    "common_stock": "ESVUFR",
     "adr":         "EDSXFR",
     "gdr":         "EDSXFR",
     "reit":        "ESVUFR",
@@ -303,7 +303,7 @@ def yahoo_info_to_golden(
                 FinancialInstrumentIdentification(identifier=valor_value, type="valoren")
             )
     identifier_list.append(
-        FinancialInstrumentIdentification(identifier=ticker_symbol, type="tickerSymbol")
+        FinancialInstrumentIdentification(identifier=ticker_symbol, type="ticker_symbol")
     )
 
     industry_sector = None

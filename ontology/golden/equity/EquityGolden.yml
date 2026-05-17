@@ -6,7 +6,7 @@ ontology:
     and retrieval in OpenSearch within a Portfolio Management System (PMS).
 
     The golden record composes data from the canonical (tier-2) ontology entities
-    — Equity, Issuer, Listing, MarketDataSnapshot, industry/sector classifications
+    — Equity, issuer, listing, MarketDataSnapshot, industry/sector classifications
     and ratings — into a single, search-optimised document. It is a derived view:
     the tier-2 entities remain the source of truth; this record is rebuilt by the
     enrichment pipeline and never edited directly.
@@ -107,15 +107,15 @@ ontology:
           description: Equity sub-type (Common, Preferred, ADR, GDR, REIT, etc.).
           type: string
           enum:
-            - commonStock
-            - preferredStock
+            - common_stock
+            - preferred_stock
             - adr
             - gdr
             - reit
             - mlp
-            - convertiblePreferred
+            - convertible_preferred
             - other
-          example: commonStock
+          example: common_stock
         shareClass:
           description: Share class (e.g., Class A, Class B, Preferred).
           type: string
@@ -417,7 +417,7 @@ ontology:
           enum:
             - retail
             - professional
-            - eligibleCounterparty
+            - eligible_counterparty
 
     GoldenRecordMeta:
       description: >

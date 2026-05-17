@@ -23,9 +23,9 @@ _ASSET_CLASS_TO_OW_TYPE: Dict[str, str] = {
     "Equity / Common Stock": "equity",
     "Equity / ADR": "equity",
     "Equity / REIT": "equity",
-    "Fixed Income / Government Bond": "simpleBond",
-    "Fixed Income / Corporate Bond": "simpleBond",
-    "Fixed Income / Supranational Bond": "simpleBond",
+    "Fixed Income / Government Bond": "simple_bond",
+    "Fixed Income / Corporate Bond": "simple_bond",
+    "Fixed Income / Supranational Bond": "simple_bond",
 }
 
 
@@ -37,7 +37,7 @@ def _ow_type_from_doc(src: Dict[str, Any]) -> str:
     if asset_class.startswith("Fund"):
         return "fund"
     if asset_class.startswith("Fixed Income"):
-        return "simpleBond"
+        return "simple_bond"
     if asset_class.startswith("Equity"):
         return "equity"
     return "other"
@@ -52,7 +52,7 @@ def _isin_from_identifier_list(src: Dict[str, Any]) -> str:
 
 def _ticker_from_identifier_list(src: Dict[str, Any]) -> str:
     for entry in src.get("identifierList") or []:
-        if (entry.get("type") or "").lower() in ("tickersymbol", "ticker"):
+        if (entry.get("type") or "").lower() in ("ticker_symbol", "ticker"):
             return entry.get("identifier") or ""
     return ""
 
@@ -268,7 +268,7 @@ class OpenSearchInstrumentStore:
             if ac.startswith("Equity"):
                 seen.add("equity")
             elif ac.startswith("Fixed Income"):
-                seen.add("simpleBond")
+                seen.add("simple_bond")
             elif ac.startswith("Fund"):
                 seen.add("fund")
         return sorted(seen) or ["equity"]
