@@ -122,6 +122,93 @@ def fetch_openfigi_by_isin(isin: str, *, use_cache: bool = True) -> Optional[Dic
     return projected
 
 
+def fetch_openfigi_by_ticker(
+    ticker: str,
+    exchange_code: Optional[str] = None,
+    *,
+    use_cache: bool = True,
+) -> Optional[Dict[str, Any]]:
+    """Resolve a Yahoo-suffixed ticker to a single best-match OpenFIGI record.
+
+    The reverse direction of `fetch_openfigi_by_isin`. Used by the
+    universe batch loader to map Wikipedia-sourced tickers (S&P 500 etc.)
+    onto ISINs before handing them to the agentic equity chain.
+
+    The Yahoo suffix (`.SW`, `.DE`, `.L`, …) is stripped before the
+    OpenFIGI call — OpenFIGI expects the bare ticker plus an optional
+    `exchCode` filter. When `exchange_code` is None, OpenFIGI returns
+    the best composite-FIGI match across all venues.
+
+    Returns the same flat projection as `fetch_openfigi_by_isin`, plus
+    the `isin` field when OpenFIGI's response carries it on the chosen
+    match. Returns None on no-match or transient HTTP error.
+    """
+    bare = _strip_yahoo_suffix(ticker)
+    cache_key = f"ticker:{bare}" + (f":{exchange_code}" if exchange_code else "")
+    cached = _cache_path(cache_key)
+    if use_cache and cached.exists():
+        try:
+            data = json.loads(cached.read_text(encoding="utf-8"))
+            return None if data.get("_negative") else data
+        except json.JSONDecodeError:
+            cached.unlink(missing_ok=True)
+
+    body: Dict[str, str] = {"idType": "TICKER", "idValue": bare}
+    if exchange_code:
+        body["exchCode"] = exchange_code
+    response = _post_json([body])
+    if response is None:
+        return None
+
+    if not isinstance(response, list) or not response:
+        cached.write_text(json.dumps({"_negative": True}), encoding="utf-8")
+        return None
+    result = response[0] or {}
+    matches = result.get("data") or []
+    if not matches:
+        cached.write_text(json.dumps({"_negative": True}), encoding="utf-8")
+        return None
+
+    chosen = _pick_best_match(matches)
+    projected = {
+        "figi": chosen.get("figi"),
+        "compositeFIGI": chosen.get("compositeFIGI"),
+        "ticker": chosen.get("ticker"),
+        "name": chosen.get("name"),
+        "securityType": chosen.get("securityType"),
+        "securityType2": chosen.get("securityType2"),
+        "exchCode": chosen.get("exchCode"),
+        "marketSector": chosen.get("marketSector"),
+        "isin": chosen.get("isin"),
+    }
+    try:
+        cached.write_text(json.dumps(projected), encoding="utf-8")
+    except OSError as exc:
+        log.warning("openfigi ticker cache write failed for %s: %s", cache_key, exc)
+    return projected
+
+
+# Yahoo venue suffixes used by the named universes the batch loader
+# supports (SMI=.SW, DAX 40=.DE, FTSE 100=.L). Share-class indicators on
+# US tickers (BRK.B, BF.B) are NOT venue suffixes and must not be
+# stripped — they're part of the OpenFIGI ticker.
+_YAHOO_VENUE_SUFFIXES = frozenset({"SW", "DE", "L"})
+
+
+def _strip_yahoo_suffix(ticker: str) -> str:
+    """Drop the Yahoo venue suffix (`.SW`, `.DE`, `.L`) before hitting OpenFIGI.
+
+    Bare tickers (no dot) and US share-class tickers (`BRK.B`, `BF.B`) pass
+    through unchanged — only known venue suffixes are removed.
+    """
+    if "." not in ticker:
+        return ticker
+    head, tail = ticker.rsplit(".", 1)
+    if tail in _YAHOO_VENUE_SUFFIXES:
+        return head
+    return ticker
+
+
 def _pick_best_match(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Prefer the composite-FIGI record; otherwise the first match.
 

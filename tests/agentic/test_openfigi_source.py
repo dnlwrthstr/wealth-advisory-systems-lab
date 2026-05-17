@@ -100,3 +100,86 @@ def test_adapter_omits_valor_for_non_swiss_isin(monkeypatch):
     result = adapter.fetch("isin", "US0378331005", current={})
     types_seen = [e["type"] for e in result.patch["identifierList"]]
     assert "valor" not in types_seen
+
+
+# ---------------------------------------------------------------------------
+# fetch_openfigi_by_ticker (used by the universe batch loader)
+# ---------------------------------------------------------------------------
+
+def test_fetch_by_ticker_strips_yahoo_suffix_before_calling_openfigi(
+    fake_post_json, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(gold_openfigi, "CACHE_DIR", tmp_path)
+    rec = gold_openfigi.fetch_openfigi_by_ticker("NESN.SW", use_cache=False)
+    assert rec is not None
+    # OpenFIGI sees the bare ticker, not the Yahoo-suffixed form.
+    assert fake_post_json["last"] == [{"idType": "TICKER", "idValue": "NESN"}]
+
+
+def test_fetch_by_ticker_passes_through_bare_us_ticker(
+    fake_post_json, tmp_path, monkeypatch
+):
+    """US tickers carry no Yahoo venue suffix — they pass through unchanged."""
+    monkeypatch.setattr(gold_openfigi, "CACHE_DIR", tmp_path)
+    gold_openfigi.fetch_openfigi_by_ticker("AAPL", use_cache=False)
+    assert fake_post_json["last"] == [{"idType": "TICKER", "idValue": "AAPL"}]
+
+
+def test_fetch_by_ticker_passes_exchange_code_when_given(
+    fake_post_json, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(gold_openfigi, "CACHE_DIR", tmp_path)
+    gold_openfigi.fetch_openfigi_by_ticker("AAPL", exchange_code="US", use_cache=False)
+    assert fake_post_json["last"] == [
+        {"idType": "TICKER", "idValue": "AAPL", "exchCode": "US"}
+    ]
+
+
+def test_fetch_by_ticker_negative_cache_on_empty_response(monkeypatch, tmp_path):
+    monkeypatch.setattr(gold_openfigi, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(gold_openfigi, "_post_json", lambda payload: [{"data": []}])
+    assert gold_openfigi.fetch_openfigi_by_ticker("ZZZZ") is None
+    # The cache key embeds "ticker:" to avoid colliding with ISIN cache entries.
+    assert (tmp_path / "ticker:ZZZZ.json").exists()
+
+
+def test_fetch_by_ticker_surfaces_isin_when_present(monkeypatch, tmp_path):
+    monkeypatch.setattr(gold_openfigi, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(
+        gold_openfigi,
+        "_post_json",
+        lambda payload: [
+            {
+                "data": [
+                    {
+                        "figi": "BBG000B9XRY4",
+                        "compositeFIGI": "BBG000B9XRY4",
+                        "ticker": "AAPL",
+                        "name": "APPLE INC",
+                        "securityType": "Common Stock",
+                        "exchCode": "US",
+                        "isin": "US0378331005",
+                    }
+                ]
+            }
+        ],
+    )
+    rec = gold_openfigi.fetch_openfigi_by_ticker("AAPL", use_cache=False)
+    assert rec is not None
+    assert rec["isin"] == "US0378331005"
+
+
+def test_strip_yahoo_suffix_passthrough_for_bare_ticker():
+    assert gold_openfigi._strip_yahoo_suffix("AAPL") == "AAPL"
+
+
+def test_strip_yahoo_suffix_strips_known_venues():
+    assert gold_openfigi._strip_yahoo_suffix("NESN.SW") == "NESN"
+    assert gold_openfigi._strip_yahoo_suffix("SAP.DE") == "SAP"
+    assert gold_openfigi._strip_yahoo_suffix("AZN.L") == "AZN"
+
+
+def test_strip_yahoo_suffix_preserves_us_share_class_tickers():
+    """S&P 500 contains BRK.B / BF.B — these are share-class indicators, not venues."""
+    assert gold_openfigi._strip_yahoo_suffix("BRK.B") == "BRK.B"
+    assert gold_openfigi._strip_yahoo_suffix("BF.B") == "BF.B"

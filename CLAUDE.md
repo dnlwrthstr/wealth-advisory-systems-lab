@@ -115,7 +115,7 @@ OpenSearch runs with the security plugin disabled (dev mode, no auth, plain HTTP
 
 ### Agentic data engineering (primary path)
 
-The universe is built one instrument at a time via the agentic platform under `src/pipeline/agentic/`. Given an identifier (ISIN, ticker, LEI), the planner reads the ontology-derived field manifest, picks sources from a per-scope registry, runs them in cost order (file_read → api_call → web_fetch → llm_skill), merges their patches with provenance (fill-empty-only), and returns a composed golden record. The instrument-api exposes `POST /instruments/assemble`; with `persist=true` it writes to `pms_golden_{scope}` and chains into issuer assembly for every embedded LEI.
+The universe is built one instrument at a time via the agentic platform under `src/pipeline/agentic/`. Given an identifier (ISIN, ticker, LEI), the planner reads the ontology-derived field manifest, picks sources from a per-scope registry, runs them in cost order (file_read → api_call → web_fetch → llm_skill), merges their patches with provenance (fill-empty-only), and returns a composed golden record. The instrument-api exposes `POST /instruments/assemble`; with `persist=true` it writes to `pms_golden_{scope}` and chains into issuer assembly for every embedded LEI. For a full architectural reference (layered API, source tables per scope, merge policy, manifest invariant), see [`src/pipeline/agentic/README.md`](src/pipeline/agentic/README.md). Batch seeding from a named universe (SMI, S&P 500, …) is handled by `python -m pipeline.agentic.cli.equity_universe --universe …`.
 
 Per scope:
 
