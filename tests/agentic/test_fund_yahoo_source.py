@@ -21,7 +21,7 @@ def test_projects_market_data_ter_and_allocation(monkeypatch):
         "volume": 1_234_000,
         "assetAllocation": {
             "bySector": [{"sector": "Information Technology", "percentage": 0.25}],
-            "byAssetClass": [{"type": "EQUITY", "percentage": 1.0}],
+            "byAssetClass": [{"type": "equity", "percentage": 1.0}],
             "holdings": [{"identifier": "AAPL", "weight": 0.05}],
         },
     }

@@ -197,7 +197,15 @@ ontology:
             properties:
               type:
                 type: string
-                description: Asset class bucket (e.g., EQUITY, FIXED_INCOME, CASH, REAL_ESTATE, COMMODITIES, OTHER).
+                description: Asset class bucket.
+                enum:
+                  - equity
+                  - fixed_income
+                  - cash
+                  - real_estate
+                  - commodities
+                  - other
+                example: equity
               percentage:
                 type: number
                 description: Weight of this bucket as a decimal (e.g., 0.65 for 65%).
