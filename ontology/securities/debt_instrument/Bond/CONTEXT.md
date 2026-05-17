@@ -147,6 +147,32 @@ This defines the likelihood of you getting your money back.
 
 - **Credit Spread**: This is the difference in yield between your bond and a "risk-free" government bond. If this spread widens, it means the market thinks your bond is getting riskier.
 
+### The Seniority (The "Place in Line")
+
+While Credit Quality tells you the *likelihood* of default, **Seniority** tells you what happens *if* default occurs. It defines where your bond sits in the repayment queue when an issuer is liquidated or restructured. Two bonds from the same issuer with the same maturity can have very different prices and yields purely because of seniority.
+
+When a company goes bankrupt, its remaining assets are distributed in a strict order. Senior claims must be paid in full before any junior claim receives a cent. Equity holders are always last.
+
+#### The Repayment Hierarchy
+
+| Rank | Seniority Class | Description | Typical Recovery |
+| :--- | :--- | :--- | :--- |
+| 1 | **Senior Secured** | Backed by specific collateral (property, equipment). First in line. | 60–80%+ |
+| 2 | **Senior Unsecured** | No collateral, but ranks above subordinated debt. Most investment-grade corporates sit here. | ~40% |
+| 3 | **Senior Subordinated** | Below senior unsecured, above other subordinated debt. | 20–30% |
+| 4 | **Subordinated** | Paid only after all senior claims are satisfied. | 10–20% |
+| 5 | **Junior Subordinated / Tier 2** | Deeply subordinated; often used by banks for regulatory capital. | Low |
+| 6 | **AT1 / CoCos** | Most junior debt. Can be written down or converted to equity *before* default. | Often zero |
+
+> **Real-world example**: In March 2023, holders of Credit Suisse's AT1 bonds were wiped out (~$17 billion written to zero) while equity holders received some value in the UBS takeover. This was legally permitted because of the bonds' deep subordination — a striking demonstration of why seniority matters.
+
+#### Why Seniority Matters for Your Position
+
+- **Pricing**: Lower seniority = higher yield. The market demands more compensation for sitting further back in the queue.
+- **Rating**: Agencies "notch" ratings up or down based on seniority. A subordinated bond from a AA-rated issuer might itself be rated A or BBB.
+- **Risk Modeling**: Loss-Given-Default (LGD) calculations depend directly on seniority class.
+- **Special Cases**: **Covered Bonds** are technically senior unsecured *plus* a dedicated cover pool of assets — giving them dual recourse and often the highest ratings in the corporate bond universe.
+
 ## The Time Horizon (The "Timeline")
 
 - **Maturity**: The date the clock stops.
@@ -161,6 +187,7 @@ Summary Table: Bond Key Components
 | **Yield to Maturity (YTM)** | Your total expected return if you hold until the end. |
 | **Accrued Interest** | The cash you've "earned" but haven't been paid yet. |
 | **Duration** | How much a "rate hike" will hurt your portfolio. |
+| **Seniority** | Where you stand in line for repayment if the issuer defaults. |
 
 ## Risks of Bond Positions
 
@@ -179,6 +206,8 @@ This is the risk that the issuer—the company or government—simply can’t pa
 - **The Danger**: If a company goes bankrupt, they may stop making interest payments and fail to return your principal at maturity.
 
 - **Protection**: Investors use **Credit Ratings** (from agencies like Moody's or S&P) to gauge this. AAA is the "gold standard," while anything below BBB- is considered "High Yield" or "Junk."
+
+- **Recovery**: Even if default happens, you may not lose everything — your bond's **Seniority** (see "Place in Line" above) determines how much of your principal you can expect to recover from the bankruptcy proceedings.
 
 ### Inflation Risk (Purchasing Power Risk)
 
