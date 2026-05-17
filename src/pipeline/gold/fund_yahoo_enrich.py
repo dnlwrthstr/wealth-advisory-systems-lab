@@ -79,12 +79,12 @@ _SECTOR_LABEL = {
 }
 
 _ASSET_CLASS_LABEL = {
-    "stock_position": "EQUITY",
-    "bond_position": "FIXED_INCOME",
-    "cash_position": "CASH",
-    "preferred_position": "EQUITY",
-    "convertible_position": "FIXED_INCOME",
-    "other_position": "OTHER",
+    "stock_position": "equity",
+    "bond_position": "fixed_income",
+    "cash_position": "cash",
+    "preferred_position": "equity",
+    "convertible_position": "fixed_income",
+    "other_position": "other",
 }
 
 
@@ -157,7 +157,7 @@ def _project_funds_data(fd: Any) -> Dict[str, Any]:
                     "identifier": str(symbol),
                     "name": row.get("Name") or str(symbol),
                     "weight": float(row.get("Holding Percent") or 0.0),
-                    "assetClass": "EQUITY",
+                    "assetClass": "equity",
                 }
                 for symbol, row in df.iterrows()
                 if (row.get("Holding Percent") or 0.0) > 0
@@ -185,7 +185,7 @@ def _project_funds_data(fd: Any) -> Dict[str, Any]:
             for k, v in ac.items():
                 if v is None:
                     continue
-                bucket = _ASSET_CLASS_LABEL.get(k, "OTHER")
+                bucket = _ASSET_CLASS_LABEL.get(k, "other")
                 agg[bucket] = agg.get(bucket, 0.0) + float(v)
             out["byAssetClass"] = [
                 {"type": k, "percentage": round(v, 6)} for k, v in agg.items() if v > 0
