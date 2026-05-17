@@ -1,0 +1,18 @@
+{
+  "version": "2.6.0",
+  "created": "2026-05-17T10:26:36.838488",
+  "templates": {
+    "core": {
+      "spec": "templates/spec.md",
+      "plan": "templates/plan.md",
+      "task": "templates/task.md"
+    },
+    "decomposition": {
+      "microservices": "templates/decomposition/microservices.md",
+      "api_contract": "templates/decomposition/api-contract.yaml",
+      "interface": "templates/decomposition/interface.ts",
+      "service_plan": "templates/decomposition/service-plan.md",
+      "integration_plan": "templates/decomposition/integration-plan.md"
+    }
+  }
+}

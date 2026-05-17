@@ -43,3 +43,10 @@ frontend/dist/
 # Claude Code local settings (permissions, per-machine preferences)
 .claude/settings.local.json
 
+# SpecPulse runtime state (churns on every command; ID registry + memory + specs are tracked)
+.specpulse/cache/
+.specpulse/checkpoints/
+.specpulse/memory/task-history.json
+.specpulse/memory/task-states.json
+.specpulse/memory/task-progress.json
+

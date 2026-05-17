@@ -24,6 +24,33 @@ git branch -d <branch>
 git push origin --delete <branch>
 ```
 
+## Spec-first workflow (SpecPulse)
+
+Non-trivial features go through a spec → plan → tasks loop **before any code is written**, using the SpecPulse slash commands in `.claude/commands/sp-*.md`:
+
+```
+/sp-pulse <feature-name>     # create .specpulse/specs/NNN-<name>/ scaffold + matching feat/<name> branch
+/sp-spec "<one-liner>"        # write the spec — outcomes, scope, constraints, verification
+/sp-plan                      # decompose spec into implementation plan
+/sp-task                      # break plan into ordered tasks
+/sp-execute                   # implement, one task at a time
+/sp-validate                  # cross-check artefacts before merge
+```
+
+Artefacts under `.specpulse/specs/`, `.specpulse/plans/`, `.specpulse/tasks/` are committed alongside the code and reviewed in PyCharm as part of the PR.
+
+**When to use it:**
+
+- *Required* for net-new features, cross-package work, new ontology types, new agentic sources, new backend services, schema changes.
+- *Skipped* for bugfixes, refactors, doc edits, dependency bumps, single-file changes — those stay ad-hoc on a `fix/…` or `refactor/…` branch.
+
+**Memory boundary:**
+
+- `.specpulse/memory/decisions.md` — per-feature decisions ("why we chose X for spec NNN"). Lives in git with the spec; rots with it.
+- Claude Code auto-memory (`~/.claude/projects/.../memory/`) — cross-session facts about the user and the repo. Project-wide, not feature-specific.
+
+Don't double-write the same fact into both.
+
 ## docker-compose.yml maintenance
 
 `docker-compose.yml` must be kept in sync with architectural changes:

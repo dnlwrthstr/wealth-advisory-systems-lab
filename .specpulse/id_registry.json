@@ -1,0 +1,16 @@
+{
+  "counters": {
+    "feature": 0,
+    "spec": 0,
+    "plan": 0,
+    "task": 0,
+    "decision": 0,
+    "pattern": 0,
+    "constraint": 0,
+    "checkpoint": 0
+  },
+  "service_counters": {},
+  "used_ids": [],
+  "last_updated": null,
+  "version": "1.0"
+}

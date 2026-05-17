@@ -1,0 +1,18 @@
+ai:
+  primary: claude
+  selected_tools:
+  - claude
+conventions:
+  branch_naming: 'feat/{feature-name}'
+  plan_naming: plan-{number:03d}.md
+  spec_naming: spec-{number:03d}.md
+  task_naming: task-{number:03d}.md
+project:
+  created: '2026-05-17T10:26:36.832485'
+  name: wealth-advisory-systems-lab
+  type: web
+templates:
+  plan: .specpulse/templates/plan.md
+  spec: .specpulse/templates/spec.md
+  task: .specpulse/templates/task.md
+version: 2.7.5

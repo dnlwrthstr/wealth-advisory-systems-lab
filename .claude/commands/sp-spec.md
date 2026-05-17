@@ -1,0 +1,255 @@
+---
+name: sp-spec
+description: Create and manage specifications without SpecPulse CLI
+allowed_tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - TodoWrite
+---
+
+# /sp-spec Command
+
+Create and manage specifications without SpecPulse CLI. Works completely independently through LLM-safe file operations.
+
+## Usage
+```
+/sp-spec [action] [description|feature-name]
+```
+
+Actions: `create`, `update`, `validate`, `clarify` (defaults to `create`)
+
+## Implementation
+
+When called with `/sp-spec {{args}}`, I will:
+
+### 1. Parse Arguments to Determine Action
+
+**I will analyze the arguments:**
+- If first argument is `create`, `update`, `validate`, or `clarify` → Use that action
+- If no action specified → Default to `create`
+- For `create` → All remaining text becomes the description
+- For other actions → Look for feature name or use current feature
+
+### 2. Detect Current Feature Context
+
+**I will identify the current working feature:**
+- Check `.specpulse/memory/context.md` for active feature
+- Look for most recently modified spec/plan/task directory
+- Validate feature directory exists and is properly structured
+- Extract feature ID and name from directory structure
+
+### 3. For Action: create (default)
+
+**I will create a comprehensive specification:**
+
+#### A. Generate Next Spec Number (Universal ID System)
+- Use **Glob** tool to scan `.specpulse/specs/[feature]/` directory
+- Parse all existing `spec-###.md` files to extract numbers
+- Convert to integers and find the maximum value
+- Generate next sequential number: `next_num = max_num + 1`
+- Zero-pad to 3 digits: `format(max_num + 1, '03d')` → `001`, `002`, `003`
+- Validate no conflicts exist before using the number
+- Handle edge cases: empty directory, corrupted files, numbering gaps
+
+#### B. Read Template
+- Load `.specpulse/templates/spec.md` template file
+- If template missing, create comprehensive specification structure
+
+#### C. Expand Specification with AI
+Based on the description, I will generate:
+- **Executive Summary**: Clear problem statement and solution overview
+- **Functional Requirements**: Detailed feature breakdown with acceptance criteria
+- **User Stories**: Given-When-Then format with concrete scenarios
+- **Technical Constraints**: Performance, security, and scalability requirements
+- **Non-Functional Requirements**: Usability, accessibility, maintainability
+- **Risk Assessment**: Potential technical and business risks
+- **Success Metrics**: Measurable criteria for completion
+
+#### D. Write Specification File
+- Create `.specpulse/specs/[feature]/spec-[###].md` with generated content
+- Use atomic file operations to prevent corruption
+- Include proper YAML frontmatter with metadata
+
+### 4. For Action: update
+
+**I will update an existing specification:**
+- List all specification files in current feature
+- Allow user to select which spec to update
+- Parse existing content and identify sections needing updates
+- Generate updated content based on new requirements
+- Preserve existing structure while enhancing content
+
+### 5. For Action: validate
+
+**I will perform comprehensive validation:**
+- Check specification file exists and is readable
+- Validate required sections are present:
+  - Executive Summary ✓
+  - Functional Requirements ✓
+  - User Stories ✓
+  - Acceptance Criteria ✓
+  - Technical Constraints ✓
+- Count any `[NEEDS CLARIFICATION]` markers
+- Verify Given-When-Then format in user stories
+- Calculate completeness percentage
+- Identify missing or incomplete sections
+
+### 6. For Action: clarify
+
+**I will resolve clarification markers:**
+- Scan specification for `[NEEDS CLARIFICATION:...]` patterns
+- Extract each question with surrounding context
+- Ask user for resolution on each clarification
+- Replace markers with `✅ **CLARIFIED**: [answer]` format
+- Update specification with resolved clarifications
+
+## Enhanced Specification Generation
+
+### AI-Powered Content Analysis
+
+**For any description, I will analyze:**
+
+#### Project Type Detection
+- **Web Application**: React/Vue/Angular frontend + API backend
+- **API Service**: REST/GraphQL microservice architecture
+- **Mobile App**: React Native/Flutter native application
+- **CLI Tool**: Command-line interface tool
+- **Data Pipeline**: ETL/ELT data processing system
+- **Library/SDK**: Reusable component or SDK
+
+#### Complexity Assessment
+- **Simple** (2-4 hours): Single feature, minimal dependencies
+- **Standard** (8-12 hours): Multiple features, some integrations
+- **Complex** (16-24 hours): Multiple services, complex workflows
+
+#### Requirement Expansion
+Based on project type, I will include relevant sections:
+
+**Web Applications:**
+- UI/UX requirements
+- Browser compatibility
+- Responsive design
+- Accessibility standards (WCAG 2.1)
+
+**API Services:**
+- Endpoint specifications
+- Authentication/authorization
+- Rate limiting
+- Documentation standards
+
+**Mobile Apps:**
+- Platform requirements
+- App store guidelines
+- Offline functionality
+- Push notifications
+
+### SDD Gates Compliance
+
+**Every generated specification meets:**
+- ✅ **Specification First**: Clear requirements before implementation
+- ✅ **Traceable**: Each requirement maps to user stories and acceptance criteria
+- ✅ **Testable**: Acceptance criteria can be verified through testing
+- ✅ **Complete**: All necessary sections for implementation
+
+## File Structure and Validation
+
+### Safe File Operations
+**I ensure safe file handling:**
+- Validate file paths within allowed directories only
+- Use atomic write operations to prevent corruption
+- Create directory structure if missing
+- Backup existing files before updates
+- Validate file permissions and access rights
+
+### Context Management
+**I maintain project context:**
+- Update `.specpulse/memory/context.md` with feature changes
+- Track specification history and decisions
+- Link related specifications, plans, and tasks
+- Maintain searchable decision log
+
+## Example Outputs
+
+### Create Specification
+```
+User: /sp-spec create user authentication system with JWT tokens
+
+✅ Creating specification for: user authentication system with JWT tokens
+🔍 Current feature: 003-user-management
+📋 Generated spec number: 002
+📄 Specification file: .specpulse/specs/003-user-management/spec-002.md
+
+📊 Specification Analysis:
+   Project Type: Web Application (API + Frontend)
+   Complexity: Standard (8-12 hours)
+   Requirements Generated: 12
+   User Stories Created: 8
+   Acceptance Criteria: 24
+
+✅ Specification created successfully!
+🎯 Next steps: /sp-/sp-plan to generate implementation plan
+```
+
+### Validate Specification
+```
+User: /sp-spec validate
+
+🔍 Validating specifications in feature: 003-user-management
+
+📄 Files found: 2
+   ✅ spec-001.md - Complete (100%)
+   ⚠️  spec-002.md - Missing sections (85%)
+
+📊 Validation Results:
+   Total Sections: 12/14
+   Clarifications Needed: 0
+   User Stories: 8/8 valid
+   Acceptance Criteria: 24/24 complete
+
+⚠️  Issues Found:
+   - Missing: Performance Requirements
+   - Missing: Deployment Strategy
+
+✅ Specification is ready for implementation planning
+🎯 Next steps: /sp-/sp-plan or fix missing sections
+```
+
+### Update Specification
+```
+User: /sp-spec update add MFA support
+
+📋 Available specifications:
+   1) spec-001.md - User Registration
+   2) spec-002.md - User Authentication
+
+Select spec to update: 2
+
+✅ Updating spec-002.md with MFA support requirements
+📝 Analyzing existing content...
+🔧 Generating new requirements for MFA...
+📄 Updated specification with additional sections:
+   - Multi-Factor Authentication Requirements
+   - TOTP Implementation Details
+   - Backup/Recovery Codes
+   - Security Considerations
+
+✅ Specification updated successfully!
+📊 Completeness: 100% (14/14 sections)
+```
+
+## Error Handling and Recovery
+
+### Validation Errors
+- **No active feature**: Prompt to run `/sp-/sp-pulse` first
+- **Permission denied**: Guide user to check file permissions
+- **Invalid feature name**: Suggest valid feature names
+- **Template missing**: Create specification structure manually
+
+### Content Issues
+- **Vague description**: Ask clarifying questions
+- **Conflicting requirements**: Identify and request resolution
+- **Missing dependencies**: Highlight required prerequisite features
+
+This `/sp-spec` command provides **complete specification management** without requiring any SpecPulse CLI installation, using only validated file operations and AI-enhanced content generation.
