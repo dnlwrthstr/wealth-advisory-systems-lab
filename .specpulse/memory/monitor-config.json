@@ -1,0 +1,11 @@
+{
+  "auto_discovery": true,
+  "backup_enabled": true,
+  "cache_enabled": true,
+  "cache_ttl_seconds": 300,
+  "history_retention_days": 30,
+  "max_backups": 5,
+  "max_tasks_per_feature": 1000,
+  "progress_calculation_method": "simple",
+  "update_interval_seconds": 60
+}

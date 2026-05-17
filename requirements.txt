@@ -7,5 +7,6 @@ psycopg[binary]>=3.2.0
 pydantic>=2.7.0
 pyarrow>=16.0.0
 pytest>=8.0.0
+specpulse>=2.7.0
 uvicorn[standard]>=0.30.0
 yfinance>=0.2.40
