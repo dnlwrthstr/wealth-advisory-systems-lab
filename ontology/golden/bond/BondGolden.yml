@@ -119,6 +119,7 @@ ontology:
             - senior_secured
             - senior_unsecured
             - senior_non_preferred
+            - senior_subordinated
             - subordinated
             - junior_subordinated
             - tier1
