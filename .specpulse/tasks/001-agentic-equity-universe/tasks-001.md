@@ -12,10 +12,10 @@
 ## Progress Overview
 
 - **Total Tasks**: 17
-- **Completed Tasks**: 12 (71%)
+- **Completed Tasks**: 17 (100%)
 - **In Progress Tasks**: 0
 - **Blocked Tasks**: 0
-- **Remaining**: T013–T017 (Phase 5–6: live OpenSearch + legacy removal + final smoke)
+- **Status**: DONE — all 5 acceptance criteria met. Ready for PR.
 
 ## Task Categories
 
@@ -48,14 +48,14 @@
 
 ### Phase 5 — Parity verification & legacy removal [Priority: HIGH]
 
-- [ ] **T013**: [M] Capture legacy `equity_yahoo --universe smi` output (NDJSON or per-ISIN JSON) for the parity diff. Pre-deletion snapshot. — 1h
-- [ ] **T014**: [M] Run new CLI `--universe smi` against local OpenSearch; verify AC-1 (≥18/20 in `pms_golden_equity`, distinct LEIs in `pms_golden_issuer`) and AC-2 (idempotent re-run, no duplicates). — 1h
-- [ ] **T015**: [M] Diff legacy vs new `pms_golden_equity` documents on schema-overlapping fields; document the divergence list in the eventual PR body (AC-3). — 1h
-- [ ] **T016** (revised): [S] Strip the universe-loader CLI surface from `src/pipeline/gold/equity_yahoo.py` — delete `UNIVERSE_SOURCES`, `load_universe`, `_fetch_wikipedia`, `WIKI_USER_AGENT`, `WIKI_FETCH_TIMEOUT`, `main()`, the `argparse` setup, and `write_ndjson` if unused. **Keep** `fetch_by_identifier`, `fetch_one`, `yahoo_info_to_golden`, and supporting helpers — they're imported by `pipeline.agentic.sources.equity_yahoo`. Update CLAUDE.md: rewrite the `equity_yahoo` bullet under "Legacy bulk fetchers" to reflect the slimmed-down library role. — 1h. ⚠️ Scope revised 2026-05-17 from "delete entire file" after Phase 0 surfaced the agentic-source dependency.
+- [x] **T013**: [M] Capture legacy `equity_yahoo --universe smi` output (NDJSON or per-ISIN JSON) for the parity diff. Pre-deletion snapshot. — 1h ✅ Done 2026-05-18. 20 docs at `data/cache/parity/legacy_smi.ndjson`.
+- [x] **T014**: [M] Run new CLI `--universe smi` against local OpenSearch; verify AC-1 (≥18/20 in `pms_golden_equity`, distinct LEIs in `pms_golden_issuer`) and AC-2 (idempotent re-run, no duplicates). — 1h ✅ Done 2026-05-18. AC-1: 20/20 persisted (19 success + 1 partial). AC-2: re-run identical counts. Findings: OpenFIGI ticker direction misses on SIX listings (expected); planner's `six_ticker_isin` recovers all 20 ISINs via the ticker-fallback path built into T011.
+- [x] **T015**: [M] Diff legacy vs new `pms_golden_equity` documents on schema-overlapping fields; document the divergence list in the eventual PR body (AC-3). — 1h ✅ Done 2026-05-18. No regressions. New chain populates `universeStatus`, `secondaryListings`, `firstTradingDate` (by design); shared fields differ on `identifierList` (FIGI/CFI/valor added), `issuer` (richer FIRDS data), `cfiCode` (FIRDS authoritative vs yfinance heuristic). **Found one legacy data bug**: yfinance returned `JP3869930002` as ISIN for PGHN.SW; the curated `six_ticker_isin.yml` correctly maps it to `CH0024608827`. Diff script + report at `data/cache/parity/diff_smi.py` and `diff_smi_report.md` (gitignored).
+- [x] **T016** (revised): [S] Strip the universe-loader CLI surface from `src/pipeline/gold/equity_yahoo.py` — delete `UNIVERSE_SOURCES`, `load_universe`, `_fetch_wikipedia`, `WIKI_USER_AGENT`, `WIKI_FETCH_TIMEOUT`, `main()`, the `argparse` setup, and `write_ndjson` if unused. **Keep** `fetch_by_identifier`, `fetch_one`, `yahoo_info_to_golden`, and supporting helpers — they're imported by `pipeline.agentic.sources.equity_yahoo`. Update CLAUDE.md: rewrite the `equity_yahoo` bullet under "Legacy bulk fetchers" to reflect the slimmed-down library role. — 1h ✅ Done 2026-05-18. 99 lines removed. Module docstring rewritten. CLAUDE.md updated. 162/162 tests still pass.
 
 ### Phase 6 — Integration & sign-off [Priority: MEDIUM]
 
-- [ ] **T017**: [S] Final integration smoke: `pytest` clean, `docker compose up --build`, `POST /instruments/assemble` for one SMI ISIN still works, `GET /instruments/search?identifier=NESN.SW` returns the new agentic record. Tick DoD in spec-002.md. — 1h
+- [x] **T017**: [S] Final integration smoke: `pytest` clean, `docker compose up --build`, `POST /instruments/assemble` for one SMI ISIN still works, `GET /instruments/search?identifier=NESN.SW` returns the new agentic record. Tick DoD in spec-002.md. — 1h ✅ Done 2026-05-18. `pytest`: 162/162. `POST /instruments/assemble` for CH0038863350 → quality_score 0.933. `GET /instruments/search?identifier=NESN.SW` → finds EQG-CH0038863350-XSWX-001. `GET /universe` → 23 in_universe items.
 
 ## Task Details
 

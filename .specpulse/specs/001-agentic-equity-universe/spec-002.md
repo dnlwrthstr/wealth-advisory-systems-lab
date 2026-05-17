@@ -153,13 +153,13 @@ Behaviour:
 
 ## Definition of Done
 
-- [ ] All functional requirements implemented.
-- [ ] All acceptance criteria met (AC-1 through AC-5).
-- [ ] `src/pipeline/gold/equity_yahoo.py --universe` removed; CLAUDE.md updated.
-- [ ] Architectural reference for the agentic equity chain landed.
-- [ ] Tests pass: `pytest` clean.
-- [ ] Branch `feat/agentic-equity-universe` merged into `main` via PyCharm review.
-- [ ] Local `docker compose up --build` smoke-checked: `instrument-api` still serves `POST /instruments/assemble` unchanged.
+- [x] All functional requirements implemented.
+- [x] All acceptance criteria met (AC-1 through AC-5).
+- [x] `src/pipeline/gold/equity_yahoo.py --universe` removed (revised T016: strip universe loader, keep `fetch_by_identifier` library); CLAUDE.md updated.
+- [x] Architectural reference for the agentic equity chain landed (`src/pipeline/agentic/README.md`).
+- [x] Tests pass: `pytest` 162/162.
+- [ ] Branch `feat/agentic-equity-universe` merged into `main` via PyCharm review (pending user action).
+- [x] Local `docker compose up --build` smoke-checked: `instrument-api` still serves `POST /instruments/assemble` unchanged; `GET /instruments/search?identifier=NESN.SW` returns the agentic record; `GET /universe` lists 23 in_universe equities.
 
 ## Clarifications (resolved 2026-05-17)
 
