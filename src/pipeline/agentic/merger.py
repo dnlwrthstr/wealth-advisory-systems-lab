@@ -1,13 +1,22 @@
 """Field-level merge of source patches into the accumulating golden state.
 
-Semantics (first slice): **fill-empty-only**. The first source to populate
-a field wins; subsequent sources that produce the same field are ignored
-for that field. This matches what `fund_yahoo_enrich` does and is the
-safe default when one source is curated and another is auto-fetched.
+Semantics: **deep fill-empty-only**. At every level of a nested dict, the
+first source to populate a leaf wins; later sources patching the same leaf
+are ignored. Within a single source's patch, sub-keys missing from the
+current state are still written, even when the parent dict already has
+other sibling keys populated.
 
-Future iterations can replace this with a precedence-aware merger that
-overwrites lower-confidence values with higher-confidence ones, using
-the `confidence` declared on each SourceDescriptor.
+This matches the practical need from spec 003: `fund_yahoo` populates
+`assetAllocation` with sector/asset-class buckets but no holdings;
+`fund_lookthrough_skill` later contributes the holdings array via a patch
+shaped as `{"assetAllocation": {"holdings": [...]}}`. Shallow fill-empty
+would silently drop the holdings; deep fill-empty merges them in.
+
+Atomic types and lists are still treated as leaves — a list value is
+written only when the existing slot is empty/missing. List-of-objects
+deep-merge would need an identity key per source and is out of scope.
+
+The merger never overwrites a populated leaf, regardless of nesting depth.
 """
 from __future__ import annotations
 
@@ -26,17 +35,40 @@ def merge_patch(
     current: Dict[str, Any],
     patch: Dict[str, Any],
 ) -> List[str]:
-    """Apply `patch` to `current` with fill-empty-only semantics.
+    """Apply `patch` to `current` with deep fill-empty-only semantics.
 
-    Returns the list of field paths actually written (i.e. the ones that
-    were empty in `current` and the patch supplied a non-empty value).
+    Returns the list of dot-paths actually written. Nested writes carry
+    their full path (e.g. `"assetAllocation.holdings"`); top-level writes
+    are unprefixed (`"benchmarkName"`).
     """
+    return _merge(current, patch, "")
+
+
+def _merge(
+    current: Dict[str, Any],
+    patch: Dict[str, Any],
+    prefix: str,
+) -> List[str]:
     written: List[str] = []
     for field_name, value in patch.items():
-        if value in (None, [], {}):
+        path = f"{prefix}.{field_name}" if prefix else field_name
+
+        # Skip empty/null sentinels — never write nothing over something.
+        if value in (None, "", [], {}):
             continue
+
         existing = current.get(field_name)
-        if existing in (None, [], {}):
+
+        # Both sides are dicts and existing is populated → recurse.
+        if isinstance(value, dict) and isinstance(existing, dict) and existing:
+            written.extend(_merge(existing, value, path))
+            continue
+
+        # Existing slot empty → write the value (atomic, list, or fresh dict).
+        if existing in (None, "", [], {}):
             current[field_name] = value
-            written.append(field_name)
+            written.append(path)
+            continue
+
+        # Existing slot populated and not a deep-mergeable dict → skip.
     return written

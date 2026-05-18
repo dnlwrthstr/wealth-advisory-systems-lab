@@ -114,11 +114,15 @@ def run_planner(
 
         written = merge_patch(current, result.patch)
         provenance.extend(result.source_of_truth_rows)
+        # `written` carries dot-paths; the skipped-trace summarises top-level
+        # patch keys that contributed nothing (every nested sub-key was either
+        # filled by an earlier source or was an empty sentinel).
+        written_top = {p.split(".", 1)[0] for p in written}
         trace.invocations.append({
             "source": chosen.id,
             "outcome": "ok",
             "fields_written": written,
-            "fields_skipped_already_filled": sorted(set(result.patch) - set(written)),
+            "fields_skipped_already_filled": sorted(set(result.patch) - written_top),
         })
     else:
         trace.stopped_reason = "budget exhausted"

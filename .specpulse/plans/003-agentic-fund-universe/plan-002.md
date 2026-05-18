@@ -615,6 +615,90 @@ All resolved 2026-05-18:
 - **Single-service feature** — no decomposition directory needed.
 - **Phase 0 findings** to be appended in-place before Phase 1 starts, per the convention from plan-001.
 
+## Phase 0 findings (T001, 2026-05-18)
+
+Six discovery checks done. **Four material adjustments required** before T002 starts.
+
+### 1. Holdings path confirmed
+
+`Holding` lives at `assetAllocation.holdings[]` (per `ontology/securities/fund/Fund.yml:248`). Top-level FundGolden has `holdingsCount`, `holdingsAsOf` but **not** a top-level `holdings` array. Spec language stays informational; plan + code use the correct path.
+
+### 2. **BLOCKER → RESOLVED via Option B (merger upgrade)** — Merger is shallow fill-empty-only
+
+`pipeline.agentic.merger.merge_patch` is shallow: it refuses to overwrite any top-level key whose existing value is non-empty. `fund_yahoo.fetch` populates `current["assetAllocation"]` with sector/asset-class buckets but **explicitly strips out holdings** (line 43: `proj = {k: v for k, v in asset_allocation.items() if k != "holdings"}`). So by the time `fund_lookthrough_skill` runs:
+
+- `current["assetAllocation"]` is a non-empty dict missing only its `holdings` array.
+- A patch returning `{"assetAllocation": {"holdings": [...]}}` would be **silently dropped** by the merger.
+
+**Decision (user, 2026-05-18): Option B — extend the merger globally** to deep-merge nested dicts. At each level the same fill-empty-only rule applies. Lists remain atomic (no list-of-objects merge in V1).
+
+**Impact**:
+- New task **T002** (merger upgrade) inserted before ontology; remaining tasks renumbered T002–T013 → T003–T014. Now 14 tasks, ~11h total (+1.5h vs original).
+- `fund_lookthrough_skill` (T006) returns a clean `SourceFetchResult` patch with `{assetAllocation: {holdings: [...]}, holdingsCount, holdingsAsOf, lookthroughProvenance}`. The upgraded merger deep-merges into current's existing `assetAllocation` buckets. **No in-place mutation needed.**
+- All four existing source modules (equity, bond, fund, issuer) get re-verified through a full pytest run. Mitigation: the deep-merge change is semantically an extension — fill-empty-only at each level is the natural generalisation, and any source whose patches happened to be flat retains identical behaviour.
+- `merge_patch`'s return value (currently `List[str]` of top-level keys written) is updated to carry dot-paths for nested writes (`"assetAllocation.holdings"`); planner's trace formatting in `planner.py` updated to match.
+
+**Rejected alternatives**:
+- *Option A — In-place mutation workaround in the source*: contained but hacky; preserves the merger's silent-drop behaviour as a latent bug.
+- *Option C — Add a top-level `holdings` field on FundGolden*: schema duplication; contradicts spec-003 design (integrated `assetAllocation.holdings` with source enum).
+
+### 3. **ADJUSTMENT** — `lookthroughProvenance` must be annotated `important`, not `optional`
+
+Planner `compute_gaps` only flags `requirement ∈ {required, important}` fields as gaps. If all of lookthrough_skill's `produces_fields` are `optional`, the source NEVER fires (no gap → not a candidate). To make it fire (and then short-circuit via predicate on physical / no-benchmark funds), annotate `lookthroughProvenance` as **`important`**.
+
+Per-fund cost of this approach: the predicate runs cheaply (in-memory dict checks, no OS / no LLM) on every fund, then short-circuits. Net cost: ~microseconds per non-eligible fund.
+
+Plan task T002 updated: annotation entry's `requirement: important`.
+
+### 4. **ADJUSTMENT** — `replicationMethod` value space includes `physical_sampling`
+
+The iShares Core MSCI World patch (`data/opensearch/golden/fund/patches/FG-IE00B4L5Y983-001.json`) uses `replicationMethod: "physical_sampling"`, not the bare `physical`/`synthetic` enum the plan assumed.
+
+**Trigger predicate** (synthetic side) widens to `replicationMethod.lower() ∈ {"synthetic", "swap", "swap_based"}` for forward-compat.
+
+**Proxy lookup filter** (physical side) widens to `replicationMethod ∈ {"physical", "physical_sampling", "sampling", "full_replication", "optimised_sampling"}`. Practical set; plan task T004 spec updated.
+
+### 5. **ADJUSTMENT** — `benchmarkIdentifier` often null; predicate must accept benchmarkName alone
+
+The iShares patch carries `benchmarkName: "MSCI World Index"` but `benchmarkIdentifier: null`. The predicate already allows "identifier OR name" — confirmed correct. **Proxy lookup query** must therefore lean on `benchmarkName` text-match as the primary discriminator, not the `benchmarkIdentifier.keyword` exact-match. Plan task T004 query reordered: `benchmarkName` match clause is unconditional; `benchmarkIdentifier.keyword` clause runs only when current has it.
+
+### 6. Patch wrapper shape confirmed: `{doc: {...}, _meta: {...}}`
+
+Fixture cache file under `tests/fixtures/lookthrough/FG-LU1681043599-001.json` and live cache files under `data/opensearch/golden/fund/patches/lookthrough/` must use this wrapper. The lookthrough source reads `payload["doc"]` for the patch body, mirroring `fund_factsheet_patch.fetch` lines 50–56.
+
+### 7. Planner ordering — gap-driven, not order-locked
+
+`planner._rank` sorts by `(cost_rank ASC, -confidence_rank, -coverage)`. Both `fund_factsheet_skill` and `fund_lookthrough_skill` are `llm_skill` / `medium` confidence — tiebreaker is gap coverage. Factsheet's 17 produces_fields cover more of the typical first-iteration gap set than lookthrough's 4, so factsheet fires first. After factsheet runs, its `called` flag is set, the iteration loop continues, lookthrough becomes a candidate, and its predicate (now seeing populated replicationMethod / benchmark) decides whether to actually do work. **No explicit `order:` key needed in the registry YAML** — natural coverage tiebreaker delivers the correct order.
+
+### 8. OpenSearch mapping for `benchmarkIdentifier.keyword` exists
+
+Live mapping (`curl localhost:9200/pms_golden_fund/_mapping`) shows `benchmarkIdentifier` as text+keyword (dynamic). `replicationMethod` is keyword. Proxy lookup query can use `benchmarkIdentifier.keyword` for exact match. Mapping file lives at `data/opensearch/golden/pms_golden_fund.index.json` (NOT `data/opensearch/golden/fund/mapping.json` as plan task T002 originally said). T002 path updated.
+
+### 9. **PHASE 5 PREREQUISITE** — IE00B4L5Y983 NOT in pms_golden_fund yet
+
+Live `pms_golden_fund` (docker stack running ~42h, healthy) does **not** contain IE00B4L5Y983. AC-1 verification depends on it. T010 must include an explicit seed step:
+
+```bash
+curl -X POST localhost:8003/instruments/assemble \
+  -H 'content-type: application/json' \
+  -d '{"identifier":{"kind":"isin","value":"IE00B4L5Y983"},"persist":true,"max_cost_class":"llm_skill"}'
+```
+
+(The existing factsheet patch under `data/opensearch/golden/fund/patches/FG-IE00B4L5Y983-001.json` will populate `replicationMethod=physical_sampling` and `benchmarkName="MSCI World Index"`. Holdings are NOT in the patch — they'd need separate seeding via the find-and-parse-factsheet skill's holdings procedure, OR via a fixture for the unit-test path.)
+
+For the live AC-1 demo: we may need to **manually populate** `assetAllocation.holdings` on IE00B4L5Y983 (one-time, via a small ndjson seed) since no source today writes the full constituent list. Document this as Phase 5 setup; not a code task.
+
+### Summary of plan task updates baked in
+
+- **T002**: replace `data/opensearch/golden/fund/mapping.json` with `data/opensearch/golden/pms_golden_fund.index.json` in the regen target list; annotate `lookthroughProvenance` as `important` (not `optional`).
+- **T003**: predicate `replicationMethod.lower() ∈ {"synthetic", "swap", "swap_based"}`.
+- **T004**: proxy filter `replicationMethod ∈ {physical, physical_sampling, sampling, full_replication, optimised_sampling}`; `benchmarkName` text-match unconditional, `benchmarkIdentifier.keyword` filter conditional on current having one.
+- **T005**: in-place mutation of `current["assetAllocation"]["holdings"]`; patch carries only `holdingsCount`, `holdingsAsOf`, `lookthroughProvenance` for the merger; source_of_truth_rows explicitly cover the nested write.
+- **T010**: prepend a seed step — assemble IE00B4L5Y983 (factsheet patch → replicationMethod + benchmark populated); manually seed `assetAllocation.holdings` if needed.
+- **Registry T006**: no `order:` key needed.
+
+No spec changes required — the spec's design intent is preserved; only the implementation mechanism (in-place mutation vs merger) and one annotation tier (`important` instead of `optional`) change.
+
 ---
 
-*Generated by /sp-plan on 2026-05-18. Plans the implementation of spec-003.md (synthetic-ETF look-through via physical-equivalent proxy). Inherits structure and conventions from plan-001.md (merged via PR #4).*
+*Generated by /sp-plan on 2026-05-18. Plans the implementation of spec-003.md (synthetic-ETF look-through via physical-equivalent proxy). Inherits structure and conventions from plan-001.md (merged via PR #4). Phase 0 findings appended 2026-05-18 during /sp-execute T001.*
