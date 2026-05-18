@@ -31,9 +31,15 @@ DEFAULT_URL = os.environ.get("OPENSEARCH_URL", "http://localhost:9200")
 TARGET_INDEX = "pms_golden_instrumentsearch"
 
 # OpenWealth FinancialInstrumentType the frontend type tabs filter on.
+# Values must match the public API contract: the search-store's ow_type
+# filter does an exact-match `term` query on `ow_type.keyword`, so the
+# writer here has to use the same casing the caller passes to
+# `GET /instruments/search?type=…`. Equity and fund are one word so
+# casing was already aligned; bond is two words and the API documents
+# camelCase (`simpleBond`), so this map uses camelCase here too.
 _SCOPE_TO_OW_TYPE = {
     "equity": "equity",
-    "bond": "simple_bond",
+    "bond": "simpleBond",
     "fund": "fund",
 }
 
