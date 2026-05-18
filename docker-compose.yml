@@ -62,6 +62,12 @@ services:
       OPENFIGI_API_KEY: ${OPENFIGI_API_KEY:-}
       FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      # Read-only mount of curated fund patches consumed by
+      # fund_factsheet_patch and fund_lookthrough_skill (cache files
+      # under patches/lookthrough/). Without this mount, both sources
+      # silently return no_data inside the container.
+      - ./data/opensearch/golden/fund/patches:/app/data/opensearch/golden/fund/patches:ro
     ports:
       - "8003:8003"
     depends_on:
