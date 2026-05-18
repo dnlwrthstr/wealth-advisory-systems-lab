@@ -355,7 +355,16 @@ def _build_patch(picked: Dict[str, Any], confidence: str) -> SourceFetchResult:
     if holdings_as_of:
         sot_rows.append({"fieldGroup": "holdingsAsOf", "source": "fund_lookthrough_skill"})
 
-    return SourceFetchResult(patch=patch, source_of_truth_rows=sot_rows)
+    # spec 004: opt into list-replacement at assetAllocation.holdings so that a
+    # factsheet-supplied top-N projection (e.g. 10 rows of MSCI World) is
+    # replaced by the proxy's full constituent list (~1310 rows). Without this,
+    # the merger's deep fill-empty-only would preserve the top-N and silently
+    # drop the proxy's expanded list.
+    return SourceFetchResult(
+        patch=patch,
+        source_of_truth_rows=sot_rows,
+        replace_paths=["assetAllocation.holdings"],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -488,16 +497,29 @@ def _predicate_passes(current: Dict[str, Any], isin: str) -> bool:
 
     Cheap in-memory check. No I/O, no LLM. Runs first so the source bails
     out without burning any cost when the fund isn't a synthetic ETF or
-    when upstream sources already populated holdings.
+    when upstream sources already populated the full constituent list.
+
+    Spec 004 refinement: fire when factsheet's holdings are a strict
+    subset of the declared `holdingsCount` — e.g. top-10 of 1310 MSCI
+    World constituents. Skip when holdings are already complete
+    (`len >= holdingsCount`) or when factsheet didn't declare a count
+    (we treat that as "factsheet thinks it's done" — defensive).
     """
     asset_allocation = current.get("assetAllocation") or {}
     existing_holdings = asset_allocation.get("holdings") or []
-    if existing_holdings:
-        log.debug("fund_lookthrough_skill skipped for %s: holdings already populated", isin)
-        return False
+    declared_count = current.get("holdingsCount") or 0
 
-    if current.get("holdingsCount"):
-        log.debug("fund_lookthrough_skill skipped for %s: holdingsCount already set", isin)
+    if existing_holdings and declared_count and len(existing_holdings) >= declared_count:
+        log.debug(
+            "fund_lookthrough_skill skipped for %s: holdings already complete (%d/%d)",
+            isin, len(existing_holdings), declared_count,
+        )
+        return False
+    if existing_holdings and not declared_count:
+        log.debug(
+            "fund_lookthrough_skill skipped for %s: holdings populated without holdingsCount — treating as complete",
+            isin,
+        )
         return False
 
     rep = (current.get("replicationMethod") or "").lower()

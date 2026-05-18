@@ -121,7 +121,11 @@ def run_planner(
             trace.invocations.append({"source": chosen.id, "outcome": "no_data"})
             continue
 
-        written = merge_patch(current, result.patch)
+        written = merge_patch(
+            current,
+            result.patch,
+            replace_paths=result.replace_paths,
+        )
         provenance.extend(result.source_of_truth_rows)
         # `written` carries dot-paths; the skipped-trace summarises top-level
         # patch keys that contributed nothing (every nested sub-key was either
