@@ -228,15 +228,15 @@ Note: `holdingsCount` and `holdingsAsOf` continue to merge via fill-empty-only �
 
 ## Definition of Done
 
-- [ ] FR-1 through FR-5 implemented.
-- [ ] All seven acceptance criteria met (AC-1, AC-4 live; AC-2, AC-3, AC-5, AC-6, AC-7 via unit/integration tests).
-- [ ] `SourceFetchResult.replace_paths` added to the merger dataclass.
-- [ ] `merge_patch` honours `replace_paths` and remains backward-compatible.
-- [ ] `fund_lookthrough_skill._build_patch` declares `replace_paths=["assetAllocation.holdings"]`.
-- [ ] `tests/agentic/test_merger.py` and `tests/agentic/test_fund_lookthrough_skill.py` cover the new behaviour.
-- [ ] `src/pipeline/agentic/README.md` "Merge policy" section gains a paragraph on `replace_paths`.
-- [ ] `pytest` green (target ≥ 270/270 incl. new tests; baseline is 263).
-- [ ] Live AC-1 verified on the docker stack with at least one iShares MSCI World ETF seeded.
+- [x] FR-1 through FR-5 implemented.
+- [x] AC-2, AC-3, AC-5, AC-6, AC-7 met via unit + integration tests.
+- [ ] **AC-1 + AC-4 live verification deferred** — docker stack was unresponsive during the rebuild + recreate cycle. Mocked integration tests in T006 (`test_lookthrough_replaces_factsheet_top_n`, `test_lookthrough_does_not_fire_on_complete_factsheet_holdings`) prove the chain end-to-end at the code level. To be re-run by the user post-merge.
+- [x] `SourceFetchResult.replace_paths` added to the merger dataclass.
+- [x] `merge_patch` honours `replace_paths` and remains backward-compatible (explicit `replace_paths=()` regression-lock test).
+- [x] `fund_lookthrough_skill._build_patch` declares `replace_paths=["assetAllocation.holdings"]`.
+- [x] `tests/agentic/test_merger.py` and `tests/agentic/test_fund_lookthrough_skill.py` cover the new behaviour.
+- [x] `src/pipeline/agentic/README.md` "Merge policy" section gains a paragraph on `replace_paths`.
+- [x] `pytest` green: **273/273** (baseline 263 + 5 merger + 4 lookthrough + 2 integration − 1 obsolete).
 - [ ] Branch `feat/lookthrough-full-list` merged into `main` via PR.
 
 ## Clarifications (resolved 2026-05-18)

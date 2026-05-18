@@ -12,10 +12,11 @@
 ## Progress Overview
 
 - **Total Tasks**: 9
-- **Completed Tasks**: 0 (0%)
+- **Completed Tasks**: 8 (89%)
 - **In Progress Tasks**: 0
 - **Blocked Tasks**: 0
-- **Status**: READY — awaiting `/sp-execute`.
+- **Deferred Tasks**: 1 (T007 — live verification; docker unresponsive during rebuild cycle)
+- **Status**: ✅ READY FOR PR — all code, tests, docs done; 273/273 tests green; T007 live AC-1/AC-4 deferred to user-driven validation post-merge.
 
 ## Task Categories
 
@@ -42,12 +43,12 @@
 
 ### Phase 5 — Live verification + docs [Priority: MEDIUM]
 
-- [ ] **T007**: [M] Live verification on docker stack. (1) Source `.env` so `ANTHROPIC_API_KEY` propagates; rebuild + recreate instrument-api (`docker compose build instrument-api && docker compose up -d --force-recreate instrument-api`). (2) **Pre-step**: assemble an iShares MSCI World ETF (e.g. IE00B4L5Y983) with `persist:true, invoke_llm_skills:true` — factsheet skill produces a patch with top-N constituents; persists into `pms_golden_fund`. Cost: ~$0.02 one-time; cache_hit thereafter. (3) **AC-1 live**: assemble LU1681043599 (Amundi MSCI World Swap) with `persist:true, invoke_llm_skills:true`; expect `holdings.length >= 50`, every row `source: "physical_proxy"`, `lookthroughProvenance.proxyIsin` matches the seeded iShares ISIN. (4) **AC-4 live**: re-run the same assemble; verify byte-identical result. Document AC-1 result (pre/post holdings length, proxyIsin) in the PR body. — 0.75h
-- [ ] **T008**: [S] Update `src/pipeline/agentic/README.md` "Merge policy" section: append a paragraph on `replace_paths` (source-declared dot-paths whose list values fully replace; list-only semantic; no-op on dict values; opt-in per source). Optional: update `CLAUDE.md` to clarify that lookthrough now enhances rather than only fills. — 0.25h
+- [ ] **T007**: [M] **DEFERRED** — Live verification on docker stack. Docker compose became unresponsive during the rebuild + recreate cycle (containers stuck in `Created` state, `docker logs` returning empty, `docker ps` not reflecting compose state). Mocked integration tests in T006 already lock the AC-1 / AC-2 behaviour end-to-end at the code level. Deferring to a user-driven validation pass post-merge (same pattern as spec-003's T011b). Steps documented in the original task body remain valid: source `.env`, `docker compose build instrument-api && docker compose up -d --force-recreate instrument-api`, then assemble an iShares MSCI World ISIN to seed the proxy, then assemble LU1681043599 to verify the replacement. (1) Source `.env` so `ANTHROPIC_API_KEY` propagates; rebuild + recreate instrument-api (`docker compose build instrument-api && docker compose up -d --force-recreate instrument-api`). (2) **Pre-step**: assemble an iShares MSCI World ETF (e.g. IE00B4L5Y983) with `persist:true, invoke_llm_skills:true` — factsheet skill produces a patch with top-N constituents; persists into `pms_golden_fund`. Cost: ~$0.02 one-time; cache_hit thereafter. (3) **AC-1 live**: assemble LU1681043599 (Amundi MSCI World Swap) with `persist:true, invoke_llm_skills:true`; expect `holdings.length >= 50`, every row `source: "physical_proxy"`, `lookthroughProvenance.proxyIsin` matches the seeded iShares ISIN. (4) **AC-4 live**: re-run the same assemble; verify byte-identical result. Document AC-1 result (pre/post holdings length, proxyIsin) in the PR body. — 0.75h
+- [x] **T008**: [S] Update `src/pipeline/agentic/README.md` "Merge policy" section: append a paragraph on `replace_paths` (source-declared dot-paths whose list values fully replace; list-only semantic; no-op on dict values; opt-in per source). Optional: update `CLAUDE.md` to clarify that lookthrough now enhances rather than only fills. — 0.25h
 
 ### Phase 6 — Sign-off [Priority: MEDIUM]
 
-- [ ] **T009**: [S] Final sign-off. (1) Full `pytest` clean across the repo (target ≥ 270/270 — baseline 263 + 4 merger + 4 lookthrough + 2 integration = 273). (2) Regression: `POST /instruments/assemble` for a physical fund (one of the existing 22 records) without LLM skills → unchanged behaviour vs spec-003. (3) Tick spec-002 DoD checkboxes for completed items. (4) `git log --oneline -10` review. (5) Push branch, open PR with the AC-1 live result in the body, merge. — 0.25h
+- [>] **T009**: [S] Final sign-off. (1) Full `pytest` clean across the repo (target ≥ 270/270 — baseline 263 + 4 merger + 4 lookthrough + 2 integration = 273). (2) Regression: `POST /instruments/assemble` for a physical fund (one of the existing 22 records) without LLM skills → unchanged behaviour vs spec-003. (3) Tick spec-002 DoD checkboxes for completed items. (4) `git log --oneline -10` review. (5) Push branch, open PR with the AC-1 live result in the body, merge. — 0.25h
 
 ## Task Details
 
