@@ -1,10 +1,17 @@
-"""Fetch bonds from ESMA FIRDS for a curated issuer list and emit
-BondGolden NDJSON.
+"""ESMA FIRDS bond fetch — library for the agentic chain.
 
-Per issuer LEI: query FIRDS Solr, paginate, filter to CFI category D
-(debt), dedupe by ISIN (keeping the highest-quality record per ISIN),
-build a validated `BondGolden` pydantic instance per surviving doc, and
-write one document per line to NDJSON.
+`fetch_by_isin(isin)` looks up a single bond by ISIN via FIRDS Solr and
+returns a validated `BondGolden` pydantic instance (or None on miss).
+`firds_to_golden` is the core projection from a raw FIRDS doc to the
+golden record. `load_issuers` reads the curated issuer-LEI YAML;
+`dedupe_by_isin` filters FIRDS records to CFI=D and picks the
+highest-quality record per ISIN.
+
+This module used to host a `--universe` batch CLI that looped over the
+curated `bond_issuers.yml` and bulk-loaded NDJSON. That entry point has
+moved to `pipeline.agentic.cli.bond_universe`, which calls into the
+full agentic chain per ISIN. The FIRDS fetch retained here is what
+`pipeline.agentic.sources.bond_firds` calls.
 
 FIRDS populates static fields well (ISIN, CFI, coupon type, coupon rate,
 maturity, denomination, seniority, primary venue). Prices / yields /
@@ -14,7 +21,6 @@ stay blank in the golden record.
 
 from __future__ import annotations
 
-import argparse
 import datetime as dt
 import hashlib
 import json
@@ -377,62 +383,6 @@ def fetch_by_isin(
     return firds_to_golden(doc, issuer, run_id, now)
 
 
-def write_ndjson(docs: List[BondGolden], path: Path) -> int:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        for doc in docs:
-            fh.write(doc.model_dump_json(exclude_none=True))
-            fh.write("\n")
-    return len(docs)
-
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Fetch bonds from ESMA FIRDS and emit BondGolden NDJSON."
-    )
-    parser.add_argument(
-        "--issuers", type=Path,
-        help="Issuer YAML override (default: bundled bond_issuers.yml).",
-    )
-    parser.add_argument(
-        "--limit-per-issuer", type=int, default=None,
-        help="Cap bonds emitted per issuer (smoke testing).",
-    )
-    parser.add_argument(
-        "--output", "-o", type=Path,
-        default=Path("data/opensearch/golden/bond/bonds.ndjson"),
-    )
-    args = parser.parse_args()
-
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-
-    issuers = load_issuers(args.issuers)
-    log.info("Loaded %d issuer(s)", len(issuers))
-
-    run_id = f"firds-bond-{uuid.uuid4().hex[:8]}"
-    now = datetime.now(timezone.utc)
-    all_docs: List[BondGolden] = []
-    for i, issuer in enumerate(issuers, 1):
-        lei = issuer["lei"]
-        log.info("[%d/%d] %s (%s)", i, len(issuers), issuer["name"], lei)
-        records = list(iter_issuer_records(lei, FIRDS_FL))
-        bonds = dedupe_by_isin(iter(records))
-        if args.limit_per_issuer:
-            bonds = bonds[: args.limit_per_issuer]
-        built = 0
-        for raw in bonds:
-            golden = firds_to_golden(raw, issuer, run_id, now)
-            if golden is not None:
-                all_docs.append(golden)
-                built += 1
-        log.info("  → %d BondGolden built (from %d FIRDS records)", built, len(records))
-
-    n = write_ndjson(all_docs, args.output)
-    log.info("Wrote %d BondGolden documents to %s", n, args.output)
 
 
 if __name__ == "__main__":

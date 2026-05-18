@@ -1,9 +1,9 @@
 {
   "counters": {
-    "feature": 1,
-    "spec": 2,
-    "plan": 1,
-    "task": 1,
+    "feature": 2,
+    "spec": 4,
+    "plan": 2,
+    "task": 2,
     "decision": 0,
     "pattern": 0,
     "constraint": 0,
@@ -12,11 +12,16 @@
   "service_counters": {},
   "used_ids": [
     "feature-001",
-    "spec-001",
-    "spec-002",
-    "plan-001",
-    "tasks-001"
+    "feature-001/spec-001",
+    "feature-001/spec-002",
+    "feature-001/plan-001",
+    "feature-001/tasks-001",
+    "feature-002",
+    "feature-002/spec-001",
+    "feature-002/spec-002",
+    "feature-002/plan-001",
+    "feature-002/tasks-001"
   ],
-  "last_updated": "2026-05-17T10:52:00Z",
+  "last_updated": "2026-05-18T06:00:00Z",
   "version": "1.0"
 }
