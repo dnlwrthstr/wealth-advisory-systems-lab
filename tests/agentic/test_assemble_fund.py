@@ -205,3 +205,92 @@ def test_lookthrough_runs_after_factsheet_skill_in_planner_order():
     assert fs.cost_class == lt.cost_class == "llm_skill"
     assert fs.confidence == lt.confidence == "medium"
     assert len(fs.produces_fields) > len(lt.produces_fields)
+
+
+# ---------------------------------------------------------------------------
+# Spec-004 integration: lookthrough enhances factsheet's top-N to full list
+# ---------------------------------------------------------------------------
+
+def test_lookthrough_replaces_factsheet_top_n():
+    """Spec-004 AC-1 (integration): factsheet wrote 10/1310 → lookthrough
+    overrides with the full proxy list via replace_paths.
+    """
+    from pipeline.agentic.sources import fund_lookthrough_skill as lookthrough_src
+    from pipeline.agentic.merger import merge_patch
+
+    # Simulate the state after factsheet has run:
+    #   replicationMethod + benchmark + top-10 holdings + holdingsCount=1310.
+    current = {
+        "longName": "Amundi MSCI World Swap UCITS ETF",
+        "replicationMethod": "synthetic_swap",
+        "benchmarkName": "MSCI World Index",
+        "benchmarkIdentifier": None,
+        "currencyOfDenomination": "EUR",
+        "holdingsCount": 1310,
+        "assetAllocation": {
+            "bySector": [{"sector": "INFORMATION_TECHNOLOGY", "percentage": 0.28}],
+            "holdings": [
+                {"identifier": f"TOP{i}", "name": f"Top{i}", "weight": 0.05, "source": "direct"}
+                for i in range(10)
+            ],
+        },
+    }
+
+    # Spec-004 predicate must now PASS (10 < 1310)
+    assert lookthrough_src._predicate_passes(current, "LU1681043599") is True
+
+    # Proxy: physical-replication peer with the full constituent list (100 mock rows
+    # standing in for the real ~1310).
+    proxy = {
+        "goldenId": "FG-IE00B4L5Y983-XETR-001",
+        "longName": "iShares Core MSCI World UCITS ETF",
+        "identifierList": [{"identifier": "IE00B4L5Y983", "type": "isin"}],
+        "benchmarkName": "MSCI World Index",
+        "replicationMethod": "physical_sampling",
+        "assetAllocation": {"holdings": [
+            {"identifier": f"FULL{i}", "name": f"Full{i}", "weight": 0.01}
+            for i in range(100)
+        ]},
+        "holdingsAsOf": "2026-04-30",
+        "holdingsCount": 1310,
+    }
+
+    confidence = lookthrough_src._derive_confidence(current, proxy)
+    result = lookthrough_src._build_patch(proxy, confidence)
+
+    # Sanity: the patch declares replace_paths for the holdings list
+    assert result.replace_paths == ["assetAllocation.holdings"]
+
+    written = merge_patch(current, result.patch, replace_paths=result.replace_paths)
+
+    # The full 100-row list replaced the top-10
+    aa = current["assetAllocation"]
+    assert len(aa["holdings"]) == 100, "expected proxy full list (100), got %d" % len(aa["holdings"])
+    assert all(h["source"] == "physical_proxy" for h in aa["holdings"])
+    # Sibling buckets preserved (deep-merge protected them)
+    assert aa["bySector"] == [{"sector": "INFORMATION_TECHNOLOGY", "percentage": 0.28}]
+    # Provenance landed
+    assert current["lookthroughProvenance"]["proxyIsin"] == "IE00B4L5Y983"
+    # Written reports the replacement
+    assert "assetAllocation.holdings" in written
+
+
+def test_lookthrough_does_not_fire_on_complete_factsheet_holdings():
+    """Spec-004 AC-2: factsheet provided the COMPLETE constituent list
+    (holdingsCount == len(holdings)) → lookthrough's predicate must skip.
+    """
+    from pipeline.agentic.sources import fund_lookthrough_skill as lookthrough_src
+
+    current = {
+        "replicationMethod": "synthetic_swap",
+        "benchmarkName": "MSCI World Index",
+        "holdingsCount": 80,
+        "assetAllocation": {
+            "holdings": [
+                {"identifier": f"H{i}", "weight": 1.0 / 80, "source": "direct"}
+                for i in range(80)
+            ],
+        },
+    }
+
+    assert lookthrough_src._predicate_passes(current, "LU1681043599") is False

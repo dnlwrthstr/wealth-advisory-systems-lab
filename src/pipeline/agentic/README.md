@@ -93,6 +93,34 @@ extracts the top-level prefix when computing
 the source name, timestamp, and (for proxy-derived rows) the proxy ISIN
 and confidence.
 
+### `replace_paths` — opt-in list replacement (spec 004)
+
+A source can opt into **list replacement** instead of fill-empty-only by
+declaring `replace_paths: List[str]` on its `SourceFetchResult`. Each
+entry is a dot-path; when the patch carries a list value at that path,
+the merger replaces the existing list verbatim (even when non-empty).
+
+Why it exists: `fund_factsheet_skill` produces a top-N projection of
+holdings (e.g. 10 of 1310 MSCI World constituents). `fund_lookthrough_skill`
+later contributes the full constituent list from a physical-proxy peer
+ETF. Without the marker, deep fill-empty-only would preserve the top-N
+and silently drop the proxy's expanded list — exactly the wrong outcome
+for portfolio-risk look-through.
+
+Rules:
+- Applies only when the patch's value at the marked path is a `list`.
+  Marker is a no-op when the value is a dict (deep-merge applies) or a
+  scalar (fill-empty-only applies).
+- Empty patch lists (`[]`) are still skipped at every path — the marker
+  doesn't override the never-write-nothing rule.
+- Other paths in the same patch are unaffected — they follow standard
+  deep fill-empty-only.
+
+V1 has exactly one source using `replace_paths`: `fund_lookthrough_skill`
+declares `["assetAllocation.holdings"]`. Adding a new source that uses
+it requires review — the marker is a deliberate escape hatch from the
+otherwise-safe fill-empty-only invariant.
+
 ## Persistence and chaining
 
 `persist.assemble_and_persist`:

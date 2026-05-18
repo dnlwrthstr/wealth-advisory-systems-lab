@@ -99,15 +99,13 @@ def test_predicate_skips_non_isin_kind(monkeypatch):
     assert src.fetch("ticker", "AMUN.PA", _SYNTHETIC_CURRENT) is None
 
 
-def test_predicate_skips_when_holdings_already_populated():
+def test_predicate_skips_when_holdings_populated_without_count():
+    """Spec-004: when factsheet produced holdings but didn't declare a count,
+    treat the list as authoritative — lookthrough must not override.
+    """
     current = dict(_SYNTHETIC_CURRENT)
     current["assetAllocation"] = {"holdings": [{"identifier": "AAPL", "weight": 0.04}]}
-    assert src._predicate_passes(current, "LU1681043599") is False
-
-
-def test_predicate_skips_when_holdings_count_set():
-    current = dict(_SYNTHETIC_CURRENT)
-    current["holdingsCount"] = 1400
+    # holdingsCount intentionally absent
     assert src._predicate_passes(current, "LU1681043599") is False
 
 
@@ -128,6 +126,64 @@ def test_predicate_skips_when_no_benchmark():
     current["benchmarkName"] = None
     current["benchmarkIdentifier"] = None
     assert src._predicate_passes(current, "LU1681043599") is False
+
+
+# ---------------------------------------------------------------------------
+# (a') Spec-004 predicate refinement: top-N vs full-list
+# ---------------------------------------------------------------------------
+
+def test_predicate_fires_when_existing_holdings_are_strict_subset_of_holdingsCount():
+    """Spec-004 unblock: factsheet produced 10 of 1310 → lookthrough fires
+    to provide the full constituent list via the proxy.
+    """
+    current = dict(_SYNTHETIC_CURRENT)
+    current["assetAllocation"] = {
+        "holdings": [{"identifier": f"H{i}", "weight": 0.01} for i in range(10)],
+    }
+    current["holdingsCount"] = 1310
+    assert src._predicate_passes(current, "LU1681043599") is True
+
+
+def test_predicate_skips_when_existing_holdings_equal_holdingsCount():
+    """Spec-004 safety: factsheet provided the COMPLETE list — lookthrough
+    must not override an already-complete dataset.
+    """
+    current = dict(_SYNTHETIC_CURRENT)
+    current["assetAllocation"] = {
+        "holdings": [{"identifier": f"H{i}", "weight": 1.0/80} for i in range(80)],
+    }
+    current["holdingsCount"] = 80
+    assert src._predicate_passes(current, "LU1681043599") is False
+
+
+def test_predicate_fires_when_holdings_empty_with_holdingsCount_declared():
+    """Edge case: factsheet declared a count but produced no rows — still
+    eligible for lookthrough (the empty-holdings branch falls through to
+    the replicationMethod + benchmark gates).
+    """
+    current = dict(_SYNTHETIC_CURRENT)
+    current["holdingsCount"] = 1310
+    # assetAllocation.holdings deliberately absent (or empty)
+    assert src._predicate_passes(current, "LU1681043599") is True
+
+
+def test_build_patch_declares_replace_paths_for_holdings():
+    """Spec-004: lookthrough's SourceFetchResult must opt into list-replacement
+    at assetAllocation.holdings so the merger overrides factsheet's top-N.
+    """
+    picked = {
+        "goldenId": "FG-IE00B4L5Y983-XETR-001",
+        "longName": "iShares Core MSCI World",
+        "identifierList": [{"identifier": "IE00B4L5Y983", "type": "isin"}],
+        "benchmarkName": "MSCI World Index",
+        "assetAllocation": {"holdings": [
+            {"identifier": "AAPL", "name": "Apple", "weight": 0.04},
+        ]},
+        "holdingsAsOf": "2026-04-30",
+        "holdingsCount": 1310,
+    }
+    result = src._build_patch(picked, "high")
+    assert result.replace_paths == ["assetAllocation.holdings"]
 
 
 # ---------------------------------------------------------------------------

@@ -5,12 +5,29 @@
 - **SpecPulse Version**: 2.7.5
 - **AI Assistant**: Not configured
 
-## Active Feature: 003-agentic-fund-universe (extension — lookthrough skill)
+## Active Feature: 004-lookthrough-full-list
+- **ID**: 004
+- **Name**: lookthrough-full-list
+- **One-liner**: refine fund_lookthrough_skill predicate + add merger marker-based list-replacement so the proxy fallback enhances factsheet's top-N to the full constituent list
+- **Branch**: feat/lookthrough-full-list (off main, post-PR-#9)
+- **Status**: 📝 TASKS — spec-002 + plan-001 + tasks-001 drafted; awaiting /sp-execute
+- **Created**: 2026-05-18T20:30:00Z
+- **Spec (current)**: .specpulse/specs/004-lookthrough-full-list/spec-002.md (clarified; supersedes spec-001)
+- **Spec (placeholder)**: .specpulse/specs/004-lookthrough-full-list/spec-001.md
+- **Plan (current)**: .specpulse/plans/004-lookthrough-full-list/plan-001.md (6 phases, ~4h)
+- **Tasks (current)**: .specpulse/tasks/004-lookthrough-full-list/tasks-001.md (9 tasks T001–T009, strict serial; ~4h)
+- **Design decisions resolved upfront**:
+  - Feature name: lookthrough-full-list (action-oriented)
+  - Merger approach: marker-based override (`_replace` sentinel) — surgical, doesn't change semantics for other source chains
+- **Live validation gap from spec-003**: factsheet skill produces a top-10 projection from Amundi's holdings page; lookthrough predicate short-circuits on "holdings already populated"; users never see the full ~1310 MSCI World constituents. This spec closes that gap.
+
+## Completed Feature: 003-agentic-fund-universe (extension — lookthrough skill) ✅ MERGED 2026-05-18
 - **ID**: 003
 - **Name**: agentic-fund-universe
 - **One-liner**: extend agentic fund chain with synthetic-ETF look-through via physical proxy
-- **Branch**: feat/fund-lookthrough-skill (off main, post-PR-#4)
-- **Status**: 📝 TASKS — spec-003 + plan-002 + tasks-002 drafted; awaiting /sp-execute
+- **Branch**: feat/fund-lookthrough-skill (merged + deleted)
+- **PRs**: #5 (universe ticker fix), #6 (main spec-003 implementation), #7 / #8 / #9 (docker-stack infrastructure for the LLM skills)
+- **Status**: ✅ MERGED — 13/14 tasks done; T011b discovered factsheet skill produces top-N rather than gating empty → feature 004 closes the gap
 - **Created**: 2026-05-18T15:50:00Z
 - **Spec (current)**: .specpulse/specs/003-agentic-fund-universe/spec-003.md (supersedes spec-002.md)
 - **Spec (prior, implemented + merged via PR #4)**: .specpulse/specs/003-agentic-fund-universe/spec-002.md

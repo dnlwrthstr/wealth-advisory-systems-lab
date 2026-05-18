@@ -153,3 +153,118 @@ def test_patch_dict_into_empty_slot_writes_full_dict():
 
     assert current["lookthroughProvenance"]["proxyIsin"] == "IE00B4L5Y983"
     assert written == ["lookthroughProvenance"]
+
+
+# ---------------------------------------------------------------------------
+# spec-004: `replace_paths` marker-based override
+# ---------------------------------------------------------------------------
+
+def test_replace_paths_overrides_existing_list():
+    """A patch with replace_paths replaces the existing list verbatim — even
+    when current already has a non-empty list at that path. This is the
+    spec-004 unblock for lookthrough overriding factsheet's top-N.
+    """
+    current = {
+        "assetAllocation": {
+            "holdings": [
+                {"identifier": "AAPL", "name": "Apple", "weight": 0.06, "source": "direct"},
+            ],
+        },
+    }
+    patch = {
+        "assetAllocation": {
+            "holdings": [
+                {"identifier": "NVDA", "name": "NVIDIA", "weight": 0.06, "source": "physical_proxy"},
+                {"identifier": "AAPL", "name": "Apple", "weight": 0.045, "source": "physical_proxy"},
+                {"identifier": "MSFT", "name": "Microsoft", "weight": 0.035, "source": "physical_proxy"},
+            ],
+        },
+    }
+    written = merge_patch(current, patch, replace_paths=["assetAllocation.holdings"])
+
+    # Existing list fully replaced
+    assert len(current["assetAllocation"]["holdings"]) == 3
+    assert current["assetAllocation"]["holdings"][0]["identifier"] == "NVDA"
+    assert all(h["source"] == "physical_proxy" for h in current["assetAllocation"]["holdings"])
+    # written carries the nested dot-path
+    assert "assetAllocation.holdings" in written
+
+
+def test_replace_paths_no_op_on_dict_value():
+    """replace_paths marker pointing at a dict-valued field is silently
+    ignored; deep-merge applies. Defensive against marker misuse (AC-6).
+    """
+    current = {
+        "lookthroughProvenance": {
+            "method": "physical_proxy",
+            "proxyIsin": "IE00BFM6T921",
+            "confidence": "high",
+        },
+    }
+    patch = {
+        "lookthroughProvenance": {
+            "method": "physical_proxy",
+            "proxyIsin": "IE00B4L5Y983",  # different
+            "asOfDate": "2026-04-30",     # new sub-key
+        },
+    }
+    written = merge_patch(current, patch, replace_paths=["lookthroughProvenance"])
+
+    # Deep-merge applied — existing method/proxyIsin/confidence preserved,
+    # only the new asOfDate sub-key written.
+    assert current["lookthroughProvenance"]["proxyIsin"] == "IE00BFM6T921"
+    assert current["lookthroughProvenance"]["confidence"] == "high"
+    assert current["lookthroughProvenance"]["asOfDate"] == "2026-04-30"
+    assert written == ["lookthroughProvenance.asOfDate"]
+
+
+def test_replace_paths_does_not_affect_other_paths():
+    """replace_paths for `a.b` does NOT change semantics for `a.c`."""
+    current = {
+        "assetAllocation": {
+            "holdings": [{"identifier": "OLD", "weight": 1.0}],
+            "byAssetClass": [{"type": "equity", "percentage": 1.0}],
+        },
+    }
+    patch = {
+        "assetAllocation": {
+            "holdings": [{"identifier": "NEW1", "weight": 0.5}, {"identifier": "NEW2", "weight": 0.5}],
+            "byAssetClass": [{"type": "fixed_income", "percentage": 1.0}],
+        },
+    }
+    written = merge_patch(current, patch, replace_paths=["assetAllocation.holdings"])
+
+    # holdings replaced (marker applies)
+    assert len(current["assetAllocation"]["holdings"]) == 2
+    assert current["assetAllocation"]["holdings"][0]["identifier"] == "NEW1"
+    # byAssetClass preserved (no marker for that path)
+    assert current["assetAllocation"]["byAssetClass"][0]["type"] == "equity"
+    assert "assetAllocation.holdings" in written
+    assert "assetAllocation.byAssetClass" not in written
+
+
+def test_replace_paths_empty_default_preserves_spec_003_behavior():
+    """Explicit empty replace_paths must behave identically to spec-003's
+    deep fill-empty-only. Regression lock against accidental semantic drift.
+    """
+    current = {"holdings": [{"identifier": "AAPL", "weight": 0.07}]}
+    patch = {"holdings": [{"identifier": "MSFT", "weight": 0.06}]}
+
+    # With explicit empty replace_paths — should match spec-003's atomic-list
+    # fill-empty-only: existing non-empty list wins.
+    written = merge_patch(current, patch, replace_paths=())
+    assert current["holdings"] == [{"identifier": "AAPL", "weight": 0.07}]
+    assert written == []
+
+
+def test_replace_paths_skips_empty_list_value():
+    """An empty list value at a marked path is still skipped (never write
+    nothing). Marker doesn't bypass the empty-sentinel rule.
+    """
+    current = {"holdings": [{"identifier": "AAPL", "weight": 0.07}]}
+    patch = {"holdings": []}
+
+    written = merge_patch(current, patch, replace_paths=["holdings"])
+    # Existing list untouched
+    assert current["holdings"] == [{"identifier": "AAPL", "weight": 0.07}]
+    assert written == []
