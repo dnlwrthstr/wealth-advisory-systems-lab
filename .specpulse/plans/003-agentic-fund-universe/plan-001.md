@@ -297,3 +297,40 @@ Single-machine internal-tool feature. Standard repo flow: feature branch → PyC
 - **Inheritance from features 001/002**: layered API, search-mirror per record, lazy opensearch imports, JSON report shape (extended to nested per-parent-LEI grouping in bond's `_IssuerReport` pattern), strict-serial concurrency, per-record error isolation, `dotenv` at module top. The fund CLI extends — not redesigns — feature 002's pattern.
 - **Decomposition directory not used** — single-service feature.
 - Phase 0 findings should be appended in-place before Phase 1 starts.
+
+## Phase 0 findings (T001, 2026-05-18)
+
+All five contract checks pass cleanly — no plan adjustments needed.
+
+**1. `fund_firds.dedupe_by_isin` CFI filter direction**: confirmed `cfi.startswith("C")` — funds, as spec'd. (Parallel to bond's `D*` filter from feature 002.)
+
+**2. External callers of `fund_firds.main` / `write_ndjson`**: **zero** across `src/`, `tests/`, `backend/`. T009 strip is safe.
+
+**3. Existing test compatibility**: `tests/agentic/test_assemble_fund.py` and `test_cost_cap.py` import `from pipeline.gold import fund_firds` and use only `fund_firds.solr_get`, `fund_firds.load_issuers` — all library APIs that survive the strip.
+
+**4. `max_cost_class` wiring** (the load-bearing check for this feature):
+
+```python
+# pipeline/agentic/agents/base.py
+def assemble_and_persist(cls, *, client, identifier, status, budget=None, max_cost_class=None):
+    return assemble_and_persist(
+        client=client, scope=cls.scope, identifier=identifier,
+        budget=budget if budget is not None else cls.default_budget,
+        max_cost_class=max_cost_class or cls.default_max_cost_class,  # ← Python `or`
+        universe_status=status,
+    )
+```
+
+The `max_cost_class or cls.default_max_cost_class` short-circuits correctly:
+- CLI passes `"web_fetch"` (truthy string) → overrides `FundAgent.default_max_cost_class="llm_skill"`. ✅
+- CLI passes `"llm_skill"` → uses the default value verbatim. ✅
+- CLI omits / passes `None` → falls back to the agent's default (LLM-eligible). The CLI design always explicitly passes a string, so this branch is academic.
+
+**5. `persist.extract_leis` traversal**: confirmed recursive walk over **any** `lei` key in the record dict. Docstring explicitly cites `umbrella.lei`, `managementCompany.lei` as examples. For a FundGolden record, this picks up:
+- `umbrella.lei` (always present in the curated YAML).
+- `managementCompany.lei` (present for 8 of 10 umbrellas per the YAML).
+- `promoter.lei` (intentionally absent in the curated YAML per its comment — BlackRock Inc. has an LEI but isn't a "fund-industry registered entity" in the lab's modelling).
+
+So the **realistic chained-issuer count is 1–2 per fund**, not 1–3. The spec AC-1 already says "1 to 3"; the actual range will skew low. Worth noting in the PR body but not a blocker.
+
+**No plan adjustments required.** Proceed to Phase 1.

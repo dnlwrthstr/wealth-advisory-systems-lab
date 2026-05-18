@@ -202,14 +202,14 @@ Module docstring rewritten to "library only" — parity with `equity_yahoo` (fea
 
 ## Definition of Done
 
-- [ ] All six functional requirements implemented.
-- [ ] All six acceptance criteria met.
-- [ ] Fund universe section landed in `src/pipeline/agentic/README.md`.
-- [ ] `pipeline.gold.fund_firds --universe` CLI surface stripped; library functions retained.
-- [ ] CLAUDE.md updated (legacy `fund_firds` bullet rewritten + new CLI pointer added).
-- [ ] Tests pass: `pytest` clean.
-- [ ] Branch `feat/agentic-fund-universe` merged into `main` via PyCharm review.
-- [ ] Local smoke: `instrument-api` still serves `POST /instruments/assemble` for a fund ISIN; `GET /universe/fund` lists the loaded share-classes; `GET /instruments/search?type=fund` returns search-mirror hits (the bond `ow_type` casing bug from feature 002 doesn't apply here — fund is single-word).
+- [x] All six functional requirements implemented.
+- [x] All six acceptance criteria met (AC-1 + AC-2 verified live on `--all --limit-per-umbrella 3`; AC-3 parity diff at `data/cache/parity/diff_funds_report.md` — zero regressions, new chain adds `marketData`, `assetAllocation`, `totalExpenseRatio`, `universeStatus`; AC-4 / AC-5 covered by smoke tests; AC-6 flag wiring verified live — `cost_class=web_fetch` default vs `cost_class=llm_skill` opt-in; LLM execution itself skipped due to missing `ANTHROPIC_API_KEY` in dev `.env`).
+- [x] Fund universe section landed in `src/pipeline/agentic/README.md`.
+- [x] `pipeline.gold.fund_firds --universe` CLI surface stripped (~67 lines); library functions retained.
+- [x] CLAUDE.md updated (legacy `fund_firds` bullet rewritten + new CLI pointer added).
+- [x] Tests pass: `pytest` 190/190.
+- [ ] Branch `feat/agentic-fund-universe` merged into `main` via PyCharm review (pending user action).
+- [x] Local smoke: `POST /instruments/assemble` for `IE00B4L5Y983` (iShares Core MSCI World) → quality 0.778; `GET /universe/fund` → 21 funds; `GET /instruments/search?type=fund` → 21 hits (no casing bug — feature 002's ow_type fix covers fund single-word case correctly).
 
 ## Clarifications (resolved 2026-05-18)
 

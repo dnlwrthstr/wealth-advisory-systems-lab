@@ -10,11 +10,12 @@
 - **Name**: agentic-fund-universe
 - **One-liner**: build instrument universe -> agentic pipeline for funds
 - **Branch**: feat/agentic-fund-universe
-- **Status**: Planned (spec → plan → tasks complete; execution pending)
+- **Status**: ✅ DONE — all 11 tasks complete; ready for commit + PR.
 - **Created**: 2026-05-18T10:30:00Z
-- **Spec**: .specpulse/specs/003-agentic-fund-universe/spec-002.md (clarified)
-- **Plan**: .specpulse/plans/003-agentic-fund-universe/plan-001.md (ready)
-- **Tasks**: .specpulse/tasks/003-agentic-fund-universe/tasks-001.md (11 tasks)
+- **Completed**: 2026-05-18 (single-day feature; all phases wrapped)
+- **Spec**: .specpulse/specs/003-agentic-fund-universe/spec-002.md (DoD ticked)
+- **Plan**: .specpulse/plans/003-agentic-fund-universe/plan-001.md (with Phase 0 findings addendum)
+- **Tasks**: .specpulse/tasks/003-agentic-fund-universe/tasks-001.md (11/11; 100%)
 
 ## Previous Features
 
