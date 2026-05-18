@@ -126,19 +126,50 @@ outcome = AGENTS["equity"].assemble_and_persist(
 - `GET /universe` — cross-scope universe listing.
 - `PATCH /universe/{scope}/{golden_id}/status` — partial update of `universeStatus`.
 
-**Universe batch CLI (this package, `cli/equity_universe.py`):**
+**Universe batch CLIs (this package, `cli/`):**
+
+One batch loader per scope. All share the same shape: enumerate ISINs,
+call `AGENTS[scope].assemble_and_persist(..., status="in_universe")`
+per ISIN in strict serial order, mirror each persisted record onto
+`pms_golden_instrumentsearch` via `index_search_hit`. Per-ISIN errors
+are isolated. The scopes differ only in how the universe is enumerated.
+
+### Equity — `cli/equity_universe.py`
 
 ```bash
 PYTHONPATH=src python -m pipeline.agentic.cli.equity_universe \
     --universe smi   # one of: smi, sp500, nasdaq100, dax40, ftse100
 ```
 
-Resolves a named ticker universe (Wikipedia-sourced), maps tickers to
-ISINs (via `six_ticker_isin` for SIX-listed, via OpenFIGI's
-ticker-direction lookup for foreign exchanges), and calls
-`AGENTS["equity"].assemble_and_persist(..., status="in_universe")` per
-ISIN in strict serial order. Mirrors each persisted record onto
-`pms_golden_instrumentsearch` via `index_search_hit`.
+Universe model: named market index. Resolves a Wikipedia ticker table
+to a list of tickers, then maps each to an ISIN (via `six_ticker_isin`
+for SIX-listed, OpenFIGI's ticker-direction lookup for foreign
+exchanges; falls back to passing the ticker directly to the planner
+when OpenFIGI misses).
+
+### Bond — `cli/bond_universe.py`
+
+```bash
+PYTHONPATH=src python -m pipeline.agentic.cli.bond_universe \
+    [--issuer-lei LEI]       # single-issuer smoke test
+    [--all]                  # full curated set (default)
+    [--limit-per-issuer N]   # cap bonds emitted per issuer
+```
+
+Universe model: per-issuer-LEI. Reads the curated
+[bond_issuers.yml](../gold/data/bond_issuers.yml) (sovereigns +
+corporates), then for each LEI runs `pipeline.gold._firds.iter_issuer_records(lei, FIRDS_FL)`
+to enumerate all bond ISINs that issuer has reported to ESMA FIRDS,
+deduplicates by ISIN, and calls `AGENTS["bond"].assemble_and_persist`
+per ISIN. Issuer chaining via GLEIF fires automatically inside the
+persist call; the curated `bond_issuers.yml` metadata acts as a
+fallback when GLEIF lacks a record.
+
+The loop is two-level (issuer → ISIN); the report groups outcomes
+per-issuer. Issuer-level FIRDS failures are silently swallowed by
+`iter_issuer_records` (its built-in retry-then-empty pattern), so a
+failed issuer shows up as "0 bonds" in the report rather than as an
+exception.
 
 ## Adding a new source
 
