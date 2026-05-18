@@ -1,16 +1,26 @@
-"""Fetch UCITS funds from ESMA FIRDS for a curated umbrella LEI list and
-emit FundGolden NDJSON.
+"""ESMA FIRDS UCITS fund fetch — library for the agentic chain.
 
-Per umbrella LEI: query FIRDS Solr, filter to CFI category C (funds),
-dedupe by ISIN, build a validated `FundGolden` pydantic instance per
-surviving doc, write NDJSON. Static fields (ISIN, CFI, sub-type derived
-from CFI, domicile, legal framework) populate well. NAV / AUM / TER /
-returns / holdings need NAV feeds and KIID parsing — left blank here.
+`fetch_by_isin(isin)` looks up a single fund share-class by ISIN via
+FIRDS Solr and returns a validated `FundGolden` pydantic instance (or
+None on miss). `firds_to_golden` is the core projection from a raw
+FIRDS doc to the golden record. `load_issuers` reads the curated
+umbrella-LEI YAML; `dedupe_by_isin` filters FIRDS records to CFI=C* and
+picks the highest-quality record per ISIN.
+
+This module used to host a `--universe` batch CLI that looped over the
+curated `fund_umbrellas.yml` and bulk-loaded NDJSON. That entry point
+has moved to `pipeline.agentic.cli.fund_universe`, which calls into
+the full agentic chain per ISIN. The FIRDS fetch retained here is what
+`pipeline.agentic.sources.fund_firds` calls.
+
+Static fields (ISIN, CFI, sub-type derived from CFI, domicile, legal
+framework) populate well. NAV / AUM / TER / returns / holdings need NAV
+feeds and KIID parsing — surfaced by `fund_yahoo` and
+`fund_factsheet_*` sources in the agentic chain.
 """
 
 from __future__ import annotations
 
-import argparse
 import datetime as dt
 import hashlib
 import json
@@ -366,69 +376,3 @@ def fetch_by_isin(
     return firds_to_golden(doc, issuer, run_id, now)
 
 
-def write_ndjson(docs: List[FundGolden], path: Path) -> int:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as fh:
-        for doc in docs:
-            fh.write(doc.model_dump_json(exclude_none=True))
-            fh.write("\n")
-    return len(docs)
-
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Fetch UCITS funds from ESMA FIRDS and emit FundGolden NDJSON."
-    )
-    parser.add_argument(
-        "--issuers", type=Path,
-        help="Umbrella YAML override (default: bundled fund_umbrellas.yml).",
-    )
-    parser.add_argument(
-        "--limit-per-issuer", type=int, default=None,
-        help="Cap funds emitted per umbrella (smoke testing).",
-    )
-    parser.add_argument(
-        "--limit-issuers", type=int, default=None,
-        help="Cap number of umbrellas processed.",
-    )
-    parser.add_argument(
-        "--output", "-o", type=Path,
-        default=Path("data/opensearch/golden/fund/funds.ndjson"),
-    )
-    args = parser.parse_args()
-
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-
-    issuers = load_issuers(args.issuers)
-    if args.limit_issuers:
-        issuers = issuers[: args.limit_issuers]
-    log.info("Loaded %d umbrella(s)", len(issuers))
-
-    run_id = f"firds-fund-{uuid.uuid4().hex[:8]}"
-    now = datetime.now(timezone.utc)
-    all_docs: List[FundGolden] = []
-    for i, issuer in enumerate(issuers, 1):
-        umbrella_lei = issuer["umbrellaLei"]
-        log.info("[%d/%d] %s (%s)", i, len(issuers), issuer["umbrellaName"], umbrella_lei)
-        records = list(iter_issuer_records(umbrella_lei, FIRDS_FL))
-        funds = dedupe_by_isin(iter(records))
-        if args.limit_per_issuer:
-            funds = funds[: args.limit_per_issuer]
-        built = 0
-        for raw in funds:
-            golden = firds_to_golden(raw, issuer, run_id, now)
-            if golden is not None:
-                all_docs.append(golden)
-                built += 1
-        log.info("  → %d FundGolden built (from %d FIRDS records)", built, len(records))
-
-    n = write_ndjson(all_docs, args.output)
-    log.info("Wrote %d FundGolden documents to %s", n, args.output)
-
-
-if __name__ == "__main__":
-    main()

@@ -1,9 +1,9 @@
 {
   "counters": {
-    "feature": 2,
-    "spec": 4,
-    "plan": 2,
-    "task": 2,
+    "feature": 3,
+    "spec": 6,
+    "plan": 3,
+    "task": 3,
     "decision": 0,
     "pattern": 0,
     "constraint": 0,
@@ -20,8 +20,13 @@
     "feature-002/spec-001",
     "feature-002/spec-002",
     "feature-002/plan-001",
-    "feature-002/tasks-001"
+    "feature-002/tasks-001",
+    "feature-003",
+    "feature-003/spec-001",
+    "feature-003/spec-002",
+    "feature-003/plan-001",
+    "feature-003/tasks-001"
   ],
-  "last_updated": "2026-05-18T06:00:00Z",
+  "last_updated": "2026-05-18T10:30:00Z",
   "version": "1.0"
 }

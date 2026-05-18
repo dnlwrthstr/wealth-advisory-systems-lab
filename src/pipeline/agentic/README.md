@@ -171,6 +171,44 @@ per-issuer. Issuer-level FIRDS failures are silently swallowed by
 failed issuer shows up as "0 bonds" in the report rather than as an
 exception.
 
+### Fund — `cli/fund_universe.py`
+
+```bash
+PYTHONPATH=src python -m pipeline.agentic.cli.fund_universe \
+    [--umbrella-lei LEI]          # single-umbrella smoke test
+    [--all]                       # full curated set (default)
+    [--limit-per-umbrella N]      # cap share-classes emitted per umbrella
+    [--enable-factsheet-skill]    # opt into LLM cost (default: web_fetch cap)
+```
+
+Universe model: per-umbrella-LEI, with a five-level corporate
+hierarchy (promoter → managementCompany → umbrella → subFund →
+shareClass). Reads the curated
+[fund_umbrellas.yml](../gold/data/fund_umbrellas.yml) (iShares /
+Vanguard / Xtrackers / Amundi / UBS), then for each umbrella LEI runs
+the same `iter_issuer_records(lei, FIRDS_FL)` helper bond uses but
+with fund-specific `FIRDS_FL` and a CFI=C* filter in
+`fund_firds.dedupe_by_isin`. Calls `AGENTS["fund"].assemble_and_persist`
+per share-class ISIN.
+
+**Cost-class control (unique to fund)**: `FundAgent.default_max_cost_class="llm_skill"`,
+because the `find-and-parse-factsheet` skill carries TER, SRRI/SRI,
+dealing terms, and service-provider data that nothing else surfaces.
+The batch CLI overrides this default to `"web_fetch"` so a full
+universe load is free at the LLM layer; `--enable-factsheet-skill`
+opts in. Pre-curated patches under
+`data/opensearch/golden/fund/patches/*.json` are honoured by the
+`fund_factsheet_patch` source regardless (cheap, `file_read`) — the
+skill only fires when a patch is missing AND the cap allows
+`llm_skill`.
+
+**Three-record issuer chain**: `persist.extract_leis` walks every
+`lei` key in the assembled record. For a fund, this typically picks
+up `umbrella.lei` and `managementCompany.lei` (and `promoter.lei`
+when the curated YAML has it), so each fund-scope `assemble_and_persist`
+triggers 1–3 chained issuer writes to `pms_golden_issuer` — vs ~1 for
+bond/equity.
+
 ## Adding a new source
 
 1. Add `sources/<name>.py` implementing `fetch(identifier_kind, identifier_value, current) -> Optional[SourceFetchResult]`.
