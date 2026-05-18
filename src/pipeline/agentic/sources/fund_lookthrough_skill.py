@@ -98,10 +98,146 @@ def fetch(
         log.debug("fund_lookthrough_skill skipped for %s: claude-agent-sdk not installed", identifier_value)
         return None
 
-    # Proxy lookup + LLM rank + patch construction land in subsequent tasks.
-    # For now the skeleton stops here — the source predicate-and-cache half
-    # is fully wired and unit-testable.
+    client = _opensearch_client()
+    if client is None:
+        log.debug("fund_lookthrough_skill skipped for %s: OPENSEARCH_URL unset", identifier_value)
+        return None
+
+    candidates, reason = _find_proxy_candidates(client, current, identifier_value)
+    if not candidates:
+        log.info(
+            "fund_lookthrough_skill found no proxy for %s: reason=%s",
+            identifier_value, reason,
+        )
+        return None
+
+    # LLM ranking + patch construction land in T006.
+    log.debug(
+        "fund_lookthrough_skill: %d proxy candidates for %s; LLM ranking pending (T006)",
+        len(candidates), identifier_value,
+    )
     return None
+
+
+# ---------------------------------------------------------------------------
+# OpenSearch client + proxy lookup
+# ---------------------------------------------------------------------------
+
+def _opensearch_client():
+    """Lazy-construct the OpenSearch client. Returns None if env is unset."""
+    try:
+        from instruments.opensearch_store import opensearch_client_from_env
+    except ImportError:  # pragma: no cover
+        return None
+    return opensearch_client_from_env()
+
+
+def _find_proxy_candidates(
+    client: Any,
+    current: Dict[str, Any],
+    current_isin: str,
+) -> tuple[List[Dict[str, Any]], Optional[str]]:
+    """Search pms_golden_fund for physically-replicated peers tracking the
+    same benchmark.
+
+    Returns ``(candidates, reason)``:
+      * candidates is the list of physical-fund records (top-N by holdings
+        recency) with non-empty `assetAllocation.holdings`.
+      * reason is None on success. On empty result it distinguishes:
+        - "proxy_search_empty" — the index has no physical funds at all
+          (cold start; need to seed the universe).
+        - "no_physical_proxy_in_universe" — physical funds exist but none
+          match this benchmark.
+
+    Uses at most two OpenSearch queries: the primary (with benchmark
+    filter), and on empty primary, a broader probe (without benchmark).
+    """
+    primary = _proxy_query(current, current_isin, include_benchmark=True)
+    primary_hits = _run_search(client, primary)
+    primary_hits = _filter_non_empty_holdings(primary_hits)
+    if primary_hits:
+        return primary_hits, None
+
+    # Distinguish cold start vs no-peer-for-this-benchmark.
+    broader = _proxy_query(current, current_isin, include_benchmark=False)
+    broader_hits = _run_search(client, broader)
+    broader_hits = _filter_non_empty_holdings(broader_hits)
+    if not broader_hits:
+        return [], "proxy_search_empty"
+    return [], "no_physical_proxy_in_universe"
+
+
+def _proxy_query(
+    current: Dict[str, Any],
+    current_isin: str,
+    *,
+    include_benchmark: bool,
+) -> Dict[str, Any]:
+    """Compose the OpenSearch query body for the proxy search.
+
+    Benchmark name match is the primary discriminator (the iShares MSCI
+    World patch carries `benchmarkName` but null `benchmarkIdentifier`,
+    so we can't rely on identifier-exact). When current carries a
+    `benchmarkIdentifier`, it's added as a stricter `should` clause that
+    raises the score for exact-identifier matches — but is not required.
+    """
+    must: List[Dict[str, Any]] = []
+    if include_benchmark:
+        should: List[Dict[str, Any]] = []
+        bench_name = current.get("benchmarkName")
+        if bench_name:
+            should.append({"match": {"benchmarkName": bench_name}})
+        bench_id = current.get("benchmarkIdentifier")
+        if bench_id:
+            should.append({"term": {"benchmarkIdentifier.keyword": bench_id}})
+        must.append({"bool": {"should": should, "minimum_should_match": 1}})
+
+    body: Dict[str, Any] = {
+        "size": 10,
+        "query": {
+            "bool": {
+                "must": must,
+                "filter": [
+                    {"terms": {"replicationMethod": sorted(PHYSICAL_REPLICATION_VALUES)}},
+                    {"exists": {"field": "assetAllocation.holdings"}},
+                ],
+                "must_not": [
+                    {"term": {"identifierList.identifier.keyword": current_isin}},
+                ],
+            },
+        },
+        "sort": [
+            {"holdingsAsOf": {"order": "desc", "missing": "_last", "unmapped_type": "date"}},
+        ],
+    }
+    if not must:
+        # bool query needs something — `match_all` keeps the filter+must_not
+        # clauses meaningful when no benchmark clause is set.
+        body["query"]["bool"]["must"] = [{"match_all": {}}]
+    return body
+
+
+def _run_search(client: Any, body: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Execute the query against pms_golden_fund and return _source dicts."""
+    try:
+        response = client.search(index="pms_golden_fund", body=body)
+    except Exception as exc:  # noqa: BLE001 — OpenSearch errors vary
+        log.warning("fund_lookthrough_skill: OpenSearch query failed: %s", exc)
+        return []
+    return [hit.get("_source") or {} for hit in response.get("hits", {}).get("hits", [])]
+
+
+def _filter_non_empty_holdings(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Drop records whose `assetAllocation.holdings` is empty.
+
+    OpenSearch's `exists` check returns true for empty arrays under some
+    mappings — this Python-side filter is a safety net so we don't waste
+    an LLM call on a "candidate" with no actual holdings to copy.
+    """
+    return [
+        r for r in records
+        if (r.get("assetAllocation") or {}).get("holdings")
+    ]
 
 
 # ---------------------------------------------------------------------------
