@@ -63,11 +63,15 @@ services:
       FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
-      # Read-only mount of curated fund patches consumed by
-      # fund_factsheet_patch and fund_lookthrough_skill (cache files
-      # under patches/lookthrough/). Without this mount, both sources
-      # silently return no_data inside the container.
-      - ./data/opensearch/golden/fund/patches:/app/data/opensearch/golden/fund/patches:ro
+      # Read-write mount of curated fund patches.
+      #  * `fund_factsheet_patch` and `fund_lookthrough_skill` READ
+      #    pre-curated patches from here.
+      #  * `fund_factsheet_skill` WRITES the patch JSON produced by the
+      #    find-and-parse-factsheet Claude Code skill back here, so the
+      #    next run cache-hits without re-invoking the LLM.
+      # Read-only would silently swallow the write and leave the cache
+      # cold forever, which is what bit T011b on first deploy.
+      - ./data/opensearch/golden/fund/patches:/app/data/opensearch/golden/fund/patches
     ports:
       - "8003:8003"
     depends_on:
