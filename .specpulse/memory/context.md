@@ -5,19 +5,25 @@
 - **SpecPulse Version**: 2.7.5
 - **AI Assistant**: Not configured
 
-## Active Feature: 002-agentic-bond-universe
-- **ID**: 002
-- **Name**: agentic-bond-universe
-- **One-liner**: build instrument universe -> agentic pipeline for bonds
-- **Branch**: feat/agentic-bond-universe
-- **Status**: ✅ DONE — all 11 tasks complete; ready for commit + PR.
-- **Created**: 2026-05-18T06:00:00Z
-- **Completed**: 2026-05-18 (single-day feature; all phases wrapped)
-- **Spec**: .specpulse/specs/002-agentic-bond-universe/spec-002.md (DoD ticked)
-- **Plan**: .specpulse/plans/002-agentic-bond-universe/plan-001.md (with Phase 0 findings addendum)
-- **Tasks**: .specpulse/tasks/002-agentic-bond-universe/tasks-001.md (11/11; 100%)
+## Active Feature: 003-agentic-fund-universe
+- **ID**: 003
+- **Name**: agentic-fund-universe
+- **One-liner**: build instrument universe -> agentic pipeline for funds
+- **Branch**: feat/agentic-fund-universe
+- **Status**: Planned (spec → plan → tasks complete; execution pending)
+- **Created**: 2026-05-18T10:30:00Z
+- **Spec**: .specpulse/specs/003-agentic-fund-universe/spec-002.md (clarified)
+- **Plan**: .specpulse/plans/003-agentic-fund-universe/plan-001.md (ready)
+- **Tasks**: .specpulse/tasks/003-agentic-fund-universe/tasks-001.md (11 tasks)
 
 ## Previous Features
+
+### 002-agentic-bond-universe ✅ MERGED to main 2026-05-18
+- **Branch**: feat/agentic-bond-universe (deleted post-merge)
+- **PR**: https://github.com/dnlwrthstr/wealth-advisory-systems-lab/pull/2
+- **Spec**: .specpulse/specs/002-agentic-bond-universe/spec-002.md
+- **Plan**: .specpulse/plans/002-agentic-bond-universe/plan-001.md
+- **Tasks**: .specpulse/tasks/002-agentic-bond-universe/tasks-001.md (12/12 — includes T012 search-mirror fix)
 
 ### 001-agentic-equity-universe ✅ MERGED to main 2026-05-18
 - **Branch**: feat/agentic-equity-universe (deleted post-merge)
@@ -27,6 +33,11 @@
 - **Tasks**: .specpulse/tasks/001-agentic-equity-universe/tasks-001.md (17/17)
 
 ## Recent Activity
+- 2026-05-18T11:15 — tasks-001.md generated via /sp-task (11 tasks across Phase 0–5; ~7h estimated).
+- 2026-05-18T11:00 — plan-001.md generated via /sp-plan (5 phases; mirrors feature 002's plan with fund-specific LLM-cost-class control and three-LEI chain semantics).
+- 2026-05-18T10:45 — spec-002.md generated via /sp-spec; all 4 open questions clarified interactively (--enable-factsheet-skill boolean, no patch pre-check, no --limit default cap, raw chain counts).
+- 2026-05-18T10:30 — Feature 003-agentic-fund-universe initialized via /sp-pulse. Branch feat/agentic-fund-universe created off origin/main (which now includes features 001 + 002 merges).
+- 2026-05-18 — Feature 002 merged via PR #2; remote branch deleted. Included bond-universe CLI + legacy strip + search-mirror ow_type bug fix.
 - 2026-05-18T06:45 — tasks-001.md generated via /sp-task (11 tasks across Phase 0–5; ~7h estimated).
 - 2026-05-18T06:30 — plan-001.md generated via /sp-plan (5 phases; reuses feature 001's layered API and search-mirror pattern; no new deps, no new helper module).
 - 2026-05-18T06:15 — spec-002.md generated via /sp-spec; 4 of 5 open questions clarified interactively (single --issuer-lei, --all default, no --group, no --limit-total).
