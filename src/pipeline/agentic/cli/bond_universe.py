@@ -42,6 +42,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
+
+# Load project-root .env so OPENFIGI_API_KEY (and other source credentials)
+# are available to the agentic chain when this CLI runs outside Docker.
+load_dotenv()
+
 from pipeline.agentic.agents import AGENTS
 from pipeline.agentic.persist import ALLOWED_UNIVERSE_STATUSES
 from pipeline.gold._firds import iter_issuer_records
