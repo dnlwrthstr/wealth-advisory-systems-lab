@@ -72,6 +72,14 @@ services:
       # Read-only would silently swallow the write and leave the cache
       # cold forever, which is what bit T011b on first deploy.
       - ./data/opensearch/golden/fund/patches:/app/data/opensearch/golden/fund/patches
+      # Read-only mount of the Claude Code skills directory.
+      # `fund_factsheet_skill` invokes the find-and-parse-factsheet skill
+      # via `claude-agent-sdk`; the SDK auto-discovers skills from
+      # `<cwd>/.claude/skills/` (cwd=/app inside the container). Without
+      # this mount the LLM call runs blind — Claude attempts the work
+      # without the skill's parsing playbook and rarely produces a
+      # usable patch.
+      - ./.claude/skills:/app/.claude/skills:ro
     ports:
       - "8003:8003"
     depends_on:

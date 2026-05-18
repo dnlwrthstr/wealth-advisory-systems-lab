@@ -1,0 +1,92 @@
+{
+  "doc": {
+    "totalExpenseRatio": 0.0038,
+    "fees": {
+      "ongoing": {
+        "totalExpenseRatio": 0.0038
+      },
+      "transactional": {
+        "entryLoad": 0.0,
+        "exitLoad": 0.0
+      },
+      "incentive": {
+        "performanceFee": 0.0
+      }
+    },
+    "transactionCostsPRIIPs": 0.0,
+    "riskRating": {
+      "sri": 4
+    },
+    "dealing": {
+      "dealingFrequency": "daily"
+    },
+    "serviceProviders": {
+      "depositary": {
+        "legalName": "CACEIS Bank, Luxembourg Branch"
+      },
+      "administrator": {
+        "legalName": "CACEIS Bank, Luxembourg Branch"
+      },
+      "auditor": {
+        "legalName": "Deloitte Audit"
+      }
+    },
+    "benchmarkName": "MSCI World Index (Net Total Return)",
+    "replicationMethod": "synthetic_swap",
+    "dividendPolicy": "ACCUMULATING",
+    "isCurrencyHedged": false,
+    "inceptionDate": "2009-06-16",
+    "shareClass": {
+      "inceptionDate": "2018-04-18"
+    },
+    "holdingsCount": 1310,
+    "holdingsAsOf": "2026-04-30",
+    "assetAllocation": {
+      "holdings": [
+        { "identifier": "US67066G1040", "name": "NVIDIA Corp",              "weight": 0.0591, "assetClass": "EQUITY" },
+        { "identifier": "US0378331005", "name": "Apple Inc",                "weight": 0.0461, "assetClass": "EQUITY" },
+        { "identifier": "US5949181045", "name": "Microsoft Corp",           "weight": 0.0348, "assetClass": "EQUITY" },
+        { "identifier": "US0231351067", "name": "Amazon.com Inc",           "weight": 0.0294, "assetClass": "EQUITY" },
+        { "identifier": "US02079K3059", "name": "Alphabet Inc Cl A",        "weight": 0.0237, "assetClass": "EQUITY" },
+        { "identifier": "US11135F1012", "name": "Broadcom Inc",             "weight": 0.0212, "assetClass": "EQUITY" },
+        { "identifier": "US02079K1079", "name": "Alphabet Inc Cl C",        "weight": 0.0196, "assetClass": "EQUITY" },
+        { "identifier": "US30303M1027", "name": "Meta Platforms Inc Cl A",  "weight": 0.0169, "assetClass": "EQUITY" },
+        { "identifier": "US88160R1014", "name": "Tesla Inc",                "weight": 0.0122, "assetClass": "EQUITY" },
+        { "identifier": "US46625H1005", "name": "JPMorgan Chase & Co",      "weight": 0.0098, "assetClass": "EQUITY" }
+      ],
+      "byRegion": [
+        { "region": "United States",  "percentage": 0.7200 },
+        { "region": "Japan",          "percentage": 0.0570 },
+        { "region": "United Kingdom", "percentage": 0.0364 },
+        { "region": "Canada",         "percentage": 0.0345 },
+        { "region": "France",         "percentage": 0.0249 },
+        { "region": "Switzerland",    "percentage": 0.0226 },
+        { "region": "Germany",        "percentage": 0.0224 },
+        { "region": "Australia",      "percentage": 0.0165 },
+        { "region": "Netherlands",    "percentage": 0.0130 },
+        { "region": "Spain",          "percentage": 0.0095 },
+        { "region": "Sweden",         "percentage": 0.0088 },
+        { "region": "Italy",          "percentage": 0.0082 },
+        { "region": "Hong Kong",      "percentage": 0.0050 },
+        { "region": "Others",         "percentage": 0.0213 }
+      ],
+      "bySector": [
+        { "sector": "Information Technology",   "percentage": 0.2806 },
+        { "sector": "Financials",               "percentage": 0.1605 },
+        { "sector": "Industrials",              "percentage": 0.1162 },
+        { "sector": "Consumer Discretionary",   "percentage": 0.0930 },
+        { "sector": "Communication Services",   "percentage": 0.0882 },
+        { "sector": "Health Care",              "percentage": 0.0868 },
+        { "sector": "Consumer Staples",         "percentage": 0.0528 },
+        { "sector": "Energy",                   "percentage": 0.0420 },
+        { "sector": "Materials",                "percentage": 0.0345 },
+        { "sector": "Utilities",                "percentage": 0.0271 },
+        { "sector": "Real Estate",              "percentage": 0.0182 }
+      ]
+    }
+  },
+  "_meta": {
+    "source": "Amundi PRIIPS KID for LU1681043599 published 2026-04-28 (api.fundinfo.com/document/dbe6bd0eded971ba35808b94cd7e3e96_209169/PRP_DE_en_LU1681043599_YES_2026-04-28.pdf) + Amundi monthly factsheet as of 2026-04-30 (api.fundinfo.com/document/b73bc2b5ddd629da2490a8ab05d7ddff_373725/MR_DE_de_LU1681043599_YES_2026-04-30.pdf). Holdings, byRegion and bySector reflect MSCI World benchmark exposure published by Amundi — the sub-fund is synthetic-swap-replicated (BNP Paribas counterparty per Primary Market Maker) so its economic exposure is the index.",
+    "sourceTimestamp": "2026-04-28T00:00:00Z"
+  }
+}
