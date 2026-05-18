@@ -56,7 +56,7 @@
 
 ### Phase 7 — UI surfacing [Priority: LOW]
 
-- [ ] **T013**: [M] Fund detail panel — surface `lookthroughProvenance`. (a) API passthrough sanity check via curl. (b) `frontend/src/instruments.jsx` ~line 797 (Fund Profile subpanel): add conditional `<Row label="Look-through" value={...} />` rendering `via {proxyIsin} ({confidence})` with `title` hover tooltip carrying proxy name, benchmark, asOfDate, confidence. (c) `frontend/src/instruments.jsx` ~line 1020 (holdings-table subtitle): append `" (via physical proxy)"` when any `holdings[i].source === 'physical_proxy'`. (d) Local UI smoke on LU1681043599 + regression on IE00B4L5Y983 (no badge). (e) Docker rebuild per CLAUDE.md frontend-only recipe. — 1h
+- [x] **T013**: [M] Fund detail panel — surface `lookthroughProvenance`. (a) API passthrough sanity check via curl. (b) `frontend/src/instruments.jsx` ~line 797 (Fund Profile subpanel): add conditional `<Row label="Look-through" value={...} />` rendering `via {proxyIsin} ({confidence})` with `title` hover tooltip carrying proxy name, benchmark, asOfDate, confidence. (c) `frontend/src/instruments.jsx` ~line 1020 (holdings-table subtitle): append `" (via physical proxy)"` when any `holdings[i].source === 'physical_proxy'`. (d) Local UI smoke on LU1681043599 + regression on IE00B4L5Y983 (no badge). (e) Docker rebuild per CLAUDE.md frontend-only recipe. — 1h
 
 ### Phase 8 — Final sign-off [Priority: MEDIUM]
 
