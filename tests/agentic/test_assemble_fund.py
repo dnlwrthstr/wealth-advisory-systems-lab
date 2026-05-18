@@ -98,3 +98,110 @@ def test_assemble_fund_unknown_umbrella_yields_no_data(monkeypatch):
     )
     # No usable source data → required fields remain gaps.
     assert "longName" in result.remaining_gaps
+
+
+# ---------------------------------------------------------------------------
+# Chain integration with fund_lookthrough_skill — spec-003 T011 coverage
+#
+# Verify the deep-merge merger from T002 lets the lookthrough skill
+# contribute `assetAllocation.holdings` on top of fund_yahoo's existing
+# `assetAllocation` buckets — the original blocker resolved by Option B.
+# ---------------------------------------------------------------------------
+
+def test_lookthrough_deep_merges_into_existing_assetAllocation(monkeypatch):
+    """fund_yahoo populates assetAllocation buckets; lookthrough fills holdings.
+
+    Old shallow merger would silently drop the holdings (parent dict non-empty).
+    With the T002 deep-merge upgrade, holdings land alongside the buckets.
+    """
+    from pipeline.agentic.sources import fund_lookthrough_skill as lookthrough_src
+
+    # Start from a current state that mimics what fund_yahoo + fund_factsheet
+    # would have populated by the time lookthrough's turn comes around.
+    current_after_upstream_sources = {
+        "longName": "Amundi MSCI World Swap UCITS ETF",
+        "replicationMethod": "synthetic_swap",
+        "benchmarkName": "MSCI World Index",
+        "benchmarkIdentifier": None,
+        "currencyOfDenomination": "EUR",
+        "assetAllocation": {
+            "bySector": [{"sector": "INFORMATION_TECHNOLOGY", "percentage": 0.28}],
+            "byAssetClass": [{"type": "equity", "percentage": 1.0}],
+        },
+    }
+
+    proxy = {
+        "goldenId": "FG-IE00B4L5Y983-XETR-001",
+        "longName": "iShares Core MSCI World UCITS ETF",
+        "identifierList": [{"identifier": "IE00B4L5Y983", "type": "isin"}],
+        "benchmarkName": "MSCI World Index",
+        "replicationMethod": "physical_sampling",
+        "assetAllocation": {"holdings": [
+            {"identifier": "AAPL", "name": "Apple", "weight": 0.04},
+        ]},
+        "holdingsAsOf": "2026-04-30",
+        "holdingsCount": 1400,
+    }
+
+    # The patch the lookthrough source returns
+    confidence = lookthrough_src._derive_confidence(current_after_upstream_sources, proxy)
+    patch_result = lookthrough_src._build_patch(proxy, confidence)
+
+    # Hand-merge to verify the deep-merge behaviour from T002
+    from pipeline.agentic.merger import merge_patch
+    written = merge_patch(current_after_upstream_sources, patch_result.patch)
+
+    aa = current_after_upstream_sources["assetAllocation"]
+    # Both pre-existing buckets and the patched holdings are visible:
+    assert aa["bySector"] == [{"sector": "INFORMATION_TECHNOLOGY", "percentage": 0.28}]
+    assert aa["byAssetClass"] == [{"type": "equity", "percentage": 1.0}]
+    assert len(aa["holdings"]) == 1
+    assert aa["holdings"][0]["source"] == "physical_proxy"
+    # Top-level fields written:
+    assert current_after_upstream_sources["holdingsCount"] == 1400
+    assert current_after_upstream_sources["lookthroughProvenance"]["proxyIsin"] == "IE00B4L5Y983"
+    assert current_after_upstream_sources["lookthroughProvenance"]["confidence"] == "medium"
+    # `written` reports the nested holdings path
+    assert "assetAllocation.holdings" in written
+
+
+def test_lookthrough_predicate_short_circuits_when_holdings_already_present(monkeypatch):
+    """If an earlier source populated holdings, lookthrough must skip — fill-empty-only safety."""
+    from pipeline.agentic.sources import fund_lookthrough_skill as lookthrough_src
+
+    current_with_direct_holdings = {
+        "replicationMethod": "synthetic_swap",
+        "benchmarkName": "MSCI World",
+        "assetAllocation": {
+            "holdings": [{"identifier": "AAPL", "name": "Apple", "weight": 0.04, "source": "direct"}],
+        },
+    }
+    # Predicate must short-circuit BEFORE the OpenSearch lookup
+    monkeypatch.setattr(lookthrough_src, "_opensearch_client",
+                        lambda: pytest.fail("OS searched despite populated holdings"))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(lookthrough_src, "_SDK_AVAILABLE", True)
+
+    result = lookthrough_src.fetch("isin", "LU1681043599", current_with_direct_holdings)
+    assert result is None
+
+
+def test_lookthrough_runs_after_factsheet_skill_in_planner_order():
+    """Both sources are llm_skill+medium; planner ranks by coverage.
+
+    fund_factsheet_skill covers more fields (16 produces) than
+    fund_lookthrough_skill (4 produces), so it gets picked first when both
+    are candidates. After factsheet runs, lookthrough's gap-eligibility
+    is independently evaluated on the next planner iteration.
+    """
+    from pipeline.agentic.registry import sources_for
+
+    sources = sources_for("fund")
+    by_id = {s.id: s for s in sources}
+    fs = by_id["fund_factsheet_skill"]
+    lt = by_id["fund_lookthrough_skill"]
+
+    # Same cost class, same confidence → ranking falls to coverage
+    assert fs.cost_class == lt.cost_class == "llm_skill"
+    assert fs.confidence == lt.confidence == "medium"
+    assert len(fs.produces_fields) > len(lt.produces_fields)
