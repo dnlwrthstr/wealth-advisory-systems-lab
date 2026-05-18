@@ -330,13 +330,17 @@ def build_universe_router(opensearch_client: Optional[Any]) -> APIRouter:
 
 
 def _split_identifiers(identifier_list: List[Dict[str, Any]]) -> tuple[Optional[str], Optional[str]]:
-    """Pull the first ISIN and ticker from an identifierList projection."""
+    """Pull the first ISIN and ticker from an identifierList projection.
+
+    Compares against the canonical `type` values from the ontology's
+    FinancialInstrumentIdentification enum (`isin`, `ticker_symbol`, …).
+    """
     isin: Optional[str] = None
     ticker: Optional[str] = None
     for entry in identifier_list:
         kind = (entry.get("type") or "").lower()
         if kind == "isin" and isin is None:
             isin = entry.get("identifier")
-        elif kind == "tickersymbol" and ticker is None:
+        elif kind == "ticker_symbol" and ticker is None:
             ticker = entry.get("identifier")
     return isin, ticker
