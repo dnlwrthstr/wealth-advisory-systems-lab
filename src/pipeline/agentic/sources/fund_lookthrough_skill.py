@@ -111,12 +111,251 @@ def fetch(
         )
         return None
 
-    # LLM ranking + patch construction land in T006.
-    log.debug(
-        "fund_lookthrough_skill: %d proxy candidates for %s; LLM ranking pending (T006)",
-        len(candidates), identifier_value,
+    pick = _pick_proxy_via_llm(current, candidates, identifier_value)
+    if pick is None:
+        return None
+
+    confidence = _derive_confidence(current, pick)
+    result = _build_patch(pick, confidence)
+    log.info(
+        "fund_lookthrough_skill resolved %s: proxy=%s confidence=%s holdings=%d",
+        identifier_value,
+        pick.get("identifierList", [{}])[0].get("identifier", "?")
+            if pick.get("identifierList") else pick.get("goldenId", "?"),
+        confidence,
+        len((pick.get("assetAllocation") or {}).get("holdings") or []),
+    )
+    return result
+
+
+# ---------------------------------------------------------------------------
+# LLM ranking
+# ---------------------------------------------------------------------------
+
+_LLM_PROMPT_TEMPLATE = """You are matching a synthetic (swap-based) ETF to a physically-replicated peer
+that tracks the same benchmark, so that the synthetic ETF's economic exposure
+can be approximated by the peer's holdings.
+
+Target fund (synthetic):
+{target}
+
+Candidate physical peers (ranked by holdings recency):
+{candidates}
+
+Return ONLY a JSON object with these keys, no prose:
+  picked_isin   — the ISIN of the best peer from the candidate list
+  rationale     — one sentence (max 140 chars) explaining the choice
+
+Prefer exact benchmark identifier matches over name matches; among ties,
+prefer the most recent `holdingsAsOf`. If no candidate is a reasonable
+peer, pick the closest one anyway — confidence will be derived separately.
+"""
+
+
+def _pick_proxy_via_llm(
+    current: Dict[str, Any],
+    candidates: List[Dict[str, Any]],
+    target_isin: str,
+) -> Optional[Dict[str, Any]]:
+    """Ask the LLM to pick the single best proxy. Returns the candidate dict.
+
+    Output contract is small + strict: `{picked_isin, rationale}`. The LLM
+    never emits confidence — that's derived deterministically post-hoc.
+    """
+    target_summary = {
+        "isin": target_isin,
+        "longName": current.get("longName"),
+        "benchmarkName": current.get("benchmarkName"),
+        "benchmarkIdentifier": current.get("benchmarkIdentifier"),
+        "replicationMethod": current.get("replicationMethod"),
+        "currency": current.get("currencyOfDenomination"),
+    }
+    candidate_summaries = [
+        {
+            "isin": _isin_of(c),
+            "goldenId": c.get("goldenId"),
+            "longName": c.get("longName"),
+            "benchmarkName": c.get("benchmarkName"),
+            "benchmarkIdentifier": c.get("benchmarkIdentifier"),
+            "replicationMethod": c.get("replicationMethod"),
+            "holdingsAsOf": c.get("holdingsAsOf"),
+            "holdingsCount": c.get("holdingsCount"),
+        }
+        for c in candidates
+    ]
+
+    prompt = _LLM_PROMPT_TEMPLATE.format(
+        target=json.dumps(target_summary, indent=2),
+        candidates=json.dumps(candidate_summaries, indent=2),
+    )
+
+    try:
+        text = _run_sdk(prompt)
+    except Exception as exc:  # noqa: BLE001 — SDK errors vary
+        log.warning(
+            "fund_lookthrough_skill: LLM call failed for %s: %s (reason=llm_unavailable)",
+            target_isin, exc,
+        )
+        return None
+
+    parsed = _parse_llm_pick(text)
+    if not parsed or not parsed.get("picked_isin"):
+        log.warning(
+            "fund_lookthrough_skill: LLM returned malformed JSON for %s: %r (reason=llm_invalid_pick)",
+            target_isin, (text or "")[:200],
+        )
+        return None
+
+    picked_isin = parsed["picked_isin"]
+    for c in candidates:
+        if _isin_of(c) == picked_isin:
+            return c
+
+    log.warning(
+        "fund_lookthrough_skill: LLM picked %s for %s but it's not in the candidate list (reason=llm_invalid_pick)",
+        picked_isin, target_isin,
     )
     return None
+
+
+def _run_sdk(prompt: str) -> str:
+    """Invoke claude-agent-sdk and return the concatenated text output."""
+    import asyncio
+
+    async def _go() -> str:
+        chunks: List[str] = []
+        options = ClaudeAgentOptions(cwd=str(Path.cwd()))
+        async for message in _sdk_query(prompt=prompt, options=options):
+            # Each message carries a `.content` list of blocks; concatenate
+            # any text blocks. Defensive against shape drift.
+            content = getattr(message, "content", None) or []
+            for block in content:
+                text = getattr(block, "text", None)
+                if isinstance(text, str):
+                    chunks.append(text)
+        return "".join(chunks)
+
+    return asyncio.run(_go())
+
+
+def _parse_llm_pick(text: str) -> Optional[Dict[str, Any]]:
+    """Extract the JSON object the LLM was asked to emit.
+
+    The model may wrap the JSON in backticks or include prose around it; be
+    tolerant — find the first balanced `{...}` block and json.loads it.
+    """
+    if not text:
+        return None
+    # Find first '{' and the matching close. Bounded by lenient indexing —
+    # this is a tiny payload, no need for a full parser.
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    for i, ch in enumerate(text[start:], start=start):
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start : i + 1])
+                except json.JSONDecodeError:
+                    return None
+    return None
+
+
+def _isin_of(record: Dict[str, Any]) -> Optional[str]:
+    """Extract the ISIN from a FundGolden record's identifierList."""
+    for entry in record.get("identifierList") or []:
+        if (entry.get("type") or "").lower() == "isin":
+            return entry.get("identifier")
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Post-hoc confidence derivation (deterministic — no LLM input)
+# ---------------------------------------------------------------------------
+
+def _derive_confidence(current: Dict[str, Any], picked: Dict[str, Any]) -> str:
+    """Classify match quality from objective fields. high | medium | low.
+
+    Per spec-003 resolution 7: the LLM does NOT emit confidence. The rating
+    is computed deterministically so it's reproducible from the candidate
+    set and immune to LLM creativity.
+    """
+    cur_id = current.get("benchmarkIdentifier")
+    pick_id = picked.get("benchmarkIdentifier")
+    if cur_id and pick_id and cur_id == pick_id:
+        return "high"
+
+    cur_name = (current.get("benchmarkName") or "").strip().lower()
+    pick_name = (picked.get("benchmarkName") or "").strip().lower()
+    if cur_name and pick_name and cur_name == pick_name:
+        return "medium"
+
+    return "low"
+
+
+# ---------------------------------------------------------------------------
+# Patch construction
+# ---------------------------------------------------------------------------
+
+def _build_patch(picked: Dict[str, Any], confidence: str) -> SourceFetchResult:
+    """Compose the SourceFetchResult to hand back to the planner.
+
+    Patch shape (top-level keys the deep-merger writes into ``current``):
+      * ``assetAllocation`` — only the ``holdings`` sub-key is supplied;
+        the merger deep-merges into any pre-existing sector / asset-class
+        / region buckets from fund_yahoo.
+      * ``holdingsCount``, ``holdingsAsOf`` — flat top-level scalars.
+      * ``lookthroughProvenance`` — the proxy lineage block.
+
+    Every holdings row is deep-copied and stamped ``source: physical_proxy``
+    so risk consumers can filter on it.
+    """
+    raw_holdings = (picked.get("assetAllocation") or {}).get("holdings") or []
+    stamped_holdings: List[Dict[str, Any]] = []
+    for row in raw_holdings:
+        new_row = dict(row)
+        new_row["source"] = "physical_proxy"
+        stamped_holdings.append(new_row)
+
+    holdings_as_of = picked.get("holdingsAsOf")
+    proxy_isin = _isin_of(picked)
+
+    patch: Dict[str, Any] = {
+        "assetAllocation": {"holdings": stamped_holdings},
+        "holdingsCount": picked.get("holdingsCount") or len(stamped_holdings),
+        "lookthroughProvenance": {
+            "method": "physical_proxy",
+            "proxyIsin": proxy_isin,
+            "proxyGoldenId": picked.get("goldenId"),
+            "proxyName": picked.get("longName"),
+            "benchmarkIdentifier": picked.get("benchmarkIdentifier"),
+            "benchmarkName": picked.get("benchmarkName"),
+            "asOfDate": holdings_as_of,
+            "confidence": confidence,
+        },
+    }
+    if holdings_as_of:
+        patch["holdingsAsOf"] = holdings_as_of
+
+    sot_rows = [
+        {
+            "fieldGroup": "assetAllocation.holdings",
+            "source": "fund_lookthrough_skill",
+            "method": "physical_proxy",
+            "proxyIsin": proxy_isin,
+            "confidence": confidence,
+        },
+        {"fieldGroup": "holdingsCount", "source": "fund_lookthrough_skill"},
+        {"fieldGroup": "lookthroughProvenance", "source": "fund_lookthrough_skill"},
+    ]
+    if holdings_as_of:
+        sot_rows.append({"fieldGroup": "holdingsAsOf", "source": "fund_lookthrough_skill"})
+
+    return SourceFetchResult(patch=patch, source_of_truth_rows=sot_rows)
 
 
 # ---------------------------------------------------------------------------
