@@ -42,8 +42,8 @@ class CreditSupport(str, Enum):
     """
     Credit support or collateral agreement governing the FX forward.
     """
-    csaAgreement = "csa_agreement"
-    marginAgreement = "margin_agreement"
+    csa_agreement = "csa_agreement"
+    margin_agreement = "margin_agreement"
     other = "other"
 
 class ContractSize(RootModel):
@@ -102,16 +102,16 @@ class DayCountBasis(str, Enum):
     """
     act_360 = "act_360"
     act_365 = "act_365"
-    act_actIcma = "act_act_icma"
-    act_actIsda = "act_act_isda"
-    act_actAfb = "act_act_afb"
-    act_365L = "act_365l"
+    act_act_icma = "act_act_icma"
+    act_act_isda = "act_act_isda"
+    act_act_afb = "act_act_afb"
+    act_365l = "act_365l"
     bus_252 = "bus_252"
     u30_360 = "u30_360"
-    u30E_360Icma = "u30e_360_icma"
-    u30E_360Isda = "u30e_360_isda"
-    u30E_360 = "u30e_360"
-    u30U_360 = "u30u_360"
+    u30e_360_icma = "u30e_360_icma"
+    u30e_360_isda = "u30e_360_isda"
+    u30e_360 = "u30e_360"
+    u30u_360 = "u30u_360"
 
 class InterestRate(BaseModel):
     """
@@ -377,9 +377,9 @@ class PartnerType(str, Enum):
     """
     Type of the partner (e.g., natural person, legal entity).
     """
-    naturalPerson = "natural_person"
-    legalEntity = "legal_entity"
-    advisoryUnit = "advisory_unit"
+    natural_person = "natural_person"
+    legal_entity = "legal_entity"
+    advisory_unit = "advisory_unit"
 
 class PartnerStatus(str, Enum):
     """
@@ -653,7 +653,7 @@ class IssuanceStatus(str, Enum):
     The lifecycle state of a security issuance.
     """
     proposed = "proposed"
-    bookBuilding = "book_building"
+    book_building = "book_building"
     active = "active"
     matured = "matured"
     redeemed = "redeemed"
@@ -692,20 +692,20 @@ class CommonErrorType(str, Enum):
     """
     Error Types for CommonErrorResponse.
     """
-    problems_INVALID_PAYLOAD = "/problems/invalid_payload"
-    problems_MALFORMED_PAYLOAD = "/problems/malformed_payload"
-    problems_INVALID_TOKEN = "/problems/invalid_token"
-    problems_EXPIRED_TOKEN = "/problems/expired_token"
-    problems_INSUFFICIENT_PRIVILEGES = "/problems/insufficient_privileges"
-    problems_NO_ACCESS_TO_RESOURCE = "/problems/no_access_to_resource"
-    problems_RESOURCE_DOES_NOT_EXIST = "/problems/resource_does_not_exist"
-    problems_RESOURCE_NOT_READY = "/problems/resource_not_ready"
-    problems_RESOURCE_TOO_LARGE = "/problems/resource_too_large"
-    problems_WRONG_METHOD = "/problems/wrong_method"
-    problems_OPERATION_NOT_ALLOWED = "/problems/operation_not_allowed"
-    problems_TECHNICAL_ERROR = "/problems/technical_error"
-    problems_NOT_IMPLEMENTED = "/problems/not_implemented"
-    problems_SERVICE_UNAVAILABLE = "/problems/service_unavailable"
+    problems_invalid_payload = "/problems/invalid_payload"
+    problems_malformed_payload = "/problems/malformed_payload"
+    problems_invalid_token = "/problems/invalid_token"
+    problems_expired_token = "/problems/expired_token"
+    problems_insufficient_privileges = "/problems/insufficient_privileges"
+    problems_no_access_to_resource = "/problems/no_access_to_resource"
+    problems_resource_does_not_exist = "/problems/resource_does_not_exist"
+    problems_resource_not_ready = "/problems/resource_not_ready"
+    problems_resource_too_large = "/problems/resource_too_large"
+    problems_wrong_method = "/problems/wrong_method"
+    problems_operation_not_allowed = "/problems/operation_not_allowed"
+    problems_technical_error = "/problems/technical_error"
+    problems_not_implemented = "/problems/not_implemented"
+    problems_service_unavailable = "/problems/service_unavailable"
 
 class CommonErrorResponse(BaseModel):
     """
@@ -818,9 +818,9 @@ class TransactionType(str, Enum):
     interest = "interest"
     fee = "fee"
     tax = "tax"
-    transferIn = "transfer_in"
-    transferOut = "transfer_out"
-    corporateAction = "corporate_action"
+    transfer_in = "transfer_in"
+    transfer_out = "transfer_out"
+    corporate_action = "corporate_action"
     other = "other"
 
 class PlaceOfTrade(BaseModel):
@@ -1567,7 +1567,7 @@ class InstrumentSearch(BaseModel):
     """
     documentId: str = Field(..., description="goldenId of the source per-security record.")
     scope: str = Field(..., description="Which per-security index holds the canonical record.")
-    ow_type: Optional[str] = Field(None, description="OpenWealth FinancialInstrumentType (`equity`, `simple_bond`, `fund`) — what the frontend type tabs filter on. ")
+    ow_type: Optional[str] = Field(None, description="OpenWealth FinancialInstrumentType (`equity`, `simpleBond`, `fund`) — what the frontend type tabs filter on. ")
     longName: str = Field(..., description="Full instrument name.")
     shortName: Optional[str] = Field(None, description="Short display name.")
     assetClass: str = Field(..., description="Resolved asset-class label.")
@@ -1588,7 +1588,7 @@ class InstrumentSearch(BaseModel):
     issuerRating: Optional[str] = Field(None, description="Bond — issuer's primary credit-rating notation (e.g. \"BBB-\"). Taken from the first entry of `issuer.creditProfile.issuerRatings`. ")
     subFundName: Optional[str] = Field(None, description="Fund — sub-fund name (strategy level).")
     umbrellaName: Optional[str] = Field(None, description="Fund — umbrella legal name (issuer of the share class).")
-    fundSubType: Optional[str] = Field(None, description="Fund — sub-type (etf, openEndedMutualFund, …).")
+    fundSubType: Optional[str] = Field(None, description="Fund — sub-type (etf, open_ended_mutual_fund, …).")
     dividendPolicy: Optional[str] = Field(None, description="Fund — DISTRIBUTING / ACCUMULATING.")
     totalExpenseRatio: Optional[float] = Field(None, description="Fund — TER as a decimal fraction (0.002 = 0.20 %).")
     primaryAssetClassExposure: Optional[str] = Field(None, description="Fund — dominant underlying exposure (equity / fixedIncome / mixed_balanced / …).")
@@ -1719,6 +1719,7 @@ class FundGolden(BaseModel):
     serviceProviders: Optional[ServiceProviders] = Field(None, description="Depositary, administrator, transfer agent, auditor, promoter.")
     assetAllocation: Optional[AssetAllocation] = Field(None, description="Allocation buckets and look-through top holdings.")
     holdingsAsOf: Optional[date] = Field(None, description="As-of date of the holdings / allocation snapshot.")
+    lookthroughProvenance: Optional[LookthroughProvenance] = Field(None, description="Provenance metadata when `assetAllocation.holdings` is proxy-derived. Null when all holdings carry `source: direct` (the standard case). ")
     portfolioTurnoverPctAnnual: Optional[float] = Field(None, description="Annualised portfolio turnover ratio (decimal).")
     currencyAllocation: Optional[List[Dict[str, Any]]] = Field(None, description="Allocation of fund holdings by underlying currency.")
     performance: Optional[PerformanceSnapshot] = Field(None, description="Standard performance and risk-adjusted metrics for the share class.")
@@ -2327,6 +2328,21 @@ class Holding(BaseModel):
     name: str = Field(..., description="Human-readable name of the underlying holding.")
     weight: float = Field(..., description="Weight of this holding as a decimal (e.g., 0.071 for 7.1%).")
     assetClass: Optional[str] = Field(None, description="Asset class of the holding (e.g., EQUITY, FIXED_INCOME, DERIVATIVE, CASH).")
+    source: Optional[str] = Field(None, description="Provenance of this row. `direct` (default for back-compat) = from the issuer's own holdings page or factsheet. `physical_proxy` = copied from a physically-replicated ETF tracking the same benchmark (used for swap-based ETFs whose own holdings page returns the substitute basket, not the economic exposure). The other values are reserved for future strategies. ")
+
+class LookthroughProvenance(BaseModel):
+    """
+    Provenance metadata for proxy-derived look-through holdings. Populated only when `assetAllocation.holdings` carries rows whose `source` is not `direct`. Null otherwise.
+
+    """
+    method: str = Field(..., description="Strategy used to derive look-through holdings indirectly.")
+    proxyIsin: str = Field(..., description="ISIN of the proxy fund whose holdings were copied.")
+    proxyGoldenId: Optional[str] = Field(None, description="goldenId of the proxy fund record in pms_golden_fund.")
+    proxyName: Optional[str] = Field(None, description="Human-readable name of the proxy fund.")
+    benchmarkIdentifier: Optional[str] = Field(None, description="Identifier of the benchmark linking target fund and proxy.")
+    benchmarkName: str = Field(..., description="Name of the benchmark linking target fund and proxy.")
+    asOfDate: date = Field(..., description="Snapshot date of the proxy's holdings (carried through verbatim).")
+    confidence: str = Field(..., description="Match quality. `high` = identifier exact match; `medium` = benchmark name match but different identifier (variant index); `low` = fuzzy / substring name match only. ")
 
 class MultiBarrierReverseConvertible(FinancialInstrument):
     """

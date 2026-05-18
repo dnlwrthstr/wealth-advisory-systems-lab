@@ -183,6 +183,18 @@ fields:
     kind: source
     description: Snapshot date of the holdings list.
 
+  lookthroughProvenance:
+    requirement: important
+    kind: source
+    description: >
+      Proxy lineage when assetAllocation.holdings is derived from a
+      physical-equivalent ETF (synthetic / swap-based fund look-through).
+    notes: >
+      Populated only by fund_lookthrough_skill. Tier is `important` so the
+      planner picks the source — the source's own predicate then short-
+      circuits cheaply on non-eligible funds (physical replication, holdings
+      already populated, no benchmark).
+
   portfolioTurnoverPctAnnual:
     requirement: optional
     kind: source

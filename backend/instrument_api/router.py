@@ -41,6 +41,16 @@ class AssembleRequest(BaseModel):
             "Slow and costs money — opt in per request."
         ),
     )
+    allowed_llm_skills: Optional[list[str]] = Field(
+        default=None,
+        description=(
+            "Optional whitelist of llm_skill source IDs. When `invoke_llm_skills` "
+            "is true and this list is set, only the named llm_skill sources "
+            "are eligible (e.g. ['fund_factsheet_skill'] runs factsheet but "
+            "skips fund_lookthrough_skill). null = no restriction (all "
+            "llm_skill sources eligible)."
+        ),
+    )
 
 
 class _ChainedIssuer(BaseModel):
@@ -163,6 +173,11 @@ def build_router(
         identifier = {"kind": body.identifier.kind, "value": body.identifier.value}
         budget = body.budget or 10
         max_cost_class = "llm_skill" if body.invoke_llm_skills else "web_fetch"
+        allowed_llm_skills = (
+            set(body.allowed_llm_skills)
+            if body.invoke_llm_skills and body.allowed_llm_skills
+            else None
+        )
 
         if body.persist:
             if opensearch_client is None:
@@ -180,6 +195,7 @@ def build_router(
                     identifier=identifier,
                     budget=budget,
                     max_cost_class=max_cost_class,
+                    allowed_llm_skills=allowed_llm_skills,
                 )
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -193,6 +209,7 @@ def build_router(
                     identifier=identifier,
                     budget=budget,
                     max_cost_class=max_cost_class,
+                    allowed_llm_skills=allowed_llm_skills,
                 )
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -795,6 +795,24 @@ function FundDetail({ source }) {
           <Row label="Share class type" value={val(shareClass.type)} />
           <Row label="Benchmark" value={val(source.benchmarkName)} />
           <Row label="Replication" value={val(source.replicationMethod)} />
+          {source.lookthroughProvenance && (
+            <Row
+              label="Look-through"
+              value={
+                <span
+                  className="lookthrough-badge"
+                  title={[
+                    `Proxy: ${source.lookthroughProvenance.proxyName ?? source.lookthroughProvenance.proxyIsin}`,
+                    `Benchmark: ${source.lookthroughProvenance.benchmarkName ?? "—"}`,
+                    `As of: ${source.lookthroughProvenance.asOfDate ?? "—"}`,
+                    `Confidence: ${source.lookthroughProvenance.confidence ?? "—"}`,
+                  ].join("\n")}
+                >
+                  via {source.lookthroughProvenance.proxyIsin} ({source.lookthroughProvenance.confidence})
+                </span>
+              }
+            />
+          )}
           <Row label="Rebalance" value={val(source.rebalanceFrequency)} />
           <Row label="Legal framework" value={val(source.legalFramework)} />
           <Row label="Legal structure" value={val(source.legalStructure)} />
@@ -1017,11 +1035,15 @@ function ProvenancePanel({ recordMeta }) {
 function HoldingsPanel({ source, allocation }) {
   const holdings = (allocation?.holdings || []).filter((h) => h.weight > 0);
   const totalCount = source?.holdingsCount;
-  const subtitle = holdings.length
+  const hasProxyRows = holdings.some((h) => h.source === "physical_proxy");
+  const baseSubtitle = holdings.length
     ? (totalCount && totalCount > holdings.length
         ? `${holdings.length} of ${totalCount}`
         : `${holdings.length}`)
     : "";
+  const subtitle = baseSubtitle && hasProxyRows
+    ? `${baseSubtitle} · via physical proxy`
+    : baseSubtitle;
   return (
     <Subpanel icon="⛁" title={`Holdings (Look-through)${subtitle ? ` · ${subtitle}` : ""}`} span={2}>
       {holdings.length === 0 ? (

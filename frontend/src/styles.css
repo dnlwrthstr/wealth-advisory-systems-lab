@@ -224,6 +224,17 @@ h3 {
   color: #8f291b;
 }
 
+.lookthrough-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f1ede2;
+  color: #6a5b2b;
+  font-size: 0.82rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  cursor: help;
+}
+
 .toolbar {
   align-items: flex-end;
   margin-bottom: 18px;

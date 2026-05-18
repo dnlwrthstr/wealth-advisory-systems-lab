@@ -536,13 +536,7 @@
             "dynamic": false,
             "properties": {
               "type": {
-                "type": "text",
-                "fields": {
-                  "keyword": {
-                    "type": "keyword",
-                    "ignore_above": 256
-                  }
-                }
+                "type": "keyword"
               },
               "percentage": {
                 "type": "double"
@@ -618,6 +612,9 @@
                     "ignore_above": 256
                   }
                 }
+              },
+              "source": {
+                "type": "keyword"
               }
             }
           }
@@ -626,6 +623,67 @@
       "holdingsAsOf": {
         "type": "date",
         "format": "yyyy-MM-dd"
+      },
+      "lookthroughProvenance": {
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "method": {
+            "type": "keyword"
+          },
+          "proxyIsin": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "proxyGoldenId": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "proxyName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "benchmarkIdentifier": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "benchmarkName": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "asOfDate": {
+            "type": "date",
+            "format": "yyyy-MM-dd"
+          },
+          "confidence": {
+            "type": "keyword"
+          }
+        }
       },
       "portfolioTurnoverPctAnnual": {
         "type": "double"

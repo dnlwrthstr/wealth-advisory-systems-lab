@@ -174,12 +174,31 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Cap the number of share-classes processed per umbrella (useful for smoke testing).",
     )
     parser.add_argument(
-        "--enable-factsheet-skill",
+        "--enable-llm-skills",
         action="store_true",
         help=(
-            "Opt into the find-and-parse-factsheet LLM skill "
-            "(max_cost_class=llm_skill). Default caps at web_fetch — no LLM tokens spend."
+            "Open the cost-class gate to llm_skill, making LLM-backed sources "
+            "eligible (currently: fund_factsheet_skill, fund_lookthrough_skill). "
+            "Default off; batch loads stay free of LLM cost."
         ),
+    )
+    parser.add_argument(
+        "--llm-skills",
+        type=lambda s: {x.strip() for x in s.split(",") if x.strip()},
+        default=None,
+        metavar="ID1,ID2,...",
+        help=(
+            "Comma-separated list of llm_skill source IDs to allow. Only "
+            "effective when --enable-llm-skills is set. Defaults to all "
+            "eligible sources. Example: --llm-skills "
+            "fund_factsheet_skill,fund_lookthrough_skill."
+        ),
+    )
+    parser.add_argument(
+        "--enable-factsheet-skill",
+        action="store_true",
+        dest="enable_factsheet_skill_alias",
+        help="DEPRECATED alias for --enable-llm-skills. Will be removed in a future release.",
     )
     parser.add_argument(
         "--dry-run",
@@ -229,6 +248,7 @@ def _assemble_one(
     isin: str,
     universe_status: str,
     max_cost_class: str,
+    allowed_llm_skills: Optional[set[str]],
     dry_run: bool,
 ) -> _Outcome:
     """Assemble + persist + mirror one share-class ISIN."""
@@ -245,6 +265,7 @@ def _assemble_one(
             identifier={"kind": "isin", "value": isin},
             status=universe_status,
             max_cost_class=max_cost_class,
+            allowed_llm_skills=allowed_llm_skills,
         )
     except Exception as exc:  # noqa: BLE001 — broad: any source can raise
         outcome.status = "failed"
@@ -284,6 +305,7 @@ def _process_umbrella(
     umbrella: Dict[str, Any],
     universe_status: str,
     max_cost_class: str,
+    allowed_llm_skills: Optional[set[str]],
     dry_run: bool,
     limit_per_umbrella: Optional[int],
 ) -> _UmbrellaReport:
@@ -321,6 +343,7 @@ def _process_umbrella(
             isin=isin,
             universe_status=universe_status,
             max_cost_class=max_cost_class,
+            allowed_llm_skills=allowed_llm_skills,
             dry_run=dry_run,
         )
         ur.outcomes.append(outcome)
@@ -350,7 +373,17 @@ def run(argv: Optional[List[str]] = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
-    max_cost_class = COST_CLASS_WITH_SKILL if args.enable_factsheet_skill else COST_CLASS_DEFAULT
+    # Reconcile the new --enable-llm-skills flag with the deprecated
+    # --enable-factsheet-skill alias. Either flag opens the cost gate;
+    # the alias additionally emits a one-shot deprecation warning.
+    if args.enable_factsheet_skill_alias and not args.enable_llm_skills:
+        log.warning(
+            "--enable-factsheet-skill is deprecated; use --enable-llm-skills"
+        )
+    enable_llm_skills = args.enable_llm_skills or args.enable_factsheet_skill_alias
+
+    max_cost_class = COST_CLASS_WITH_SKILL if enable_llm_skills else COST_CLASS_DEFAULT
+    allowed_llm_skills = args.llm_skills if (enable_llm_skills and args.llm_skills) else None
 
     umbrellas = load_issuers(args.umbrellas)
     umbrellas = _filter_umbrellas(umbrellas, args.umbrella_lei)
@@ -387,6 +420,7 @@ def run(argv: Optional[List[str]] = None) -> int:
             umbrella=umbrella,
             universe_status=args.universe_status,
             max_cost_class=max_cost_class,
+            allowed_llm_skills=allowed_llm_skills,
             dry_run=args.dry_run,
             limit_per_umbrella=args.limit_per_umbrella,
         )

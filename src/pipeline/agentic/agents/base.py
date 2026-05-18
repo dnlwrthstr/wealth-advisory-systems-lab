@@ -35,12 +35,14 @@ class BaseAgent:
         *,
         budget: Optional[int] = None,
         max_cost_class: Optional[str] = None,
+        allowed_llm_skills: Optional[set[str]] = None,
     ) -> AssembleResult:
         return assemble_golden(
             scope=cls.scope,
             identifier=identifier,
             budget=budget if budget is not None else cls.default_budget,
             max_cost_class=max_cost_class or cls.default_max_cost_class,
+            allowed_llm_skills=allowed_llm_skills,
         )
 
     @classmethod
@@ -52,6 +54,7 @@ class BaseAgent:
         status: str,
         budget: Optional[int] = None,
         max_cost_class: Optional[str] = None,
+        allowed_llm_skills: Optional[set[str]] = None,
     ) -> Dict[str, Any]:
         return assemble_and_persist(
             client=client,
@@ -59,6 +62,7 @@ class BaseAgent:
             identifier=identifier,
             budget=budget if budget is not None else cls.default_budget,
             max_cost_class=max_cost_class or cls.default_max_cost_class,
+            allowed_llm_skills=allowed_llm_skills,
             universe_status=status,
         )
 

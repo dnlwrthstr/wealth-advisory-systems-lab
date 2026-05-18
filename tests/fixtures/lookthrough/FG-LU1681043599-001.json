@@ -1,0 +1,35 @@
+{
+  "doc": {
+    "assetAllocation": {
+      "holdings": [
+        {
+          "identifier": "AAPL",
+          "name": "Apple Inc.",
+          "weight": 0.04,
+          "source": "physical_proxy"
+        },
+        {
+          "identifier": "MSFT",
+          "name": "Microsoft Corp.",
+          "weight": 0.035,
+          "source": "physical_proxy"
+        }
+      ]
+    },
+    "holdingsCount": 2,
+    "holdingsAsOf": "2026-04-30",
+    "lookthroughProvenance": {
+      "method": "physical_proxy",
+      "proxyIsin": "IE00BFM6T921",
+      "proxyGoldenId": "FG-IE00BFM6T921-XETR-001",
+      "proxyName": "Curator-Picked Physical Proxy",
+      "benchmarkName": "MSCI World Index",
+      "asOfDate": "2026-04-30",
+      "confidence": "high"
+    }
+  },
+  "_meta": {
+    "source": "lookthrough-skill-cache",
+    "sourceTimestamp": "2026-05-18T17:00:00Z"
+  }
+}

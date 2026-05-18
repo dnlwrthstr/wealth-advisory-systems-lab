@@ -1,0 +1,20 @@
+id: fund_lookthrough_skill
+description: |
+  Resolves look-through holdings for synthetic / swap-based fund ETFs by
+  reasoning over physically-replicated peers in pms_golden_fund. Fires
+  only when current holdings are empty AND replicationMethod is
+  synthetic_swap AND a benchmark identifier or name is set. Costs one
+  LLM call to rank candidates; pre-curated patches under
+  data/opensearch/golden/fund/patches/lookthrough/ bypass the call.
+module: pipeline.agentic.sources.fund_lookthrough_skill
+entrypoint: fetch
+covers: [fund]
+requires_identifier:
+  any_of: [isin]
+produces_fields:
+  - assetAllocation
+  - holdingsCount
+  - holdingsAsOf
+  - lookthroughProvenance
+confidence: medium
+cost_class: llm_skill

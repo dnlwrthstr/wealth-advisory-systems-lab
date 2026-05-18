@@ -5,17 +5,26 @@
 - **SpecPulse Version**: 2.7.5
 - **AI Assistant**: Not configured
 
-## Active Feature: 003-agentic-fund-universe
+## Active Feature: 003-agentic-fund-universe (extension — lookthrough skill)
 - **ID**: 003
 - **Name**: agentic-fund-universe
-- **One-liner**: build instrument universe -> agentic pipeline for funds
-- **Branch**: feat/agentic-fund-universe
-- **Status**: ✅ DONE — all 11 tasks complete; ready for commit + PR.
-- **Created**: 2026-05-18T10:30:00Z
-- **Completed**: 2026-05-18 (single-day feature; all phases wrapped)
+- **One-liner**: extend agentic fund chain with synthetic-ETF look-through via physical proxy
+- **Branch**: feat/fund-lookthrough-skill (off main, post-PR-#4)
+- **Status**: 📝 TASKS — spec-003 + plan-002 + tasks-002 drafted; awaiting /sp-execute
+- **Created**: 2026-05-18T15:50:00Z
+- **Spec (current)**: .specpulse/specs/003-agentic-fund-universe/spec-003.md (supersedes spec-002.md)
+- **Spec (prior, implemented + merged via PR #4)**: .specpulse/specs/003-agentic-fund-universe/spec-002.md
+- **Plan (current)**: .specpulse/plans/003-agentic-fund-universe/plan-002.md (8 phases, ~9.5h, supersedes plan-001.md)
+- **Plan (prior, executed)**: .specpulse/plans/003-agentic-fund-universe/plan-001.md
+- **Tasks (current)**: .specpulse/tasks/003-agentic-fund-universe/tasks-002.md (13 tasks T001–T013, strict serial; ~9.5h)
+- **Tasks (prior, completed)**: .specpulse/tasks/003-agentic-fund-universe/tasks-001.md (11/11 done)
+
+## Completed Sub-Feature: 003-agentic-fund-universe (spec-002)
+- **Branch**: feat/agentic-fund-universe (merged + deleted)
+- **PR**: https://github.com/dnlwrthstr/wealth-advisory-systems-lab/pull/4
 - **Spec**: .specpulse/specs/003-agentic-fund-universe/spec-002.md (DoD ticked)
-- **Plan**: .specpulse/plans/003-agentic-fund-universe/plan-001.md (with Phase 0 findings addendum)
-- **Tasks**: .specpulse/tasks/003-agentic-fund-universe/tasks-001.md (11/11; 100%)
+- **Plan**: .specpulse/plans/003-agentic-fund-universe/plan-001.md
+- **Tasks**: .specpulse/tasks/003-agentic-fund-universe/tasks-001.md (11/11)
 
 ## Previous Features
 
@@ -34,6 +43,13 @@
 - **Tasks**: .specpulse/tasks/001-agentic-equity-universe/tasks-001.md (17/17)
 
 ## Recent Activity
+- 2026-05-18T16:50 — tasks-002.md generated via /sp-task. 13 tasks (T001–T013), strict serial chain, ~9.5h total. Each task ≤ 2h, scoped to a single phase and concrete file set. Critical path: ontology → source module → registry → per-skill plumbing → tests → live smoke → docs → UI → sign-off.
+- 2026-05-18T16:35 — All 4 open questions resolved. spec-003 gains Clarifications 5–7 + AC-6b. plan-002 Phase 3 restructured to absorb per-skill control plumbing (`allowed_llm_skills` threaded through agent/assemble/planner; `--enable-llm-skills` + `--llm-skills` flag pair on the CLI; `--enable-factsheet-skill` deprecated alias). 8 phases total, ~9.5h estimated.
+- 2026-05-18T16:20 — plan-002.md Phase 7 added (UI surfacing of `lookthroughProvenance` in fund detail panel + holdings table cue). 8 phases, ~9h.
+- 2026-05-18T16:10 — plan-002.md generated via /sp-plan; supersedes plan-001.md. 7 phases (~8h), targets spec-003 scope (synthetic-ETF look-through via physical-equivalent proxy). New source `fund_lookthrough_skill.py`, ontology additions (`Holding.source` enum + `LookthroughProvenance` value object on FundGolden), no new requirements.txt deps.
+- 2026-05-18T15:55 — spec-003.md drafted via /sp-spec; supersedes spec-002.md. Adds `fund_lookthrough_skill` (5th source) for synthetic-ETF look-through via physical-equivalent ETF proxy. Triggers only when `holdings` empty + `replicationMethod ∈ {synthetic, swap}`. Ontology gains `holdings[].source` enum and `lookthroughProvenance` block. Reuses `--enable-factsheet-skill` cost gate. All 4 design questions resolved (recommended picks across the board).
+- 2026-05-18T15:50 — Branch `feat/fund-lookthrough-skill` created off main (post-PR-#4 merged HEAD `ae82269`).
+- 2026-05-18 — Feature 003 (spec-002 scope) merged via PR #4; remote branch deleted. 11/11 tasks done, DoD ticked.
 - 2026-05-18T11:15 — tasks-001.md generated via /sp-task (11 tasks across Phase 0–5; ~7h estimated).
 - 2026-05-18T11:00 — plan-001.md generated via /sp-plan (5 phases; mirrors feature 002's plan with fund-specific LLM-cost-class control and three-LEI chain semantics).
 - 2026-05-18T10:45 — spec-002.md generated via /sp-spec; all 4 open questions clarified interactively (--enable-factsheet-skill boolean, no patch pre-check, no --limit default cap, raw chain counts).

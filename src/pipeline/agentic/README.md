@@ -57,9 +57,12 @@ Sources live in `sources/` (Python adapters) with matching descriptors in
 | Order | Source | Cost | Produces |
 |---|---|---|---|
 | 1 | `fund_firds` | `api_call` | UCITS hierarchy from ESMA FIRDS + umbrella LEI map |
-| 2 | `fund_yahoo` | `api_call` | NAV / market price / OHLCV / AUM / TER / asset allocation |
+| 2 | `fund_yahoo` | `api_call` | NAV / market price / OHLCV / AUM / TER / asset allocation buckets (sector / asset class / region — no holdings) |
 | 3 | `fund_factsheet_patch` | `file_read` | pre-curated patches from `data/opensearch/golden/fund/patches/` |
 | 4 | `fund_factsheet_skill` | `llm_skill` | live PDF KID parsing via the `find-and-parse-factsheet` skill |
+| 5 | `fund_lookthrough_skill` | `llm_skill` | proxy-derived holdings for synthetic / swap-based ETFs — copies the constituent list of a physically-replicated peer ETF tracking the same benchmark, stamps each row `source: physical_proxy`, and writes a top-level `lookthroughProvenance` block (proxy ISIN, benchmark, asOfDate, confidence). Predicate-gated: fires only when `holdings` is empty AND `replicationMethod == synthetic_swap` AND a benchmark is set. Pre-curated patches under `data/opensearch/golden/fund/patches/lookthrough/` bypass the LLM. |
+
+Both LLM-skill sources are gated by the same cost-class flag. Open the gate via `--enable-llm-skills` (CLI) or `max_cost_class="llm_skill"` (HTTP); restrict to a subset with `--llm-skills <id1,id2,...>` (CLI) or `allowed_llm_skills: [...]` (HTTP body).
 
 ### Issuer (`scope="issuer"`)
 
@@ -69,12 +72,26 @@ Sources live in `sources/` (Python adapters) with matching descriptors in
 
 ## Merge policy
 
-`merger.merge_into` is **fill-empty-only**: a source patch sets a field
-only when the target slot is empty (`None`, `""`, `[]`, `{}`). Already-
-populated fields are never overwritten — so source order matters and
-high-confidence sources should run first. Each populated field gets a
+`merger.merge_patch` is **deep fill-empty-only**: at every level of a
+nested dict the first writer wins, but sibling sub-keys not yet
+populated still get written even when the parent dict is non-empty.
+Lists remain atomic — a list value is replaced only when the existing
+slot is empty.
+
+This matters in practice: `fund_yahoo` populates `assetAllocation` with
+sector and asset-class buckets (no holdings). `fund_lookthrough_skill`
+later contributes `assetAllocation.holdings`. Under shallow fill-empty
+the second patch would be silently dropped because the parent dict is
+non-empty; under deep fill-empty the holdings land alongside the
+buckets and downstream consumers see both.
+
+The merger's return value carries dot-paths for nested writes
+(e.g. `"assetAllocation.holdings"`); the planner's trace formatting
+extracts the top-level prefix when computing
+`fields_skipped_already_filled`. Each populated field gets a
 `SourceAttribution` row appended to `recordMeta.sourceOfTruth` recording
-the source name and timestamp.
+the source name, timestamp, and (for proxy-derived rows) the proxy ISIN
+and confidence.
 
 ## Persistence and chaining
 

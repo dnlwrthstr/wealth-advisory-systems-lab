@@ -38,6 +38,7 @@ def assemble_golden(
     *,
     budget: int = 10,
     max_cost_class: str = DEFAULT_MAX_COST_CLASS,
+    allowed_llm_skills: Optional[set[str]] = None,
     run_id: Optional[str] = None,
     now: Optional[datetime] = None,
 ) -> AssembleResult:
@@ -46,7 +47,8 @@ def assemble_golden(
     `identifier` is `{"kind": "isin"|"ticker"|..., "value": "..."}`.
     `max_cost_class` caps which sources are eligible — defaults to
     "web_fetch" so LLM-skill sources are opt-in (callers pass
-    "llm_skill" to enable them).
+    "llm_skill" to enable them). `allowed_llm_skills` further restricts
+    which llm_skill sources may run; see `planner.run_planner`.
     """
     _validate_identifier(identifier)
     run_id = run_id or f"agentic-{scope}-{uuid.uuid4().hex[:8]}"
@@ -63,6 +65,7 @@ def assemble_golden(
         sources=sources,
         budget=budget,
         max_cost_class=max_cost_class,
+        allowed_llm_skills=allowed_llm_skills,
     )
 
     quality = quality_score(manifest, current)
