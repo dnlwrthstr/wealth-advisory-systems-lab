@@ -33,11 +33,12 @@ def test_assemble_passes_scope_and_default_cost_cap(monkeypatch):
     """Agent.assemble must forward its scope + default cost cap to the planner."""
     seen: Dict[str, Any] = {}
 
-    def fake_assemble_golden(*, scope, identifier, budget, max_cost_class):
+    def fake_assemble_golden(*, scope, identifier, budget, max_cost_class, allowed_llm_skills=None):
         seen["scope"] = scope
         seen["identifier"] = identifier
         seen["budget"] = budget
         seen["max_cost_class"] = max_cost_class
+        seen["allowed_llm_skills"] = allowed_llm_skills
         return AssembleResult(
             scope=scope,
             identifier=identifier,
@@ -54,13 +55,14 @@ def test_assemble_passes_scope_and_default_cost_cap(monkeypatch):
     assert seen["scope"] == "equity"
     assert seen["max_cost_class"] == "web_fetch"
     assert seen["budget"] == EquityAgent.default_budget
+    assert seen["allowed_llm_skills"] is None  # default: no per-skill restriction
 
 
 def test_assemble_caller_can_override_cost_cap(monkeypatch):
     """Explicit max_cost_class beats the agent default."""
     seen: Dict[str, Any] = {}
 
-    def fake_assemble_golden(*, scope, identifier, budget, max_cost_class):
+    def fake_assemble_golden(*, scope, identifier, budget, max_cost_class, allowed_llm_skills=None):
         seen["max_cost_class"] = max_cost_class
         return AssembleResult(
             scope=scope, identifier=identifier, record={"goldenId": "X"},
@@ -79,8 +81,13 @@ def test_assemble_and_persist_stamps_status_and_uses_agent_default(monkeypatch):
     """Agent.assemble_and_persist must forward (scope, status, agent cost cap)."""
     seen: Dict[str, Any] = {}
 
-    def fake(*, client, scope, identifier, budget, max_cost_class, universe_status):
-        seen.update(scope=scope, status=universe_status, max_cost_class=max_cost_class)
+    def fake(*, client, scope, identifier, budget, max_cost_class, universe_status, allowed_llm_skills=None):
+        seen.update(
+            scope=scope,
+            status=universe_status,
+            max_cost_class=max_cost_class,
+            allowed_llm_skills=allowed_llm_skills,
+        )
         primary = AssembleResult(
             scope=scope, identifier=identifier, record={"goldenId": "FG-X-001"},
             quality_score=0.0, remaining_gaps=[], provenance=[], trace=None, run_id="t",
@@ -93,7 +100,34 @@ def test_assemble_and_persist_stamps_status_and_uses_agent_default(monkeypatch):
         identifier={"kind": "isin", "value": "IE00B4L5Y983"},
         status="watchlist",
     )
-    assert seen == {"scope": "fund", "status": "watchlist", "max_cost_class": "llm_skill"}
+    assert seen == {
+        "scope": "fund",
+        "status": "watchlist",
+        "max_cost_class": "llm_skill",
+        "allowed_llm_skills": None,
+    }
+
+
+def test_assemble_and_persist_forwards_allowed_llm_skills(monkeypatch):
+    """Agent.assemble_and_persist threads `allowed_llm_skills` through to persist."""
+    seen: Dict[str, Any] = {}
+
+    def fake(*, client, scope, identifier, budget, max_cost_class, universe_status, allowed_llm_skills=None):
+        seen["allowed_llm_skills"] = allowed_llm_skills
+        primary = AssembleResult(
+            scope=scope, identifier=identifier, record={"goldenId": "FG-X-001"},
+            quality_score=0.0, remaining_gaps=[], provenance=[], trace=None, run_id="t",
+        )
+        return {"primary": primary, "chained_issuers": []}
+
+    monkeypatch.setattr("pipeline.agentic.agents.base.assemble_and_persist", fake)
+    FundAgent.assemble_and_persist(
+        client=object(),
+        identifier={"kind": "isin", "value": "IE00B4L5Y983"},
+        status="in_universe",
+        allowed_llm_skills={"fund_factsheet_skill"},
+    )
+    assert seen["allowed_llm_skills"] == {"fund_factsheet_skill"}
 
 
 def test_critical_gaps_uses_required_floor(monkeypatch):

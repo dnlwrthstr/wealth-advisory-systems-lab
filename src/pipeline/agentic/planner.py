@@ -62,6 +62,7 @@ def run_planner(
     sources: List[SourceDescriptor],
     budget: int = 10,
     max_cost_class: str = DEFAULT_MAX_COST_CLASS,
+    allowed_llm_skills: Optional[set[str]] = None,
     invoker: Optional[Callable[[SourceDescriptor, str, str, Dict[str, Any]], Optional[SourceFetchResult]]] = None,
 ) -> tuple[Dict[str, Any], List[Dict[str, Any]], PlannerTrace]:
     """Run the planner loop; return (current, provenance_rows, trace).
@@ -69,6 +70,13 @@ def run_planner(
     `invoker` is the function that actually calls a source. Defaults to
     `descriptor.load_callable()(identifier_kind, identifier_value, current)`,
     but tests can pass their own to mock real network calls.
+
+    `allowed_llm_skills` optionally restricts which llm_skill sources are
+    eligible. ``None`` (default) means all llm_skill sources whose cost is
+    within ``max_cost_class`` may run. When a set is provided, only
+    llm_skill sources whose `id` is in the set are picked; non-llm_skill
+    sources are unaffected. Used by callers that want per-skill control
+    (e.g. ``--llm-skills fund_factsheet_skill`` on the CLI).
     """
     if invoker is None:
         invoker = _default_invoker
@@ -91,6 +99,7 @@ def run_planner(
             if s.id not in called
             and s.accepts_identifier(identifier_kind)
             and s.cost_rank <= cost_cap
+            and (s.cost_class != "llm_skill" or allowed_llm_skills is None or s.id in allowed_llm_skills)
             and set(s.produces_fields) & gaps
         ]
         if not candidates:

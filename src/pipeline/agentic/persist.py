@@ -117,12 +117,17 @@ def assemble_and_persist(
     budget: int = 10,
     chain_issuers: bool = True,
     max_cost_class: Optional[str] = None,
+    allowed_llm_skills: Optional[set[str]] = None,
     universe_status: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Assemble + persist the primary record; chain into issuer assembly.
 
     `universe_status` is stamped on the primary record only — chained
     issuer records are platform-shared and don't carry membership.
+
+    `allowed_llm_skills` is forwarded to the primary assemble; chained
+    issuer assemblies use no llm_skill sources today, so the restriction
+    is effectively a no-op for them.
 
     Returns:
       {
@@ -133,6 +138,8 @@ def assemble_and_persist(
     extra: Dict[str, Any] = {"budget": budget}
     if max_cost_class is not None:
         extra["max_cost_class"] = max_cost_class
+    if allowed_llm_skills is not None:
+        extra["allowed_llm_skills"] = allowed_llm_skills
     primary: AssembleResult = assemble_golden(
         scope=scope, identifier=identifier, **extra
     )
