@@ -222,14 +222,18 @@ For per-fund work, `POST /instruments/assemble` already accepts `max_cost_class`
 
 ## Definition of Done
 
-- [ ] All six functional requirements implemented.
-- [ ] All seven acceptance criteria met (AC-1 + AC-4 verified live on the Amundi MSCI World swap → iShares physical proxy pair; AC-2 / AC-3 / AC-6 / AC-7 covered by unit tests; AC-5 covered by a fixture patch under `tests/fixtures/`).
-- [ ] `FundGolden.holdings[].source` and `FundGolden.lookthroughProvenance` added to the ontology with annotation entries + regenerated OpenSearch mapping.
-- [ ] `src/pipeline/agentic/README.md` "Fund (`scope="fund"`)" table updated to show 5 sources; cost-class semantics paragraph updated to name both LLM-skill sources.
-- [ ] `CLAUDE.md` "Agentic data engineering" block notes `fund_lookthrough_skill` in the fund chain enumeration; "Fact-sheet + full-holdings enrichment" block gets a paragraph on the proxy-fallback path.
-- [ ] `pytest` green (target ≥ 195/195 including the new tests).
-- [ ] Branch `feat/fund-lookthrough-skill` merged into `main` via PyCharm review.
-- [ ] Manual smoke: synthetic ETF assemble surfaces `lookthroughProvenance` in the `Find an instrument` fund detail panel (UI may need a small render update; track separately if non-trivial).
+- [x] All six functional requirements implemented.
+- [x] AC-2 (predicate truth table), AC-3 (no-peer distinction), AC-5 (cache hit), AC-6 (cost-safe default — covered by `test_planner_*` unit tests + the fund_universe CLI test suite), AC-6b (per-skill restriction), AC-7 (cold-start probe) — covered by `tests/agentic/test_fund_lookthrough_skill.py` and integration tests in `tests/agentic/test_assemble_fund.py`.
+- [ ] **AC-1 (Amundi → iShares live)** and **AC-4 (idempotency live)** — deferred to a user-driven validation pass after PR merge. Requires seeding both ISINs into `pms_golden_fund` with curated holdings and a real `ANTHROPIC_API_KEY` LLM call (~$0.02). Documented in tasks-002.md T011b.
+- [x] `Holding.source` enum (on the nested value object) and `FundGolden.lookthroughProvenance` added to the ontology with annotation entries + regenerated OpenSearch mapping (`data/opensearch/golden/pms_golden_fund.index.json`).
+- [x] `src/pipeline/agentic/README.md` "Fund (`scope="fund"`)" table updated to show 5 sources; Merge policy section rewritten for the new deep fill-empty-only semantic.
+- [x] `CLAUDE.md` "Agentic data engineering" block notes `fund_lookthrough_skill` in the fund chain enumeration; "Fact-sheet + full-holdings enrichment" block gets a paragraph on the proxy-fallback path.
+- [x] `pytest` green: **263/263** (target was ≥ 195/195).
+- [x] **Merger upgrade (Option B)** — `merge_patch` promoted to deep fill-empty-only; new `tests/agentic/test_merger.py` (8 tests); planner trace formatting updated for nested paths.
+- [x] **Per-skill control plumbing** — `allowed_llm_skills: Optional[set[str]]` threaded through `BaseAgent.assemble{,_and_persist}` → `persist.assemble_and_persist` → `assemble.assemble_golden` → `planner.run_planner`. HTTP `/instruments/assemble` body accepts `allowed_llm_skills: list[str]`.
+- [x] **CLI flag pair** — `--enable-llm-skills` + `--llm-skills <id1,id2,...>` on `pipeline.agentic.cli.fund_universe`; `--enable-factsheet-skill` retained as a deprecated alias with one-shot warning.
+- [x] **Frontend** — fund detail panel surfaces `lookthroughProvenance` (conditional "Look-through" row + hover tooltip); Holdings table subtitle annotates proxy-derived data. `vite build` clean.
+- [ ] **Branch `feat/fund-lookthrough-skill` merged into `main`** — pending user review in PyCharm.
 
 ## Clarifications (resolved 2026-05-18)
 
