@@ -27,6 +27,9 @@ data/universe/*.parquet
 data/lake/**/*.parquet
 data/lake/**/_manifest.json
 
+# Universe loader caches (Wikipedia ticker lists, regenerated weekly)
+data/cache/
+
 # Environment files
 .env
 .env.*

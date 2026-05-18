@@ -115,7 +115,7 @@ OpenSearch runs with the security plugin disabled (dev mode, no auth, plain HTTP
 
 ### Agentic data engineering (primary path)
 
-The universe is built one instrument at a time via the agentic platform under `src/pipeline/agentic/`. Given an identifier (ISIN, ticker, LEI), the planner reads the ontology-derived field manifest, picks sources from a per-scope registry, runs them in cost order (file_read → api_call → web_fetch → llm_skill), merges their patches with provenance (fill-empty-only), and returns a composed golden record. The instrument-api exposes `POST /instruments/assemble`; with `persist=true` it writes to `pms_golden_{scope}` and chains into issuer assembly for every embedded LEI.
+The universe is built one instrument at a time via the agentic platform under `src/pipeline/agentic/`. Given an identifier (ISIN, ticker, LEI), the planner reads the ontology-derived field manifest, picks sources from a per-scope registry, runs them in cost order (file_read → api_call → web_fetch → llm_skill), merges their patches with provenance (fill-empty-only), and returns a composed golden record. The instrument-api exposes `POST /instruments/assemble`; with `persist=true` it writes to `pms_golden_{scope}` and chains into issuer assembly for every embedded LEI. For a full architectural reference (layered API, source tables per scope, merge policy, manifest invariant), see [`src/pipeline/agentic/README.md`](src/pipeline/agentic/README.md). Batch seeding from a named universe (SMI, S&P 500, …) is handled by `python -m pipeline.agentic.cli.equity_universe --universe …`.
 
 Per scope:
 
@@ -130,7 +130,7 @@ Source descriptors are YAML under `src/pipeline/agentic/registry/`; per-scope fi
 
 For batch-loading the initial OpenSearch indices from named universes (SMI, S&P 500, FIRDS issuer lists), the legacy CLIs are still useful:
 
-- `equity_yahoo` — `--universe smi|sp500|nasdaq100|dax40|ftse100` loads a Wikipedia-sourced ticker universe and fetches yfinance per ticker.
+- `equity_yahoo` — **library only** since spec 001-agentic-equity-universe. Exposes `fetch_by_identifier(kind, value)` for the agentic `equity_yahoo` source to call. The former `--universe` bulk CLI moved to `pipeline.agentic.cli.equity_universe`, which routes every ISIN through the full agentic chain (openfigi → equity_firds → equity_yahoo) and persists via `assemble_and_persist` with `universe_status="in_universe"`.
 - `bond_firds` — bundled issuer-LEI YAML, queries FIRDS Solr, filters to CFI category D. Coupon rate from FIRDS is a percentage (1.5); the ontology expects decimal (0.015), so the fetcher divides by 100. The OpenSearchInstrumentStore then multiplies by 100 again when projecting onto the frontend's `coupon_pct` field.
 - `bond_synthetic_market_data` — fills `BondGolden.marketData` with the analytically-derivable yield + duration fields for active bonds. Computes `yieldToMaturity` and `currentYield` as the coupon rate (par assumption), `macaulayDuration = (1/y)·(1 − (1+y)⁻ᵀ)`, `modifiedDuration = macaulayDuration / (1+y)`. Provenance label is `synthetic (coupon-as-YTM at par)`. Run before `bond_boerse_frankfurt_enrich`.
 - `bond_boerse_frankfurt_enrich` — pulls real clean prices from `api.boerse-frankfurt.de/v1/data/quote_box`, recomputes YTM via bisection on `P(y) = c·annuity(y, n) + (1+y)⁻ⁿ`. Appends a separate `marketData → boerse-frankfurt.de` row to `sourceOfTruth`. Cached per-ISIN.
