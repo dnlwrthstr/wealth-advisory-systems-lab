@@ -287,3 +287,79 @@ ontology:
           type: string
           description: Asset class of the holding (e.g., EQUITY, FIXED_INCOME, DERIVATIVE, CASH).
           example: EQUITY
+        source:
+          type: string
+          description: >
+            Provenance of this row. `direct` (default for back-compat) = from
+            the issuer's own holdings page or factsheet. `physical_proxy` =
+            copied from a physically-replicated ETF tracking the same
+            benchmark (used for swap-based ETFs whose own holdings page
+            returns the substitute basket, not the economic exposure). The
+            other values are reserved for future strategies.
+          enum:
+            - direct
+            - physical_proxy
+            - index_provider
+            - fund_of_fund
+            - aggregator
+          example: direct
+
+    LookthroughProvenance:
+      description: >
+        Provenance metadata for proxy-derived look-through holdings.
+        Populated only when `assetAllocation.holdings` carries rows whose
+        `source` is not `direct`. Null otherwise.
+      kind: value_object
+      type: object
+      required:
+        - method
+        - proxyIsin
+        - benchmarkName
+        - asOfDate
+        - confidence
+      properties:
+        method:
+          type: string
+          description: Strategy used to derive look-through holdings indirectly.
+          enum:
+            - physical_proxy
+            - index_provider
+            - fund_of_fund
+            - aggregator
+          example: physical_proxy
+        proxyIsin:
+          type: string
+          description: ISIN of the proxy fund whose holdings were copied.
+          pattern: "^[A-Z]{2}[A-Z0-9]{9}[0-9]$"
+          example: IE00B4L5Y983
+        proxyGoldenId:
+          type: string
+          description: goldenId of the proxy fund record in pms_golden_fund.
+          example: FG-IE00B4L5Y983-XETR-001
+        proxyName:
+          type: string
+          description: Human-readable name of the proxy fund.
+          example: iShares Core MSCI World UCITS ETF
+        benchmarkIdentifier:
+          type: string
+          description: Identifier of the benchmark linking target fund and proxy.
+        benchmarkName:
+          type: string
+          description: Name of the benchmark linking target fund and proxy.
+          example: MSCI World Index
+        asOfDate:
+          type: string
+          format: date
+          description: Snapshot date of the proxy's holdings (carried through verbatim).
+          example: "2026-04-30"
+        confidence:
+          type: string
+          description: >
+            Match quality. `high` = identifier exact match; `medium` =
+            benchmark name match but different identifier (variant index);
+            `low` = fuzzy / substring name match only.
+          enum:
+            - high
+            - medium
+            - low
+          example: high

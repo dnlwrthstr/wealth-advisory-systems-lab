@@ -296,6 +296,11 @@ ontology:
           description: As-of date of the holdings / allocation snapshot.
           type: string
           format: date
+        lookthroughProvenance:
+          description: >
+            Provenance metadata when `assetAllocation.holdings` is proxy-derived.
+            Null when all holdings carry `source: direct` (the standard case).
+          common_ontology: "../../securities/fund/Fund.yml#/ontology/entities/LookthroughProvenance"
         portfolioTurnoverPctAnnual:
           description: Annualised portfolio turnover ratio (decimal).
           type: number
