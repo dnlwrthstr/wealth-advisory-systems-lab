@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C * status)",
+      "Bash(git -C * status *)",
+      "Bash(git -C * log)",
+      "Bash(git -C * log *)",
+      "Bash(git -C * diff)",
+      "Bash(git -C * diff *)",
+      "Bash(git -C * show *)",
+      "Bash(git -C * rev-parse *)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(source */.venv/bin/activate)",
+      "Bash(set -a)",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_click",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_Preview__preview_stop",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_network",
+      "mcp__Claude_Preview__preview_resize",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__ccd_session__mark_chapter",
+      "mcp__ccd_session__spawn_task"
+    ]
+  }
+}
